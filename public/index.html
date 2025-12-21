@@ -396,78 +396,6 @@
             cursor: not-allowed;
         }
 
-        .tone-toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: white;
-            padding: 16px 20px;
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 1000;
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            max-width: 90%;
-        }
-
-        .tone-toast.show {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .tone-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .tone-icon.negative {
-            background: #FFE5E5;
-        }
-
-        .tone-icon.neutral {
-            background: #FFF8E5;
-        }
-
-        .tone-icon.positive {
-            background: #E5F8E8;
-        }
-
-        .tone-text {
-            flex: 1;
-        }
-
-        .tone-label {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 2px;
-        }
-
-        .tone-label.negative {
-            color: #DC3545;
-        }
-
-        .tone-label.neutral {
-            color: #FFC107;
-        }
-
-        .tone-label.positive {
-            color: #28A745;
-        }
-
-        .tone-message {
-            font-size: 13px;
-            color: var(--text-light);
-        }
-
         .demo-banner {
             background: linear-gradient(135deg, var(--voyage-gold), #B8986B);
             color: white;
@@ -510,7 +438,7 @@
 <body>
     <div class="app-container">
         <div class="demo-banner">
-            🎯 <strong>GERÇEK BACKEND:</strong> Socket.IO • Claude AI Tone Analizi
+            💬 <strong>PWA CHAT:</strong> Real-time Messaging • Socket.IO
         </div>
 
         <div class="header">
@@ -560,13 +488,6 @@
             </button>
         </div>
 
-        <div class="tone-toast" id="toneToast">
-            <div class="tone-icon negative">⚠️</div>
-            <div class="tone-text">
-                <div class="tone-label negative">Ton Analizi</div>
-                <div class="tone-message">Analiz ediliyor...</div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -634,32 +555,6 @@
             console.log('📨 New message:', data);
             displayMessage(data, true);
             scrollToBottom();
-        });
-
-        // Tone analysis result
-        socket.on('tone_analysis', (analysis) => {
-            console.log('🎯 Tone analysis:', analysis);
-            showToneAnalysis(analysis);
-        });
-
-        // Tone alert (for managers)
-        socket.on('tone_alert', (alert) => {
-            console.log('🚨 TONE ALERT:', alert);
-            
-            // Show notification if permitted
-            if (Notification.permission === 'granted') {
-                new Notification(`🚨 Oda ${alert.roomNumber} - ${alert.urgency.toUpperCase()}`, {
-                    body: alert.message.substring(0, 100),
-                    icon: '/icon.png',
-                    requireInteraction: true,
-                    vibrate: [200, 100, 200]
-                });
-            }
-            
-            // Update badge
-            const badge = document.getElementById('notificationBadge');
-            badge.style.display = 'flex';
-            badge.textContent = parseInt(badge.textContent || 0) + 1;
         });
 
         // Typing indicators
@@ -769,44 +664,6 @@
                     }
                 }, 2000);
             }
-        }
-
-        // Show tone analysis
-        function showToneAnalysis(analysis) {
-            const toast = document.getElementById('toneToast');
-            const icon = toast.querySelector('.tone-icon');
-            const label = toast.querySelector('.tone-label');
-            const message = toast.querySelector('.tone-message');
-            
-            const iconMap = {
-                negative: '⚠️',
-                neutral: 'ℹ️',
-                positive: '✅'
-            };
-            
-            const labelMap = {
-                negative: 'Negatif Ton Tespit Edildi',
-                neutral: 'Nötr Mesaj',
-                positive: 'Pozitif Geri Bildirim'
-            };
-            
-            const messageMap = {
-                negative: analysis.alert_manager ? 'Yöneticiye bildirim gönderildi' : 'İlgileniliyor',
-                neutral: 'Normal iletişim',
-                positive: 'Müşteri memnun görünüyor'
-            };
-            
-            icon.textContent = iconMap[analysis.sentiment] || 'ℹ️';
-            icon.className = `tone-icon ${analysis.sentiment}`;
-            label.textContent = labelMap[analysis.sentiment] || 'Analiz Tamamlandı';
-            label.className = `tone-label ${analysis.sentiment}`;
-            message.textContent = analysis.reason || messageMap[analysis.sentiment];
-            
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 4000);
         }
 
         // Handle Enter key

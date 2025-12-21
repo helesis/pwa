@@ -70,10 +70,7 @@ async function initializeDatabase() {
         sender_type VARCHAR(20) NOT NULL,
         sender_name VARCHAR(100),
         message TEXT NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        tone_sentiment VARCHAR(20),
-        tone_urgency VARCHAR(20),
-        tone_category VARCHAR(50)
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS rooms (
@@ -85,19 +82,8 @@ async function initializeDatabase() {
         is_active BOOLEAN DEFAULT true
       );
 
-      CREATE TABLE IF NOT EXISTS tone_alerts (
-        id SERIAL PRIMARY KEY,
-        message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
-        room_number VARCHAR(50),
-        sentiment VARCHAR(20),
-        urgency VARCHAR(20),
-        alert_sent BOOLEAN DEFAULT false,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_tone_alerts_room_number ON tone_alerts(room_number);
     `);
     
     console.log('✅ Database tables initialized');
@@ -109,133 +95,6 @@ async function initializeDatabase() {
 
 // Initialize on startup
 initializeDatabase().catch(console.error);
-
-// Claude API Tone Analysis
-async function analyzeToneWithClaude(message) {
-  const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-  
-  if (!CLAUDE_API_KEY) {
-    console.log('⚠️  Claude API key not found, using fallback analysis');
-    return analyzeToneFallback(message);
-  }
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: `Aşağıdaki otel müşteri mesajını analiz et ve sadece JSON formatında döndür:
-
-Mesaj: "${message}"
-
-Döndür:
-{
-  "sentiment": "positive/neutral/negative",
-  "urgency": "low/medium/high/critical",
-  "category": "kategori (örn: teknik sorun, room service, genel soru)",
-  "alert_manager": true/false,
-  "reason": "kısa açıklama"
-}`
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const content = data.content[0].text;
-    
-    // Extract JSON from response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const analysis = JSON.parse(jsonMatch[0]);
-      console.log('🎯 Claude Analysis:', analysis);
-      return analysis;
-    }
-    
-    throw new Error('No JSON in response');
-    
-  } catch (error) {
-    console.error('Claude API error:', error.message);
-    return analyzeToneFallback(message);
-  }
-}
-
-// Fallback tone analysis (keyword-based)
-function analyzeToneFallback(message) {
-  const lowerMessage = message.toLowerCase();
-  
-  const negativeTriggers = [
-    'çalışmıyor', 'kötü', 'berbat', 'rezalet', 'şikayet', 
-    'kızgınım', 'yetersiz', 'bekliyorum', 'saattir', 'kimse',
-    'hiç', 'asla', 'problem', 'sorun', 'arızalı'
-  ];
-  
-  const urgentTriggers = [
-    'acil', 'hemen', 'şimdi', 'derhal', 'çabuk',
-    'saattir', 'gün', 'hafta'
-  ];
-  
-  const positiveTriggers = [
-    'teşekkür', 'harika', 'mükemmel', 'güzel', 'süper',
-    'muhteşem', 'çok iyi', 'beğendik', 'memnun'
-  ];
-
-  const technicalTriggers = [
-    'klima', 'tv', 'internet', 'wifi', 'duş', 'musluk',
-    'elektrik', 'ışık', 'su', 'soğuk', 'sıcak'
-  ];
-
-  let sentiment = 'neutral';
-  let urgency = 'medium';
-  let category = 'genel soru';
-  let alert = false;
-
-  // Check sentiment
-  const negativeCount = negativeTriggers.filter(t => lowerMessage.includes(t)).length;
-  const positiveCount = positiveTriggers.filter(t => lowerMessage.includes(t)).length;
-  
-  if (negativeCount > 0) {
-    sentiment = 'negative';
-    alert = true;
-  } else if (positiveCount > 0) {
-    sentiment = 'positive';
-  }
-
-  // Check urgency
-  const urgentCount = urgentTriggers.filter(t => lowerMessage.includes(t)).length;
-  if (urgentCount > 1 || negativeCount > 2) {
-    urgency = 'critical';
-    alert = true;
-  } else if (urgentCount > 0 || negativeCount > 0) {
-    urgency = 'high';
-  } else if (positiveCount > 0) {
-    urgency = 'low';
-  }
-
-  // Check category
-  if (technicalTriggers.some(t => lowerMessage.includes(t))) {
-    category = 'teknik sorun';
-  } else if (lowerMessage.includes('servis') || lowerMessage.includes('yemek')) {
-    category = 'room service';
-  } else if (lowerMessage.includes('rezervasyon') || lowerMessage.includes('oda')) {
-    category = 'rezervasyon';
-  }
-
-  return {
-    sentiment,
-    urgency,
-    category,
-    alert_manager: alert,
-    reason: `${negativeCount} negatif kelime, ${urgentCount} aciliyet göstergesi`
-  };
-}
 
 // Socket.IO Connection
 io.on('connection', (socket) => {
@@ -269,50 +128,20 @@ io.on('connection', (socket) => {
     const { roomNumber, senderType, senderName, message } = data;
     
     try {
-      // Analyze tone (only for guest messages)
-      let toneAnalysis = null;
-      if (senderType === 'guest') {
-        toneAnalysis = await analyzeToneWithClaude(message);
-      }
-      
       // Save to database
       const result = await pool.query(`
-        INSERT INTO messages (room_number, sender_type, sender_name, message, tone_sentiment, tone_urgency, tone_category)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO messages (room_number, sender_type, sender_name, message)
+        VALUES ($1, $2, $3, $4)
         RETURNING id, timestamp
       `, [
         roomNumber,
         senderType,
         senderName,
-        message,
-        toneAnalysis?.sentiment || null,
-        toneAnalysis?.urgency || null,
-        toneAnalysis?.category || null
+        message
       ]);
       
       const messageId = result.rows[0].id;
       const timestamp = result.rows[0].timestamp;
-      
-      // Create alert if needed
-      if (toneAnalysis && toneAnalysis.alert_manager) {
-        await pool.query(`
-          INSERT INTO tone_alerts (message_id, room_number, sentiment, urgency)
-          VALUES ($1, $2, $3, $4)
-        `, [messageId, roomNumber, toneAnalysis.sentiment, toneAnalysis.urgency]);
-        
-        console.log('🚨 ALERT: Negative tone detected!');
-        
-        // Emit alert to managers
-        io.emit('tone_alert', {
-          messageId,
-          roomNumber,
-          message,
-          sentiment: toneAnalysis.sentiment,
-          urgency: toneAnalysis.urgency,
-          category: toneAnalysis.category,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // Broadcast message
       const messageData = {
@@ -321,19 +150,10 @@ io.on('connection', (socket) => {
         senderType,
         senderName,
         message,
-        timestamp: timestamp.toISOString(),
-        toneAnalysis
+        timestamp: timestamp.toISOString()
       };
       
       io.to(roomNumber).emit('new_message', messageData);
-      
-      // Send tone analysis separately
-      if (toneAnalysis) {
-        socket.emit('tone_analysis', {
-          messageId,
-          ...toneAnalysis
-        });
-      }
     } catch (error) {
       console.error('Error saving message:', error);
       socket.emit('error', { message: 'Mesaj kaydedilemedi' });
@@ -401,40 +221,6 @@ app.get('/api/messages/:roomNumber', async (req, res) => {
   }
 });
 
-// Get tone alerts
-app.get('/api/alerts', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        a.*,
-        m.message,
-        m.sender_name,
-        r.guest_name
-      FROM tone_alerts a
-      LEFT JOIN messages m ON a.message_id = m.id
-      LEFT JOIN rooms r ON a.room_number = r.room_number
-      ORDER BY a.timestamp DESC
-      LIMIT 50
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching alerts:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Mark alert as sent
-app.post('/api/alerts/:id/sent', async (req, res) => {
-  try {
-    await pool.query('UPDATE tone_alerts SET alert_sent = true WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error updating alert:', error);
-    res.status(500).json({ error: 'Database error' });
-  }
-});
-
 // Create/Update room
 app.post('/api/rooms', async (req, res) => {
   try {
@@ -463,38 +249,14 @@ app.get('/api/stats', async (req, res) => {
   try {
     const totalMessages = await pool.query('SELECT COUNT(*) as count FROM messages');
     const activeRooms = await pool.query('SELECT COUNT(*) as count FROM rooms WHERE is_active = true');
-    const pendingAlerts = await pool.query('SELECT COUNT(*) as count FROM tone_alerts WHERE alert_sent = false');
-    
-    const sentimentStats = await pool.query(`
-      SELECT 
-        tone_sentiment,
-        COUNT(*) as count
-      FROM messages
-      WHERE tone_sentiment IS NOT NULL
-      GROUP BY tone_sentiment
-    `);
     
     res.json({
       totalMessages: parseInt(totalMessages.rows[0].count),
-      activeRooms: parseInt(activeRooms.rows[0].count),
-      pendingAlerts: parseInt(pendingAlerts.rows[0].count),
-      sentimentStats: sentimentStats.rows
+      activeRooms: parseInt(activeRooms.rows[0].count)
     });
   } catch (error) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Database error' });
-  }
-});
-
-// Test tone analysis endpoint
-app.post('/api/test/tone', async (req, res) => {
-  try {
-    const { message } = req.body;
-    const analysis = await analyzeToneWithClaude(message);
-    res.json(analysis);
-  } catch (error) {
-    console.error('Error analyzing tone:', error);
-    res.status(500).json({ error: 'Analysis error' });
   }
 });
 
@@ -538,7 +300,7 @@ httpServer.listen(PORT, () => {
   console.log('');
   console.log(`   ✅ Database: PostgreSQL`);
   console.log('   ✅ Real-time: Socket.IO');
-  console.log('   ✅ Tone Analysis: Claude AI');
+  console.log('   ✅ PWA: Enabled');
   console.log(`   ✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('');
   console.log('🏨 ════════════════════════════════════════════');
