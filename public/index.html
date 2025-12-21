@@ -590,6 +590,16 @@
             console.log('📨 New message:', data);
             displayMessage(data, true);
             scrollToBottom();
+            
+            // Send notification if message is from staff/hotel and page is not visible
+            if (data.senderType !== 'guest' && document.hidden) {
+                sendNotification(data);
+            } else if (data.senderType !== 'guest') {
+                // Even if page is visible, show notification if permission granted
+                if (Notification.permission === 'granted') {
+                    sendNotification(data);
+                }
+            }
         });
 
         // Typing indicators
@@ -752,6 +762,31 @@
             console.log('🧪 Test mesajı gönderildi:', randomMessage);
         }
 
+        // Send notification
+        function sendNotification(messageData) {
+            if (!('Notification' in window)) {
+                return;
+            }
+            
+            if (Notification.permission === 'granted') {
+                const senderName = messageData.senderName || 'Voyage Sorgun';
+                const messageText = messageData.message.length > 50 
+                    ? messageData.message.substring(0, 50) + '...' 
+                    : messageData.message;
+                
+                new Notification(`${senderName}`, {
+                    body: messageText,
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: 'voyage-chat-message',
+                    requireInteraction: false,
+                    vibrate: [200, 100, 200]
+                });
+                
+                console.log('🔔 Notification sent:', messageText);
+            }
+        }
+
         // Notification Permission
         async function requestNotificationPermission() {
             if (!('Notification' in window)) {
@@ -764,12 +799,24 @@
             if (permission === 'granted') {
                 new Notification('Voyage Sorgun', {
                     body: 'Bildirimler başarıyla açıldı! 🔔',
-                    icon: '/icon.png'
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png'
                 });
                 
                 document.getElementById('notificationBadge').style.display = 'none';
+            } else if (permission === 'denied') {
+                alert('Bildirim izni reddedildi. Tarayıcı ayarlarından izin verebilirsiniz.');
             }
         }
+        
+        // Check if page becomes visible/hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('📱 Page hidden - notifications will be shown');
+            } else {
+                console.log('👁️ Page visible');
+            }
+        });
 
         // Utility functions
         function formatTime(timestamp) {
@@ -812,3 +859,4 @@
     </script>
 </body>
 </html>
+
