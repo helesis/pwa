@@ -762,6 +762,18 @@
             console.log('🧪 Test mesajı gönderildi:', randomMessage);
         }
 
+        // iOS detection
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        // Check if running as PWA (standalone mode)
+        function isStandalone() {
+            return window.navigator.standalone === true || 
+                   window.matchMedia('(display-mode: standalone)').matches;
+        }
+
         // Send notification
         function sendNotification(messageData) {
             if (!('Notification' in window)) {
@@ -789,6 +801,21 @@
 
         // Notification Permission
         async function requestNotificationPermission() {
+            // iOS kontrolü
+            if (isIOS()) {
+                if (!isStandalone()) {
+                    alert('iOS\'ta bildirimler için uygulamayı ana ekrana eklemeniz gerekiyor.\n\n📱 Adımlar:\n1. Safari menüsünden "Ana Ekrana Ekle" seçin\n2. Uygulamayı ana ekrandan açın\n3. Tekrar bildirim butonuna tıklayın\n\n💡 PWA olarak açıldığında bildirimler çalışacaktır.');
+                    return;
+                }
+                
+                // iOS 16.4+ kontrolü (bildirim desteği için)
+                const iOSVersion = parseFloat((navigator.userAgent.match(/OS (\d+)_(\d+)/) || [0, 0, 0]).slice(1).join('.'));
+                if (iOSVersion < 16.4) {
+                    alert('Bildirimler iOS 16.4 ve üzeri sürümlerde çalışır.\n\nLütfen iOS\'unuzu güncelleyin.');
+                    return;
+                }
+            }
+            
             if (!('Notification' in window)) {
                 alert('Bu tarayıcı bildirim desteklemiyor');
                 return;
