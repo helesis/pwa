@@ -901,11 +901,18 @@
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.innerHTML = '';
             
+            // Ensure profile photo is loaded before displaying messages
+            if (!guestProfilePhoto) {
+                loadProfilePhoto();
+            }
+            
             if (messages.length === 0) {
                 // Show welcome message
                 addWelcomeMessage();
             } else {
                 messages.forEach(msg => {
+                    // Verify senderType is correct
+                    console.log('Message:', msg.senderType, msg.message.substring(0, 20));
                     displayMessage(msg, false);
                 });
             }
@@ -944,14 +951,22 @@
         // Display message
         function displayMessage(data, animate) {
             const chatContainer = document.getElementById('chatContainer');
+            // Ensure senderType is correctly identified
             const isSent = data.senderType === 'guest';
             const time = formatTime(data.timestamp);
             
-            // Get avatar HTML
+            // Debug log
+            if (!isSent && data.senderType) {
+                console.log('Received message from:', data.senderType, 'isSent:', isSent);
+            }
+            
+            // Get avatar HTML - ensure guestProfilePhoto is current
             let avatarHTML = '';
             if (isSent) {
-                if (guestProfilePhoto) {
-                    avatarHTML = `<div class="message-avatar"><img src="${guestProfilePhoto}" alt="Profil"></div>`;
+                // Re-check profile photo in case it was updated
+                const currentPhoto = localStorage.getItem('guestProfilePhoto') || guestProfilePhoto;
+                if (currentPhoto) {
+                    avatarHTML = `<div class="message-avatar"><img src="${currentPhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;"></div>`;
                 } else {
                     avatarHTML = '<div class="message-avatar">👤</div>';
                 }
