@@ -1309,6 +1309,8 @@
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'SW_UPDATED') {
                     console.log('🔄 Service worker updated:', event.data.version);
+                    // Update version display
+                    updateVersionDisplay();
                     if (!refreshing) {
                         refreshing = true;
                         // Auto-reload after 1 second
@@ -1328,6 +1330,8 @@
                             registration.update();
                         }
                     });
+                    // Update version display when page becomes visible
+                    updateVersionDisplay();
                 }
             });
         }
