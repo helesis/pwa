@@ -1099,16 +1099,84 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // Service Worker Registration (PWA)
+        // Service Worker Registration (PWA) with Auto-Update
         if ('serviceWorker' in navigator) {
+            let refreshing = false;
+
+            // Register service worker
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('/service-worker.js', {
+                    updateViaCache: 'none' // Always check for updates
+                })
                     .then((registration) => {
                         console.log('✅ Service Worker registered:', registration.scope);
+
+                        // Check for updates immediately
+                        registration.update();
+
+                        // Listen for service worker updates
+                        registration.addEventListener('updatefound', () => {
+                            console.log('🔄 New service worker found, installing...');
+                            const newWorker = registration.installing;
+
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker is ready
+                                    console.log('✅ New service worker installed');
+                                    
+                                    // Show update notification
+                                    if (confirm('Yeni güncelleme mevcut! Uygulamayı yenilemek ister misiniz?')) {
+                                        // User wants to update
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+
+                        // Periodic update check (every 5 minutes)
+                        setInterval(() => {
+                            registration.update();
+                        }, 5 * 60 * 1000);
+
+                        // Listen for controller change (service worker activated)
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            if (!refreshing) {
+                                refreshing = true;
+                                console.log('🔄 Service worker updated, reloading...');
+                                window.location.reload();
+                            }
+                        });
                     })
                     .catch((error) => {
                         console.log('❌ Service Worker registration failed:', error);
                     });
+            });
+
+            // Listen for messages from service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    console.log('🔄 Service worker updated:', event.data.version);
+                    if (!refreshing) {
+                        refreshing = true;
+                        // Auto-reload after 1 second
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                }
+            });
+
+            // Check for updates when page becomes visible (iOS/Android compatibility)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CHECK_UPDATE' });
+                    navigator.serviceWorker.getRegistration().then((registration) => {
+                        if (registration) {
+                            registration.update();
+                        }
+                    });
+                }
             });
         }
 

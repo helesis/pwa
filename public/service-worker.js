@@ -1,5 +1,8 @@
 // Service Worker for Voyage Sorgun Chat PWA
-const CACHE_NAME = 'voyage-chat-v1';
+// Version: 2.0.0 - Auto-update enabled
+// Cache version updates when service worker file changes
+const CACHE_VERSION = 'voyage-chat-v2';
+const CACHE_NAME = CACHE_VERSION;
 const urlsToCache = [
   '/',
   '/index.html',
@@ -8,6 +11,7 @@ const urlsToCache = [
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing new version', CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -18,39 +22,78 @@ self.addEventListener('install', (event) => {
         console.error('Service Worker: Cache failed', error);
       })
   );
+  // Force activation of new service worker immediately
   self.skipWaiting();
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activating new version', CACHE_VERSION);
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          // Delete all old caches that don't match current version
+          if (cacheName !== CACHE_NAME && cacheName.startsWith('voyage-chat-')) {
             console.log('Service Worker: Deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      // Claim all clients immediately (iOS/Android compatibility)
+      return self.clients.claim();
+    }).then(() => {
+      // Notify all clients about the update
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            version: CACHE_VERSION
+          });
+        });
+      });
     })
   );
-  return self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network first strategy for better updates
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Skip Socket.IO and API requests
+  // Skip Socket.IO and API requests (always use network)
   if (event.request.url.includes('/socket.io/') || 
       event.request.url.includes('/api/')) {
     return;
   }
 
+  // Network first strategy for HTML files (ensures updates)
+  if (event.request.destination === 'document' || 
+      event.request.url.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Update cache with fresh content
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if network fails
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // Cache first for static assets
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -105,6 +148,19 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.openWindow('/')
   );
+});
+
+// Message event - handle messages from clients
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('Service Worker: Skipping waiting, activating immediately');
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CHECK_UPDATE') {
+    // Trigger update check
+    self.registration.update();
+  }
 });
 
 
