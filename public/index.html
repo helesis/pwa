@@ -696,9 +696,26 @@
         // Update profile photo display in header and messages
         function updateProfilePhotoDisplay() {
             const headerPhoto = document.getElementById('headerProfilePhoto');
+            if (!headerPhoto) {
+                console.warn('Header profile photo element not found');
+                return;
+            }
+            
             if (guestProfilePhoto) {
-                headerPhoto.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                // Clear and add image
+                headerPhoto.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = guestProfilePhoto;
+                img.alt = 'Profil';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '50%';
+                img.style.display = 'block';
+                headerPhoto.appendChild(img);
                 headerPhoto.classList.add('has-photo');
+                
+                console.log('✅ Profile photo updated in header');
             } else {
                 headerPhoto.innerHTML = '👤';
                 headerPhoto.classList.remove('has-photo');
@@ -708,7 +725,7 @@
             const sentAvatars = document.querySelectorAll('.message.sent .message-avatar');
             sentAvatars.forEach(avatar => {
                 if (guestProfilePhoto) {
-                    avatar.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil">`;
+                    avatar.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;">`;
                 } else {
                     avatar.innerHTML = '👤';
                 }
@@ -737,18 +754,62 @@
             document.getElementById('galleryInput').click();
         }
 
-        // Handle photo selection
-        function handlePhotoSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
+        // Resize image to optimal size for profile photo
+        function resizeImage(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    guestProfilePhoto = e.target.result;
+                    const img = document.createElement('img');
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Calculate new dimensions
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height = (height * maxWidth) / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width = (width * maxHeight) / height;
+                                height = maxHeight;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert to base64
+                        const resizedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(resizedDataUrl);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Handle photo selection
+        async function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    // Resize image to 400x400 max (profile photo size)
+                    const resizedPhoto = await resizeImage(file, 400, 400, 0.9);
+                    guestProfilePhoto = resizedPhoto;
                     localStorage.setItem('guestProfilePhoto', guestProfilePhoto);
                     updateProfilePhotoDisplay();
                     closePhotoModal();
-                };
-                reader.readAsDataURL(file);
+                    console.log('✅ Profile photo updated');
+                } catch (error) {
+                    console.error('❌ Error processing photo:', error);
+                    alert('Fotoğraf işlenirken bir hata oluştu. Lütfen tekrar deneyin.');
+                }
             }
             // Reset input
             event.target.value = '';
