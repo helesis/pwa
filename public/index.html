@@ -129,6 +129,20 @@
             opacity: 0.9;
             font-weight: 400;
             line-height: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .version-badge {
+            font-size: 11px;
+            opacity: 0.8;
+            background: rgba(255,255,255,0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: 500;
         }
 
         .connection-status {
@@ -614,6 +628,7 @@
                     <div class="header-subtitle">
                         <span class="connection-status" id="connectionStatus"></span>
                         <span id="statusText">Bağlanıyor...</span>
+                        <span class="version-badge" id="versionBadge">v3</span>
                     </div>
                 </div>
             </div>
@@ -1317,12 +1332,39 @@
             });
         }
 
+        // Update version display from cache
+        async function updateVersionDisplay() {
+            try {
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    const voyageCache = cacheNames.find(name => name.startsWith('voyage-chat-'));
+                    if (voyageCache) {
+                        const version = voyageCache.replace('voyage-chat-', '');
+                        const versionBadge = document.getElementById('versionBadge');
+                        if (versionBadge) {
+                            versionBadge.textContent = version;
+                            console.log('✅ Version displayed:', version);
+                        }
+                    } else {
+                        // Fallback to default version
+                        const versionBadge = document.getElementById('versionBadge');
+                        if (versionBadge) {
+                            versionBadge.textContent = 'v3';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting version:', error);
+            }
+        }
+
         // Initialize on load
         window.addEventListener('load', () => {
             console.log('🚀 Voyage Sorgun Chat initialized');
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
             loadProfilePhoto();
+            updateVersionDisplay();
             
             // Setup file input event listeners
             const cameraInput = document.getElementById('cameraInput');
