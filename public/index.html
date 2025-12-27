@@ -86,6 +86,31 @@
             font-size: 20px;
         }
 
+        .guest-profile-photo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+
+        .guest-profile-photo:hover {
+            border-color: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        .guest-profile-photo.has-photo {
+            background: transparent;
+        }
+
         .header-title {
             display: flex;
             flex-direction: column;
@@ -234,10 +259,18 @@
             font-size: 14px;
             flex-shrink: 0;
             font-weight: 500;
+            object-fit: cover;
+            overflow: hidden;
         }
 
         .message.sent .message-avatar {
-            display: none;
+            display: flex;
+        }
+
+        .message.sent .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .message-content {
@@ -469,6 +502,93 @@
                 transition-duration: 0.01ms !important;
             }
         }
+
+        /* Photo Selection Modal */
+        .photo-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-modal.active {
+            display: flex;
+        }
+
+        .photo-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 300px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .photo-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #111b21;
+        }
+
+        .photo-modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .photo-modal-btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .photo-modal-btn.camera {
+            background: #008069;
+            color: white;
+        }
+
+        .photo-modal-btn.camera:hover {
+            background: #006d58;
+        }
+
+        .photo-modal-btn.gallery {
+            background: #f0f2f5;
+            color: #111b21;
+        }
+
+        .photo-modal-btn.gallery:hover {
+            background: #e4e6e9;
+        }
+
+        .photo-modal-btn.cancel {
+            background: transparent;
+            color: #667781;
+            border: 1px solid #e4e6e9;
+        }
+
+        .photo-modal-btn.cancel:hover {
+            background: #f0f2f5;
+        }
+
+        .hidden-input {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -476,6 +596,9 @@
         <div class="header">
             <div class="header-left">
                 <div class="hotel-icon">🏨</div>
+                <div class="guest-profile-photo" id="headerProfilePhoto" onclick="showPhotoModal()" title="Profil fotoğrafı değiştir">
+                    👤
+                </div>
                 <div class="header-title">
                     <div class="hotel-name">Voyage Sorgun</div>
                     <div class="header-subtitle">
@@ -530,11 +653,106 @@
 
     </div>
 
+    <!-- Photo Selection Modal -->
+    <div class="photo-modal" id="photoModal" onclick="closePhotoModal(event)">
+        <div class="photo-modal-content" onclick="event.stopPropagation()">
+            <div class="photo-modal-title">Profil Fotoğrafı Seç</div>
+            <div class="photo-modal-buttons">
+                <button class="photo-modal-btn camera" onclick="takePhoto()">
+                    📷 Fotoğraf Çek
+                </button>
+                <button class="photo-modal-btn gallery" onclick="selectFromGallery()">
+                    🖼️ Galeriden Seç
+                </button>
+                <button class="photo-modal-btn cancel" onclick="closePhotoModal()">
+                    İptal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden-input" onchange="handlePhotoSelect(event)">
+    <input type="file" id="galleryInput" accept="image/*" class="hidden-input" onchange="handlePhotoSelect(event)">
+
     <script>
         // Configuration
         const ROOM_NUMBER = '301'; // Demo için sabit oda numarası
         const GUEST_NAME = 'Ali Bey';
         const SERVER_URL = window.location.origin;
+
+        // Profile Photo Management
+        let guestProfilePhoto = null;
+
+        // Load profile photo from localStorage
+        function loadProfilePhoto() {
+            const savedPhoto = localStorage.getItem('guestProfilePhoto');
+            if (savedPhoto) {
+                guestProfilePhoto = savedPhoto;
+                updateProfilePhotoDisplay();
+            }
+        }
+
+        // Update profile photo display in header and messages
+        function updateProfilePhotoDisplay() {
+            const headerPhoto = document.getElementById('headerProfilePhoto');
+            if (guestProfilePhoto) {
+                headerPhoto.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                headerPhoto.classList.add('has-photo');
+            } else {
+                headerPhoto.innerHTML = '👤';
+                headerPhoto.classList.remove('has-photo');
+            }
+            
+            // Update all sent message avatars
+            const sentAvatars = document.querySelectorAll('.message.sent .message-avatar');
+            sentAvatars.forEach(avatar => {
+                if (guestProfilePhoto) {
+                    avatar.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil">`;
+                } else {
+                    avatar.innerHTML = '👤';
+                }
+            });
+        }
+
+        // Show photo selection modal
+        function showPhotoModal() {
+            document.getElementById('photoModal').classList.add('active');
+        }
+
+        // Close photo modal
+        function closePhotoModal(event) {
+            if (!event || event.target.id === 'photoModal') {
+                document.getElementById('photoModal').classList.remove('active');
+            }
+        }
+
+        // Take photo from camera
+        function takePhoto() {
+            document.getElementById('cameraInput').click();
+        }
+
+        // Select from gallery
+        function selectFromGallery() {
+            document.getElementById('galleryInput').click();
+        }
+
+        // Handle photo selection
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    guestProfilePhoto = e.target.result;
+                    localStorage.setItem('guestProfilePhoto', guestProfilePhoto);
+                    updateProfilePhotoDisplay();
+                    closePhotoModal();
+                };
+                reader.readAsDataURL(file);
+            }
+            // Reset input
+            event.target.value = '';
+        }
 
         // Socket.IO Connection
         const socket = io(SERVER_URL);
@@ -624,9 +842,21 @@
             const isSent = data.senderType === 'guest';
             const time = formatTime(data.timestamp);
             
+            // Get avatar HTML
+            let avatarHTML = '';
+            if (isSent) {
+                if (guestProfilePhoto) {
+                    avatarHTML = `<div class="message-avatar"><img src="${guestProfilePhoto}" alt="Profil"></div>`;
+                } else {
+                    avatarHTML = '<div class="message-avatar">👤</div>';
+                }
+            } else {
+                avatarHTML = '<div class="message-avatar">🏨</div>';
+            }
+            
             const messageHTML = `
                 <div class="message ${isSent ? 'sent' : ''}" ${animate ? 'style="animation: messageSlide 0.3s ease"' : ''}>
-                    <div class="message-avatar">${isSent ? '👤' : '🏨'}</div>
+                    ${avatarHTML}
                     <div class="message-content">
                         <div class="message-bubble">
                             <div class="message-text">${escapeHtml(data.message)}</div>
@@ -887,6 +1117,7 @@
             console.log('🚀 Voyage Sorgun Chat initialized');
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
+            loadProfilePhoto();
         });
     </script>
 </body>
