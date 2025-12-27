@@ -951,13 +951,19 @@
         // Display message
         function displayMessage(data, animate) {
             const chatContainer = document.getElementById('chatContainer');
-            // Ensure senderType is correctly identified
-            const isSent = data.senderType === 'guest';
+            if (!chatContainer) {
+                console.error('Chat container not found');
+                return;
+            }
+            
+            // Ensure senderType is correctly identified - normalize to lowercase
+            const senderType = (data.senderType || '').toLowerCase();
+            const isSent = senderType === 'guest';
             const time = formatTime(data.timestamp);
             
-            // Debug log
-            if (!isSent && data.senderType) {
-                console.log('Received message from:', data.senderType, 'isSent:', isSent);
+            // Debug log for troubleshooting
+            if (isSent) {
+                console.log('✅ Sent message detected:', data.message.substring(0, 30));
             }
             
             // Get avatar HTML - ensure guestProfilePhoto is current
@@ -971,11 +977,15 @@
                     avatarHTML = '<div class="message-avatar">👤</div>';
                 }
             } else {
+                // Not sent - it's from hotel/staff
                 avatarHTML = '<div class="message-avatar">🏨</div>';
             }
             
+            // Ensure 'sent' class is applied correctly
+            const sentClass = isSent ? 'sent' : '';
+            
             const messageHTML = `
-                <div class="message ${isSent ? 'sent' : ''}" ${animate ? 'style="animation: messageSlide 0.3s ease"' : ''}>
+                <div class="message ${sentClass}" ${animate ? 'style="animation: messageSlide 0.3s ease"' : ''}>
                     ${avatarHTML}
                     <div class="message-content">
                         <div class="message-bubble">
@@ -987,6 +997,13 @@
             `;
             
             chatContainer.insertAdjacentHTML('beforeend', messageHTML);
+            
+            // Verify the message was added with correct class
+            const addedMessage = chatContainer.lastElementChild;
+            if (addedMessage && isSent && !addedMessage.classList.contains('sent')) {
+                console.warn('⚠️ Sent message missing "sent" class, fixing...');
+                addedMessage.classList.add('sent');
+            }
         }
 
         // Add welcome message
