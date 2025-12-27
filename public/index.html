@@ -229,6 +229,7 @@
             animation: messageSlide 0.2s ease;
             align-items: flex-end;
             justify-content: flex-start;
+            width: 100%;
         }
 
         @keyframes messageSlide {
@@ -245,6 +246,7 @@
         .message.sent {
             flex-direction: row-reverse;
             justify-content: flex-end;
+            margin-left: auto;
         }
 
         .message-avatar {
@@ -279,6 +281,14 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+        }
+
+        .message.sent .message-content {
+            align-items: flex-end;
+        }
+
+        .message:not(.sent) .message-content {
+            align-items: flex-start;
         }
 
         .message-bubble {
