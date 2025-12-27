@@ -1040,13 +1040,12 @@
                 console.log('✅ Sent message detected:', data.message.substring(0, 30));
             }
             
-            // Get avatar HTML - ensure guestProfilePhoto is current
+            // Get avatar HTML - use current guestProfilePhoto variable
             let avatarHTML = '';
             if (isSent) {
-                // Re-check profile photo in case it was updated
-                const currentPhoto = localStorage.getItem('guestProfilePhoto') || guestProfilePhoto;
-                if (currentPhoto) {
-                    avatarHTML = `<div class="message-avatar"><img src="${currentPhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;"></div>`;
+                // Use current guestProfilePhoto (loaded from backend or localStorage)
+                if (guestProfilePhoto) {
+                    avatarHTML = `<div class="message-avatar"><img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;"></div>`;
                 } else {
                     avatarHTML = '<div class="message-avatar">👤</div>';
                 }
