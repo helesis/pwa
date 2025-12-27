@@ -658,10 +658,10 @@
         <div class="photo-modal-content" onclick="event.stopPropagation()">
             <div class="photo-modal-title">Profil Fotoğrafı Seç</div>
             <div class="photo-modal-buttons">
-                <button class="photo-modal-btn camera" onclick="takePhoto()">
+                <button class="photo-modal-btn camera" onclick="event.stopPropagation(); takePhoto();">
                     📷 Fotoğraf Çek
                 </button>
-                <button class="photo-modal-btn gallery" onclick="selectFromGallery()">
+                <button class="photo-modal-btn gallery" onclick="event.stopPropagation(); selectFromGallery();">
                     🖼️ Galeriden Seç
                 </button>
                 <button class="photo-modal-btn cancel" onclick="closePhotoModal()">
@@ -672,8 +672,8 @@
     </div>
 
     <!-- Hidden file inputs -->
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden-input" onchange="handlePhotoSelect(event)">
-    <input type="file" id="galleryInput" accept="image/*" class="hidden-input" onchange="handlePhotoSelect(event)">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden-input">
+    <input type="file" id="galleryInput" accept="image/*" class="hidden-input">
 
     <script>
         // Configuration
@@ -746,12 +746,46 @@
 
         // Take photo from camera
         function takePhoto() {
-            document.getElementById('cameraInput').click();
+            const input = document.getElementById('cameraInput');
+            if (input) {
+                // Close modal first
+                const modal = document.getElementById('photoModal');
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+                // Use requestAnimationFrame to ensure modal is closed before opening camera
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        input.click();
+                    });
+                });
+            }
         }
 
         // Select from gallery
         function selectFromGallery() {
-            document.getElementById('galleryInput').click();
+            const input = document.getElementById('galleryInput');
+            if (input) {
+                console.log('🖼️ Opening gallery...');
+                // Close modal first
+                const modal = document.getElementById('photoModal');
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+                // Use requestAnimationFrame to ensure modal is closed before opening file picker
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        try {
+                            input.click();
+                            console.log('✅ Gallery input clicked');
+                        } catch (error) {
+                            console.error('❌ Error opening gallery:', error);
+                        }
+                    });
+                });
+            } else {
+                console.error('❌ Gallery input element not found');
+            }
         }
 
         // Resize image to optimal size for profile photo
@@ -1247,6 +1281,20 @@
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
             loadProfilePhoto();
+            
+            // Setup file input event listeners
+            const cameraInput = document.getElementById('cameraInput');
+            const galleryInput = document.getElementById('galleryInput');
+            
+            if (cameraInput) {
+                cameraInput.addEventListener('change', handlePhotoSelect);
+                console.log('✅ Camera input listener attached');
+            }
+            
+            if (galleryInput) {
+                galleryInput.addEventListener('change', handlePhotoSelect);
+                console.log('✅ Gallery input listener attached');
+            }
         });
     </script>
 </body>
