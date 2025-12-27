@@ -79,7 +79,8 @@ async function initializeDatabase() {
         guest_name VARCHAR(100),
         checkin_date DATE,
         checkout_date DATE,
-        is_active BOOLEAN DEFAULT true
+        is_active BOOLEAN DEFAULT true,
+        profile_photo TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
@@ -240,6 +241,46 @@ app.post('/api/rooms', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error creating/updating room:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get profile photo for a room
+app.get('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT profile_photo FROM rooms WHERE room_number = $1',
+      [req.params.roomNumber]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    
+    res.json({ profilePhoto: result.rows[0].profile_photo || null });
+  } catch (error) {
+    console.error('Error fetching profile photo:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Save profile photo for a room
+app.post('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
+  try {
+    const { profilePhoto } = req.body;
+    const { roomNumber } = req.params;
+    
+    // Update or insert room with profile photo
+    await pool.query(`
+      INSERT INTO rooms (room_number, profile_photo)
+      VALUES ($1, $2)
+      ON CONFLICT(room_number) 
+      DO UPDATE SET profile_photo = EXCLUDED.profile_photo
+    `, [roomNumber, profilePhoto]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving profile photo:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });

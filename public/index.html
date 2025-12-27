@@ -709,12 +709,62 @@
         // Profile Photo Management
         let guestProfilePhoto = null;
 
-        // Load profile photo from localStorage
-        function loadProfilePhoto() {
-            const savedPhoto = localStorage.getItem('guestProfilePhoto');
-            if (savedPhoto) {
-                guestProfilePhoto = savedPhoto;
-                updateProfilePhotoDisplay();
+        // Load profile photo from backend
+        async function loadProfilePhoto() {
+            try {
+                // First try backend
+                const response = await fetch(`/api/rooms/${ROOM_NUMBER}/profile-photo`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.profilePhoto) {
+                        guestProfilePhoto = data.profilePhoto;
+                        // Also save to localStorage as backup
+                        localStorage.setItem('guestProfilePhoto', guestProfilePhoto);
+                        updateProfilePhotoDisplay();
+                        console.log('✅ Profile photo loaded from backend');
+                        return;
+                    }
+                }
+                
+                // Fallback to localStorage
+                const savedPhoto = localStorage.getItem('guestProfilePhoto');
+                if (savedPhoto) {
+                    guestProfilePhoto = savedPhoto;
+                    updateProfilePhotoDisplay();
+                    console.log('✅ Profile photo loaded from localStorage');
+                }
+            } catch (error) {
+                console.error('Error loading profile photo:', error);
+                // Fallback to localStorage
+                const savedPhoto = localStorage.getItem('guestProfilePhoto');
+                if (savedPhoto) {
+                    guestProfilePhoto = savedPhoto;
+                    updateProfilePhotoDisplay();
+                }
+            }
+        }
+
+        // Save profile photo to backend
+        async function saveProfilePhotoToBackend(photoData) {
+            try {
+                const response = await fetch(`/api/rooms/${ROOM_NUMBER}/profile-photo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ profilePhoto: photoData })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Profile photo saved to backend');
+                    return true;
+                } else {
+                    console.error('Failed to save profile photo to backend');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error saving profile photo to backend:', error);
+                return false;
             }
         }
 
@@ -861,7 +911,16 @@
                     // Resize image to 400x400 max (profile photo size)
                     const resizedPhoto = await resizeImage(file, 400, 400, 0.9);
                     guestProfilePhoto = resizedPhoto;
+                    
+                    // Save to localStorage as backup
                     localStorage.setItem('guestProfilePhoto', guestProfilePhoto);
+                    
+                    // Save to backend
+                    const saved = await saveProfilePhotoToBackend(resizedPhoto);
+                    if (!saved) {
+                        console.warn('⚠️ Failed to save to backend, using localStorage only');
+                    }
+                    
                     updateProfilePhotoDisplay();
                     closePhotoModal();
                     console.log('✅ Profile photo updated');
