@@ -18,17 +18,36 @@ try {
   // Read service worker file
   let content = readFileSync(serviceWorkerPath, 'utf8');
   
-  // Find current cache version (format: voyage-chat-v2, voyage-chat-v3, etc.)
-  const versionRegex = /const CACHE_VERSION = 'voyage-chat-v(\d+)';/;
+  // Find current cache version (format: voyage-chat-v4.1, voyage-chat-v4.2, etc.)
+  const versionRegex = /const CACHE_VERSION = 'voyage-chat-v(\d+)\.(\d+)';/;
   const match = content.match(versionRegex);
   
   if (!match) {
-    console.error('❌ Could not find CACHE_VERSION in service-worker.js');
-    process.exit(1);
+    // Try old format (v4, v5, etc.) and convert to new format
+    const oldVersionRegex = /const CACHE_VERSION = 'voyage-chat-v(\d+)';/;
+    const oldMatch = content.match(oldVersionRegex);
+    
+    if (oldMatch) {
+      const majorVersion = parseInt(oldMatch[1], 10);
+      const newVersion = `${majorVersion}.1`;
+      const newContent = content.replace(
+        oldVersionRegex,
+        `const CACHE_VERSION = 'voyage-chat-v${newVersion}';`
+      );
+      writeFileSync(serviceWorkerPath, newContent, 'utf8');
+      console.log(`✅ Cache version converted: v${majorVersion} → v${newVersion}`);
+      console.log(`📦 Service worker ready for deployment`);
+      process.exit(0);
+    } else {
+      console.error('❌ Could not find CACHE_VERSION in service-worker.js');
+      process.exit(1);
+    }
   }
   
-  const currentVersion = parseInt(match[1], 10);
-  const newVersion = currentVersion + 1;
+  const majorVersion = parseInt(match[1], 10);
+  const minorVersion = parseInt(match[2], 10);
+  const newMinorVersion = minorVersion + 1;
+  const newVersion = `${majorVersion}.${newMinorVersion}`;
   
   // Update cache version
   const newContent = content.replace(
@@ -39,7 +58,7 @@ try {
   // Write updated file
   writeFileSync(serviceWorkerPath, newContent, 'utf8');
   
-  console.log(`✅ Cache version updated: v${currentVersion} → v${newVersion}`);
+  console.log(`✅ Cache version updated: v${majorVersion}.${minorVersion} → v${newVersion}`);
   console.log(`📦 Service worker ready for deployment`);
   
 } catch (error) {

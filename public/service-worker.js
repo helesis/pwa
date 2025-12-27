@@ -1,7 +1,7 @@
 // Service Worker for Voyage Sorgun Chat PWA
 // Version: 2.0.0 - Auto-update enabled
 // Cache version updates when service worker file changes
-const CACHE_VERSION = 'voyage-chat-v3';
+const CACHE_VERSION = 'voyage-chat-v4.2';
 const CACHE_NAME = CACHE_VERSION;
 const urlsToCache = [
   '/',
@@ -31,15 +31,16 @@ self.addEventListener('activate', (event) => {
   console.log('Service Worker: Activating new version', CACHE_VERSION);
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Delete all old caches that don't match current version
-          if (cacheName !== CACHE_NAME && cacheName.startsWith('voyage-chat-')) {
-            console.log('Service Worker: Deleting old cache', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+      const deletePromises = cacheNames.map((cacheName) => {
+        // Delete all old caches that don't match current version
+        if (cacheName !== CACHE_NAME && cacheName.startsWith('voyage-chat-')) {
+          console.log('Service Worker: Deleting old cache', cacheName);
+          return caches.delete(cacheName);
+        }
+        return Promise.resolve();
+      });
+      
+      return Promise.all(deletePromises);
     }).then(() => {
       // Claim all clients immediately (iOS/Android compatibility)
       return self.clients.claim();

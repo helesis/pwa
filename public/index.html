@@ -1341,9 +1341,13 @@
             try {
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
-                    const voyageCache = cacheNames.find(name => name.startsWith('voyage-chat-'));
-                    if (voyageCache) {
-                        const version = voyageCache.replace('voyage-chat-', '');
+                    // Find the latest voyage-chat cache (support both v4 and v4.1 formats)
+                    const voyageCaches = cacheNames.filter(name => name.startsWith('voyage-chat-'));
+                    if (voyageCaches.length > 0) {
+                        // Sort to get the latest version
+                        voyageCaches.sort();
+                        const latestCache = voyageCaches[voyageCaches.length - 1];
+                        const version = latestCache.replace('voyage-chat-', '');
                         const versionBadge = document.getElementById('versionBadge');
                         if (versionBadge) {
                             versionBadge.textContent = version;
@@ -1353,7 +1357,7 @@
                         // Fallback to default version
                         const versionBadge = document.getElementById('versionBadge');
                         if (versionBadge) {
-                            versionBadge.textContent = 'v3';
+                            versionBadge.textContent = 'v4.1';
                         }
                     }
                 }
