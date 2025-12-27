@@ -1271,10 +1271,10 @@
                             });
                         });
 
-                        // Periodic update check (every 5 minutes)
+                        // Periodic update check (every 15 seconds)
                         setInterval(() => {
                             registration.update();
-                        }, 5 * 60 * 1000);
+                        }, 15 * 1000);
 
                         // Listen for controller change (service worker activated)
                         navigator.serviceWorker.addEventListener('controllerchange', () => {
