@@ -1194,27 +1194,40 @@
             }
             
             // Double-check the message was added with correct class and alignment
-            const addedMessage = prepend ? chatContainer.firstElementChild : chatContainer.lastElementChild;
-            if (addedMessage) {
-                if (isSent) {
-                    if (!addedMessage.classList.contains('sent')) {
-                        console.warn('⚠️ Sent message missing "sent" class, fixing...');
-                        addedMessage.classList.add('sent');
+            // Use requestAnimationFrame to ensure DOM is ready
+            requestAnimationFrame(() => {
+                const addedMessage = prepend ? chatContainer.firstElementChild : chatContainer.lastElementChild;
+                if (addedMessage) {
+                    // Verify data attributes are set
+                    if (addedMessage.getAttribute('data-sender-type') !== senderType) {
+                        addedMessage.setAttribute('data-sender-type', senderType);
                     }
-                    // Force right alignment with !important
-                    addedMessage.style.setProperty('margin-left', 'auto', 'important');
-                    addedMessage.style.setProperty('margin-right', '0', 'important');
-                    addedMessage.style.setProperty('justify-content', 'flex-end', 'important');
-                } else {
-                    // Ensure received messages don't have sent class
-                    if (addedMessage.classList.contains('sent')) {
-                        addedMessage.classList.remove('sent');
+                    if (addedMessage.getAttribute('data-is-sent') !== String(isSent)) {
+                        addedMessage.setAttribute('data-is-sent', String(isSent));
                     }
-                    addedMessage.style.setProperty('margin-left', '0', 'important');
-                    addedMessage.style.setProperty('margin-right', 'auto', 'important');
-                    addedMessage.style.setProperty('justify-content', 'flex-start', 'important');
+                    
+                    if (isSent) {
+                        if (!addedMessage.classList.contains('sent')) {
+                            console.warn('⚠️ Sent message missing "sent" class, fixing...');
+                            addedMessage.classList.add('sent');
+                        }
+                        // Force right alignment with !important
+                        addedMessage.style.setProperty('margin-left', 'auto', 'important');
+                        addedMessage.style.setProperty('margin-right', '0', 'important');
+                        addedMessage.style.setProperty('justify-content', 'flex-end', 'important');
+                        addedMessage.style.setProperty('flex-direction', 'row-reverse', 'important');
+                    } else {
+                        // Ensure received messages don't have sent class
+                        if (addedMessage.classList.contains('sent')) {
+                            addedMessage.classList.remove('sent');
+                        }
+                        addedMessage.style.setProperty('margin-left', '0', 'important');
+                        addedMessage.style.setProperty('margin-right', 'auto', 'important');
+                        addedMessage.style.setProperty('justify-content', 'flex-start', 'important');
+                        addedMessage.style.setProperty('flex-direction', 'row', 'important');
+                    }
                 }
-            }
+            });
         }
 
         // Add welcome message
