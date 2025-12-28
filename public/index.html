@@ -1132,8 +1132,20 @@
             // Ensure 'sent' class is applied correctly
             const sentClass = isSent ? 'sent' : '';
             
+            // Build inline style for alignment
+            let inlineStyle = '';
+            if (isSent) {
+                inlineStyle = 'margin-left: auto !important; margin-right: 0 !important;';
+            } else {
+                inlineStyle = 'margin-left: 0 !important; margin-right: auto !important;';
+            }
+            
+            if (animate) {
+                inlineStyle += ' animation: messageSlide 0.3s ease;';
+            }
+            
             const messageHTML = `
-                <div class="message ${sentClass}" ${animate ? 'style="animation: messageSlide 0.3s ease"' : ''}>
+                <div class="message ${sentClass}" style="${inlineStyle}">
                     ${avatarHTML}
                     <div class="message-content">
                         <div class="message-bubble">
@@ -1155,7 +1167,7 @@
                 chatContainer.insertAdjacentHTML('beforeend', messageHTML);
             }
             
-            // Verify the message was added with correct class
+            // Double-check the message was added with correct class and alignment
             const addedMessage = prepend ? chatContainer.firstElementChild : chatContainer.lastElementChild;
             if (addedMessage) {
                 if (isSent) {
@@ -1163,16 +1175,18 @@
                         console.warn('⚠️ Sent message missing "sent" class, fixing...');
                         addedMessage.classList.add('sent');
                     }
-                    // Force right alignment
-                    addedMessage.style.marginLeft = 'auto';
-                    addedMessage.style.marginRight = '0';
+                    // Force right alignment with !important
+                    addedMessage.style.setProperty('margin-left', 'auto', 'important');
+                    addedMessage.style.setProperty('margin-right', '0', 'important');
+                    addedMessage.style.setProperty('justify-content', 'flex-end', 'important');
                 } else {
                     // Ensure received messages don't have sent class
                     if (addedMessage.classList.contains('sent')) {
                         addedMessage.classList.remove('sent');
                     }
-                    addedMessage.style.marginLeft = '0';
-                    addedMessage.style.marginRight = 'auto';
+                    addedMessage.style.setProperty('margin-left', '0', 'important');
+                    addedMessage.style.setProperty('margin-right', 'auto', 'important');
+                    addedMessage.style.setProperty('justify-content', 'flex-start', 'important');
                 }
             }
         }
