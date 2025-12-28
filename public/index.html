@@ -1037,25 +1037,33 @@
             let fixedCount = 0;
 
             allMessages.forEach((messageEl) => {
-                // Check if this is a sent message by looking at the message data
-                // We need to check the actual content to determine if it's sent
-                const messageContent = messageEl.querySelector('.message-content');
-                const messageBubble = messageEl.querySelector('.message-bubble');
+                // Get senderType from data attribute (most reliable)
+                const senderType = messageEl.getAttribute('data-sender-type') || '';
+                const isSentAttr = messageEl.getAttribute('data-is-sent');
+                const isSent = isSentAttr === 'true' || senderType.toLowerCase().trim() === 'guest';
                 
-                // Check if bubble has green background (sent) or white (received)
-                const bubbleStyle = window.getComputedStyle(messageBubble);
-                const bgColor = bubbleStyle.backgroundColor;
-                
-                // Also check if message is on the right side
-                const messageStyle = window.getComputedStyle(messageEl);
-                const justifyContent = messageStyle.justifyContent;
-                
-                // If message should be sent but doesn't have sent class
-                if (justifyContent === 'flex-end' || messageEl.style.marginLeft === 'auto' || bgColor.includes('217, 253, 211')) {
+                if (isSent) {
+                    // This is a sent message - must be right-aligned
                     if (!messageEl.classList.contains('sent')) {
                         messageEl.classList.add('sent');
                         fixedCount++;
                     }
+                    // Force right alignment
+                    messageEl.style.setProperty('margin-left', 'auto', 'important');
+                    messageEl.style.setProperty('margin-right', '0', 'important');
+                    messageEl.style.setProperty('justify-content', 'flex-end', 'important');
+                    messageEl.style.setProperty('flex-direction', 'row-reverse', 'important');
+                } else {
+                    // This is a received message - must be left-aligned
+                    if (messageEl.classList.contains('sent')) {
+                        messageEl.classList.remove('sent');
+                        fixedCount++;
+                    }
+                    // Force left alignment
+                    messageEl.style.setProperty('margin-left', '0', 'important');
+                    messageEl.style.setProperty('margin-right', 'auto', 'important');
+                    messageEl.style.setProperty('justify-content', 'flex-start', 'important');
+                    messageEl.style.setProperty('flex-direction', 'row', 'important');
                 }
             });
 
@@ -1144,8 +1152,9 @@
                 inlineStyle += ' animation: messageSlide 0.3s ease;';
             }
             
+            // Add data attribute to track senderType for reliable alignment fixing
             const messageHTML = `
-                <div class="message ${sentClass}" style="${inlineStyle}">
+                <div class="message ${sentClass}" style="${inlineStyle}" data-sender-type="${senderType}" data-is-sent="${isSent}">
                     ${avatarHTML}
                     <div class="message-content">
                         <div class="message-bubble">
