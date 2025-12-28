@@ -1097,10 +1097,19 @@
                 </div>
             `;
             
-            chatContainer.insertAdjacentHTML('beforeend', messageHTML);
+            // prepend parameter: true = add to top, false = add to bottom
+            const prepend = arguments[2] || false;
+            
+            if (prepend) {
+                // Insert at the beginning (for older messages)
+                chatContainer.insertAdjacentHTML('afterbegin', messageHTML);
+            } else {
+                // Insert at the end (for new messages)
+                chatContainer.insertAdjacentHTML('beforeend', messageHTML);
+            }
             
             // Verify the message was added with correct class
-            const addedMessage = chatContainer.lastElementChild;
+            const addedMessage = prepend ? chatContainer.firstElementChild : chatContainer.lastElementChild;
             if (addedMessage && isSent && !addedMessage.classList.contains('sent')) {
                 console.warn('⚠️ Sent message missing "sent" class, fixing...');
                 addedMessage.classList.add('sent');
