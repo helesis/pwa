@@ -1008,8 +1008,14 @@
             } else {
                 messages.forEach(msg => {
                     // Verify senderType is correct
-                    const senderType = (msg.senderType || '').toLowerCase();
-                    console.log('Message:', senderType, msg.message.substring(0, 20), 'isSent:', senderType === 'guest');
+                    const senderType = (msg.senderType || '').toString().toLowerCase().trim();
+                    const isSent = senderType === 'guest';
+                    console.log('📨 Loading message:', {
+                        senderType: msg.senderType,
+                        normalized: senderType,
+                        isSent: isSent,
+                        preview: msg.message.substring(0, 20)
+                    });
                     displayMessage(msg, false);
                 });
                 
