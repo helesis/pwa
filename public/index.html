@@ -1100,9 +1100,14 @@
                 return;
             }
             
-            // Ensure senderType is correctly identified - normalize to lowercase
-            const senderType = (data.senderType || '').toLowerCase();
+            // Ensure senderType is correctly identified - normalize to lowercase and trim
+            const senderType = (data.senderType || '').toString().toLowerCase().trim();
             const isSent = senderType === 'guest';
+            
+            // Debug: Log senderType to help troubleshoot
+            if (data.senderType !== senderType) {
+                console.warn('⚠️ senderType normalized:', data.senderType, '→', senderType);
+            }
             const time = formatTime(data.timestamp);
             
             // Debug log for troubleshooting
