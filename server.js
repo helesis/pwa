@@ -116,18 +116,38 @@ io.on('connection', (socket) => {
     console.log(`👤 Client joined room: ${roomNumber}`);
     
     try {
-      // Send chat history
+      // Send chat history (last 50 messages)
       const result = await pool.query(`
         SELECT * FROM messages 
         WHERE room_number = $1 
-        ORDER BY timestamp ASC 
+        ORDER BY timestamp DESC 
         LIMIT 50
       `, [roomNumber]);
       
-      socket.emit('chat_history', result.rows);
+      socket.emit('chat_history', result.rows.reverse());
     } catch (error) {
       console.error('Error loading chat history:', error);
       socket.emit('chat_history', []);
+    }
+  });
+
+  // Load older messages
+  socket.on('load_older_messages', async (data) => {
+    const { roomNumber, beforeTimestamp, limit = 50 } = data;
+    
+    try {
+      const result = await pool.query(`
+        SELECT * FROM messages 
+        WHERE room_number = $1 
+        AND timestamp < $2
+        ORDER BY timestamp DESC 
+        LIMIT $3
+      `, [roomNumber, beforeTimestamp, limit]);
+      
+      socket.emit('older_messages', result.rows.reverse());
+    } catch (error) {
+      console.error('Error loading older messages:', error);
+      socket.emit('older_messages', []);
     }
   });
 

@@ -1004,15 +1004,22 @@
             if (messages.length === 0) {
                 // Show welcome message
                 addWelcomeMessage();
+                oldestMessageTimestamp = null;
             } else {
                 messages.forEach(msg => {
                     // Verify senderType is correct
                     console.log('Message:', msg.senderType, msg.message.substring(0, 20));
                     displayMessage(msg, false);
                 });
+                
+                // Set oldest message timestamp for pagination
+                oldestMessageTimestamp = messages[0].timestamp;
             }
             
             scrollToBottom();
+            
+            // Setup scroll listener for loading older messages
+            setupScrollListener();
         });
 
         // New message from server
@@ -1329,6 +1336,89 @@
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
+
+        // Load older messages when scrolling to top
+        let isLoadingOlderMessages = false;
+        let oldestMessageTimestamp = null;
+
+        function setupScrollListener() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return;
+
+            chatContainer.addEventListener('scroll', () => {
+                // Check if scrolled near the top (within 100px)
+                if (chatContainer.scrollTop < 100 && !isLoadingOlderMessages && oldestMessageTimestamp) {
+                    loadOlderMessages();
+                }
+            });
+        }
+
+        async function loadOlderMessages() {
+            if (isLoadingOlderMessages || !oldestMessageTimestamp) return;
+
+            isLoadingOlderMessages = true;
+            const chatContainer = document.getElementById('chatContainer');
+            const previousScrollHeight = chatContainer.scrollHeight;
+
+            // Show loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.id = 'loadingOlder';
+            loadingIndicator.style.textAlign = 'center';
+            loadingIndicator.style.padding = '10px';
+            loadingIndicator.style.color = '#667781';
+            loadingIndicator.innerHTML = '⏳ Eski mesajlar yükleniyor...';
+            chatContainer.insertBefore(loadingIndicator, chatContainer.firstChild);
+
+            socket.emit('load_older_messages', {
+                roomNumber: ROOM_NUMBER,
+                beforeTimestamp: oldestMessageTimestamp,
+                limit: 50
+            });
+        }
+
+        // Handle older messages from server
+        socket.on('older_messages', (messages) => {
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingIndicator = document.getElementById('loadingOlder');
+            
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+
+            if (messages.length === 0) {
+                isLoadingOlderMessages = false;
+                // Show "No more messages" indicator
+                const noMoreIndicator = document.createElement('div');
+                noMoreIndicator.style.textAlign = 'center';
+                noMoreIndicator.style.padding = '10px';
+                noMoreIndicator.style.color = '#667781';
+                noMoreIndicator.style.fontSize = '12px';
+                noMoreIndicator.innerHTML = '📜 Tüm mesajlar yüklendi';
+                chatContainer.insertBefore(noMoreIndicator, chatContainer.firstChild);
+                oldestMessageTimestamp = null; // No more messages to load
+                return;
+            }
+
+            // Save current scroll position
+            const previousScrollHeight = chatContainer.scrollHeight;
+
+            // Add messages to the top (prepend)
+            messages.forEach(msg => {
+                displayMessage(msg, false, true);
+            });
+
+            // Restore scroll position (prevent jump)
+            const newScrollHeight = chatContainer.scrollHeight;
+            chatContainer.scrollTop = newScrollHeight - previousScrollHeight;
+
+            // Update oldest message timestamp
+            if (messages.length > 0) {
+                oldestMessageTimestamp = messages[0].timestamp;
+            }
+
+            isLoadingOlderMessages = false;
+            console.log('✅ Loaded', messages.length, 'older messages');
+        });
 
         // Service Worker Registration (PWA) with Auto-Update
         if ('serviceWorker' in navigator) {
