@@ -12,18 +12,27 @@ const urlsToCache = [
 // Install event - cache resources
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Installing new version', CACHE_VERSION);
+  // Force activation immediately, don't wait for other tabs to close
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Service Worker: Caching files');
-        return cache.addAll(urlsToCache);
+        // Use cache.addAll but don't fail if some files fail
+        return Promise.allSettled(
+          urlsToCache.map(url => 
+            cache.add(url).catch(err => {
+              console.warn('Failed to cache:', url, err);
+              return null;
+            })
+          )
+        );
       })
       .catch((error) => {
         console.error('Service Worker: Cache failed', error);
       })
   );
-  // Force activation of new service worker immediately
-  self.skipWaiting();
 });
 
 // Activate event - clean up old caches

@@ -1336,6 +1336,9 @@
 
             // Register service worker
             window.addEventListener('load', () => {
+                // Add cache busting query parameter to service worker URL
+                const swUrl = '/service-worker.js?v=' + Date.now();
+                
                 navigator.serviceWorker.register('/service-worker.js', {
                     updateViaCache: 'none' // Always check for updates
                 })
@@ -1343,31 +1346,40 @@
                         console.log('✅ Service Worker registered:', registration.scope);
 
                         // Check for updates immediately
-                        registration.update();
+                        registration.update().catch(err => console.error('Update check failed:', err));
 
                         // Listen for service worker updates
                         registration.addEventListener('updatefound', () => {
                             console.log('🔄 New service worker found, installing...');
                             const newWorker = registration.installing;
 
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New service worker is ready
-                                    console.log('✅ New service worker installed');
-                                    
-                                    // Show update notification
-                                    if (confirm('Yeni güncelleme mevcut! Uygulamayı yenilemek ister misiniz?')) {
-                                        // User wants to update
-                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                                        window.location.reload();
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    console.log('Service Worker state:', newWorker.state);
+                                    if (newWorker.state === 'installed') {
+                                        if (navigator.serviceWorker.controller) {
+                                            // New service worker is ready
+                                            console.log('✅ New service worker installed');
+                                            
+                                            // Show update notification
+                                            if (confirm('Yeni güncelleme mevcut! Uygulamayı yenilemek ister misiniz?')) {
+                                                // User wants to update
+                                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                                setTimeout(() => {
+                                                    window.location.reload();
+                                                }, 100);
+                                            }
+                                        } else {
+                                            console.log('✅ Service Worker installed for the first time');
+                                        }
                                     }
-                                }
-                            });
+                                });
+                            }
                         });
 
                         // Periodic update check (every 15 seconds)
                         setInterval(() => {
-                            registration.update();
+                            registration.update().catch(err => console.error('Periodic update check failed:', err));
                         }, 15 * 1000);
 
                         // Listen for controller change (service worker activated)
