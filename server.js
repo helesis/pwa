@@ -38,6 +38,15 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Service worker should never be cached
+app.get('/service-worker.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(join(__dirname, 'public', 'service-worker.js'));
+});
+
 app.use(express.static('public'));
 
 // PostgreSQL Database Setup
