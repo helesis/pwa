@@ -1008,12 +1008,18 @@
             } else {
                 messages.forEach(msg => {
                     // Verify senderType is correct
-                    console.log('Message:', msg.senderType, msg.message.substring(0, 20));
+                    const senderType = (msg.senderType || '').toLowerCase();
+                    console.log('Message:', senderType, msg.message.substring(0, 20), 'isSent:', senderType === 'guest');
                     displayMessage(msg, false);
                 });
                 
                 // Set oldest message timestamp for pagination
                 oldestMessageTimestamp = messages[0].timestamp;
+                
+                // Fix alignment for all messages after loading
+                setTimeout(() => {
+                    fixMessageAlignment();
+                }, 100);
             }
             
             scrollToBottom();
@@ -1021,6 +1027,42 @@
             // Setup scroll listener for loading older messages
             setupScrollListener();
         });
+
+        // Fix message alignment - ensure all sent messages have correct class and alignment
+        function fixMessageAlignment() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return;
+
+            const allMessages = chatContainer.querySelectorAll('.message');
+            let fixedCount = 0;
+
+            allMessages.forEach((messageEl) => {
+                // Check if this is a sent message by looking at the message data
+                // We need to check the actual content to determine if it's sent
+                const messageContent = messageEl.querySelector('.message-content');
+                const messageBubble = messageEl.querySelector('.message-bubble');
+                
+                // Check if bubble has green background (sent) or white (received)
+                const bubbleStyle = window.getComputedStyle(messageBubble);
+                const bgColor = bubbleStyle.backgroundColor;
+                
+                // Also check if message is on the right side
+                const messageStyle = window.getComputedStyle(messageEl);
+                const justifyContent = messageStyle.justifyContent;
+                
+                // If message should be sent but doesn't have sent class
+                if (justifyContent === 'flex-end' || messageEl.style.marginLeft === 'auto' || bgColor.includes('217, 253, 211')) {
+                    if (!messageEl.classList.contains('sent')) {
+                        messageEl.classList.add('sent');
+                        fixedCount++;
+                    }
+                }
+            });
+
+            if (fixedCount > 0) {
+                console.log(`✅ Fixed alignment for ${fixedCount} messages`);
+            }
+        }
 
         // New message from server
         socket.on('new_message', (data) => {
@@ -1110,9 +1152,23 @@
             
             // Verify the message was added with correct class
             const addedMessage = prepend ? chatContainer.firstElementChild : chatContainer.lastElementChild;
-            if (addedMessage && isSent && !addedMessage.classList.contains('sent')) {
-                console.warn('⚠️ Sent message missing "sent" class, fixing...');
-                addedMessage.classList.add('sent');
+            if (addedMessage) {
+                if (isSent) {
+                    if (!addedMessage.classList.contains('sent')) {
+                        console.warn('⚠️ Sent message missing "sent" class, fixing...');
+                        addedMessage.classList.add('sent');
+                    }
+                    // Force right alignment
+                    addedMessage.style.marginLeft = 'auto';
+                    addedMessage.style.marginRight = '0';
+                } else {
+                    // Ensure received messages don't have sent class
+                    if (addedMessage.classList.contains('sent')) {
+                        addedMessage.classList.remove('sent');
+                    }
+                    addedMessage.style.marginLeft = '0';
+                    addedMessage.style.marginRight = 'auto';
+                }
             }
         }
 
