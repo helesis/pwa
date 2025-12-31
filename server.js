@@ -191,7 +191,10 @@ io.on('connection', (socket) => {
         timestamp: row.timestamp
       }));
       
+      console.log('📤 Sending chat_history to client');
+      console.log('📤 Message count:', messages.length);
       socket.emit('chat_history', messages);
+      console.log('✅ chat_history sent successfully');
     } catch (error) {
       console.error('Error loading chat history:', error);
       socket.emit('chat_history', []);
