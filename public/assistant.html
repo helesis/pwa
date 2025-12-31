@@ -257,38 +257,51 @@
         }
 
         .message-status.read {
-            color: #53bdeb; /* Blue double tick */
+            color: #34B7F1; /* Blue double tick - WhatsApp blue */
         }
 
         /* WhatsApp style tick icons */
         .message-status-icon {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             width: 16px;
-            height: 16px;
+            height: 14px;
             position: relative;
             font-family: 'Segoe UI', Arial, sans-serif;
+            font-weight: normal;
         }
 
-        .message-status.sent .message-status-icon::after {
+        /* Single tick (sent) */
+        .message-status.sent .message-status-icon::before {
             content: '✓';
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        /* Double tick (delivered/read) - Two separate ticks */
+        .message-status.delivered .message-status-icon::before,
+        .message-status.read .message-status-icon::before {
+            content: '✓';
+            font-size: 16px;
+            line-height: 1;
             position: absolute;
             left: 0;
-            top: 0;
-            font-size: 16px;
         }
 
         .message-status.delivered .message-status-icon::after,
         .message-status.read .message-status-icon::after {
-            content: '✓✓';
-            position: absolute;
-            left: 0;
-            top: 0;
+            content: '✓';
             font-size: 16px;
-            letter-spacing: -3px;
+            line-height: 1;
+            position: absolute;
+            left: 6px; /* Second tick offset */
         }
 
+        /* Read status - blue color */
+        .message-status.read .message-status-icon::before,
         .message-status.read .message-status-icon::after {
-            color: #53bdeb;
+            color: #34B7F1;
         }
 
         .input-container {
@@ -739,17 +752,19 @@
             
             const time = new Date(data.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
             
-            // Status HTML (for both sent and received messages)
+            // Status HTML (ONLY for sent messages - WhatsApp style)
             let statusHTML = '';
-            const status = data.status || 'sent';
-            const statusClass = status === 'read' ? 'read' : 
-                               status === 'delivered' ? 'delivered' : 'sent';
-            
-            statusHTML = `
-                <span class="message-status ${statusClass}">
-                    <span class="message-status-icon"></span>
-                </span>
-            `;
+            if (isSent) {
+                const status = data.status || 'sent';
+                const statusClass = status === 'read' ? 'read' : 
+                                   status === 'delivered' ? 'delivered' : 'sent';
+                
+                statusHTML = `
+                    <span class="message-status ${statusClass}">
+                        <span class="message-status-icon"></span>
+                    </span>
+                `;
+            }
             
             const messageHTML = `
                 <div class="message ${isSent ? 'sent' : ''}" data-message-id="${data.id}" data-is-sent="${isSent}">
