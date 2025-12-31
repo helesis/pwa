@@ -81,7 +81,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         room_number VARCHAR(50) NOT NULL,
-        checkin_date DATE NOT NULL,
+        checkin_date DATE,
         sender_type VARCHAR(20) NOT NULL,
         sender_name VARCHAR(100),
         message TEXT NOT NULL,
