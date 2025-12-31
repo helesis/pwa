@@ -409,6 +409,72 @@ io.on('connection', (socket) => {
     socket.to(data.roomNumber).emit('user_stopped_typing');
   });
 
+  // Message delivered status
+  socket.on('message_delivered', async (data) => {
+    try {
+      const { messageId } = data;
+      if (!messageId) return;
+      
+      // Update message delivered_at timestamp
+      await pool.query(
+        'UPDATE messages SET delivered_at = CURRENT_TIMESTAMP WHERE id = $1 AND delivered_at IS NULL',
+        [messageId]
+      );
+      
+      // Get message info to broadcast status update
+      const messageResult = await pool.query(
+        'SELECT room_number, checkin_date FROM messages WHERE id = $1',
+        [messageId]
+      );
+      
+      if (messageResult.rows.length > 0) {
+        const { room_number, checkin_date } = messageResult.rows[0];
+        const roomId = `${room_number}_${checkin_date}`;
+        
+        // Broadcast status update to room (sender will see delivered tick)
+        io.to(roomId).emit('message_status_update', { 
+          messageId, 
+          status: 'delivered' 
+        });
+      }
+    } catch (error) {
+      console.error('Error updating delivered status:', error);
+    }
+  });
+
+  // Message read status
+  socket.on('message_read', async (data) => {
+    try {
+      const { messageIds } = data;
+      if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) return;
+      
+      // Update messages read_at timestamp
+      await pool.query(
+        'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE id = ANY($1) AND read_at IS NULL',
+        [messageIds]
+      );
+      
+      // Get first message info to broadcast status update
+      const messageResult = await pool.query(
+        'SELECT room_number, checkin_date FROM messages WHERE id = $1',
+        [messageIds[0]]
+      );
+      
+      if (messageResult.rows.length > 0) {
+        const { room_number, checkin_date } = messageResult.rows[0];
+        const roomId = `${room_number}_${checkin_date}`;
+        
+        // Broadcast status update to room (sender will see read ticks)
+        io.to(roomId).emit('message_status_update', { 
+          messageIds, 
+          status: 'read' 
+        });
+      }
+    } catch (error) {
+      console.error('Error updating read status:', error);
+    }
+  });
+
   socket.on('disconnect', (reason) => {
     console.log('🔴 ========== CLIENT DISCONNECTED ==========');
     console.log('🔴 Socket ID:', socket.id);
