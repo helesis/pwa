@@ -1104,10 +1104,9 @@
             });
 
             // Timeout kontrolü - 10 saniye içinde bağlanmazsa hata göster
-            const connectionTimeout = setTimeout(() => {
-                if (!socket.connected) {
+            let connectionTimeout = setTimeout(() => {
+                if (socket && !socket.connected) {
                     console.error('❌ Connection timeout - socket not connected after 10 seconds');
-                    updateConnectionStatus(false);
                     const statusText = document.getElementById('statusText');
                     if (statusText) {
                         statusText.textContent = 'Bağlantı hatası';
@@ -1116,7 +1115,7 @@
             }, 10000);
 
             // Bağlantı başarılı olunca timeout'u temizle
-            socket.on('connect', () => {
+            socket.once('connect', () => {
                 clearTimeout(connectionTimeout);
             });
 
