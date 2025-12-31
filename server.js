@@ -656,9 +656,25 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Serve frontend
+// Serve frontend pages
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/assistant', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'assistant.html'));
+});
+
+app.get('/assistant.html', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'assistant.html'));
+});
+
+app.get('/join', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'join.html'));
+});
+
+app.get('/join.html', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'join.html'));
 });
 
 const PORT = process.env.PORT || 3000;
