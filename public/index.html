@@ -1290,7 +1290,7 @@
             socket.on('older_messages', (messages) => {
                 console.log('📜 ========== OLDER MESSAGES RECEIVED ==========');
                 console.log('📜 Message count:', messages.length);
-                const chatContainer = document.getElementById('chatContainer');
+                const chatContainerEl = document.getElementById('chatContainer');
                 const loadingIndicator = document.getElementById('loadingOlder');
                 
                 if (loadingIndicator) {
@@ -1305,9 +1305,14 @@
                     noMoreIndicator.style.padding = '10px';
                     noMoreIndicator.style.color = '#667781';
                     noMoreIndicator.textContent = 'Daha eski mesaj yok';
-                    chatContainer.insertBefore(noMoreIndicator, chatContainer.firstChild);
+                    if (chatContainerEl) {
+                        chatContainerEl.insertBefore(noMoreIndicator, chatContainerEl.firstChild);
+                    }
                     return;
                 }
+
+                // Store previous scroll height before adding messages
+                const previousScrollHeight = chatContainerEl ? chatContainerEl.scrollHeight : 0;
 
                 // Add messages to the top
                 messages.forEach(msg => {
@@ -1315,9 +1320,10 @@
                 });
 
                 // Restore scroll position
-                const chatContainer = document.getElementById('chatContainer');
-                const newScrollHeight = chatContainer.scrollHeight;
-                chatContainer.scrollTop = newScrollHeight - previousScrollHeight;
+                if (chatContainerEl) {
+                    const newScrollHeight = chatContainerEl.scrollHeight;
+                    chatContainerEl.scrollTop = newScrollHeight - previousScrollHeight;
+                }
 
                 // Update oldest message timestamp
                 oldestMessageTimestamp = messages[0].timestamp;
