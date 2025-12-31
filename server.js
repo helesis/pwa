@@ -270,6 +270,7 @@ io.on('connection', (socket) => {
       const messages = result.rows.reverse().map(row => ({
         id: row.id,
         roomNumber: row.room_number,
+        checkinDate: row.checkin_date,
         senderType: row.sender_type,
         senderName: row.sender_name,
         message: row.message,
