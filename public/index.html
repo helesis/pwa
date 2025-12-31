@@ -1041,26 +1041,41 @@
 
         // Initialize socket after guest info is loaded
         async function initializeSocket() {
+            console.log('🚀 ========== SOCKET INITIALIZATION START ==========');
+            console.log('📋 Step 1: Loading guest info...');
+            console.log('📋 Current URL:', window.location.href);
+            console.log('📋 URL Params:', { room: ROOM_NUMBER, token: INVITE_TOKEN });
+            
             // Wait for guest info to load
             const loaded = await loadGuestInfo();
+            
+            console.log('📋 Step 2: Guest info loaded:', loaded);
+            console.log('📋 Room Number:', ROOM_NUMBER);
+            console.log('📋 Guest Name:', GUEST_NAME);
             
             if (!ROOM_NUMBER) {
                 console.error('❌ Room number not available after loading guest info');
                 console.log('Current state:', { ROOM_NUMBER, INVITE_TOKEN, loaded });
                 // Fallback to default
                 ROOM_NUMBER = '301';
+                console.warn('⚠️ Using fallback room number:', ROOM_NUMBER);
             }
             
-            console.log('🔌 Initializing socket with room:', ROOM_NUMBER, 'Server URL:', SERVER_URL);
+            console.log('🔌 Step 3: Initializing socket');
+            console.log('🔌 Room:', ROOM_NUMBER);
+            console.log('🔌 Server URL:', SERVER_URL);
+            console.log('🔌 User Agent:', navigator.userAgent);
             
             // Detect mobile device
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            console.log('📱 Step 4: Device detection');
             console.log('📱 Is mobile device:', isMobile);
+            console.log('📱 Screen size:', window.innerWidth + 'x' + window.innerHeight);
             
             // Now create socket connection
             // Mobile devices: prefer polling, then websocket
             // Desktop: prefer websocket, then polling
-            socket = io(SERVER_URL, {
+            const socketOptions = {
                 transports: isMobile ? ['polling', 'websocket'] : ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionDelay: 1000,
@@ -1069,23 +1084,38 @@
                 timeout: 20000,
                 forceNew: false,
                 upgrade: true
-            });
+            };
+            console.log('📱 Socket options:', JSON.stringify(socketOptions, null, 2));
+            
+            console.log('🔌 Step 5: Creating socket connection...');
+            socket = io(SERVER_URL, socketOptions);
+            console.log('🔌 Socket object created:', !!socket);
             
             // Connection Events
             socket.on('connect', () => {
-                console.log('✅ Connected to server, socket ID:', socket.id);
-                console.log('📡 Transport:', socket.io.engine.transport.name);
+                console.log('✅ ========== CONNECTION SUCCESS ==========');
+                console.log('✅ Socket ID:', socket.id);
+                console.log('✅ Transport:', socket.io.engine.transport.name);
+                console.log('✅ Engine ID:', socket.io.engine.id);
+                console.log('✅ Connected at:', new Date().toISOString());
+                
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
                     statusText.textContent = 'Çevrimiçi';
                 }
-                console.log('📤 Emitting join_room with:', ROOM_NUMBER);
+                
+                console.log('📤 Step 6: Emitting join_room');
+                console.log('📤 Room Number:', ROOM_NUMBER);
                 socket.emit('join_room', ROOM_NUMBER);
+                console.log('📤 join_room event emitted');
             });
 
             // Connection attempt started
-            socket.on('connect_attempt', () => {
-                console.log('🔄 Connection attempt started...');
+            socket.on('connect_attempt', (attemptNumber) => {
+                console.log('🔄 ========== CONNECTION ATTEMPT ==========');
+                console.log('🔄 Attempt number:', attemptNumber || 1);
+                console.log('🔄 Time:', new Date().toISOString());
+                console.log('🔄 Server URL:', SERVER_URL);
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
                     statusText.textContent = 'Bağlanıyor...';
@@ -1107,12 +1137,20 @@
             });
 
             socket.on('connect_error', (error) => {
-                console.error('❌ Connection error:', error);
+                console.error('❌ ========== CONNECTION ERROR ==========');
+                console.error('❌ Error object:', error);
                 console.error('❌ Error type:', error.type);
                 console.error('❌ Error message:', error.message);
+                console.error('❌ Error description:', error.description);
+                console.error('❌ Error context:', error.context);
+                console.error('❌ Time:', new Date().toISOString());
+                console.error('❌ Server URL:', SERVER_URL);
+                console.error('❌ Socket connected:', socket.connected);
+                console.error('❌ Socket disconnected:', socket.disconnected);
+                
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
-                    statusText.textContent = 'Bağlantı hatası';
+                    statusText.textContent = `Bağlantı hatası: ${error.message || 'Bilinmeyen hata'}`;
                 }
             });
 
@@ -1158,8 +1196,16 @@
 
             // Load chat history
             socket.on('chat_history', (messages) => {
-                console.log('📜 Chat history received:', messages.length, 'messages');
-                console.log('📜 Sample message:', messages[0] ? messages[0].message.substring(0, 30) : 'none');
+                console.log('📜 ========== CHAT HISTORY RECEIVED ==========');
+                console.log('📜 Message count:', messages.length);
+                console.log('📜 Time:', new Date().toISOString());
+                if (messages.length > 0) {
+                    console.log('📜 First message:', {
+                        sender: messages[0].senderName,
+                        type: messages[0].senderType,
+                        preview: messages[0].message.substring(0, 50)
+                    });
+                }
                 const chatContainer = document.getElementById('chatContainer');
                 chatContainer.innerHTML = '';
                 

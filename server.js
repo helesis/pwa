@@ -159,10 +159,18 @@ io.on('connection', (socket) => {
 
   // Join room
   socket.on('join_room', async (roomNumber) => {
+    console.log('🔵 ========== SERVER: JOIN ROOM ==========');
+    console.log('🔵 Socket ID:', socket.id);
+    console.log('🔵 Room Number:', roomNumber);
+    console.log('🔵 Time:', new Date().toISOString());
+    console.log('🔵 Client IP:', socket.handshake.address);
+    console.log('🔵 User Agent:', socket.handshake.headers['user-agent']);
+    
     socket.join(roomNumber);
-    console.log(`👤 Client joined room: ${roomNumber}`);
+    console.log(`✅ Client joined room: ${roomNumber}`);
     
     try {
+      console.log('📊 Fetching chat history for room:', roomNumber);
       // Send chat history (last 50 messages)
       const result = await pool.query(`
         SELECT * FROM messages 
@@ -170,6 +178,8 @@ io.on('connection', (socket) => {
         ORDER BY timestamp DESC 
         LIMIT 50
       `, [roomNumber]);
+      
+      console.log('📊 Messages found:', result.rows.length);
       
       // Map database column names (snake_case) to frontend format (camelCase)
       const messages = result.rows.reverse().map(row => ({
