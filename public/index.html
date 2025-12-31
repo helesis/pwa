@@ -1279,6 +1279,11 @@
                     // Set oldest message timestamp for pagination
                     oldestMessageTimestamp = messages[0].timestamp;
                     
+                    // Initialize observer after messages loaded
+                    setTimeout(() => {
+                        initMessageObserver();
+                    }, 300);
+                    
                     // Fix alignment for all messages after loading - use multiple checks
                     setTimeout(() => {
                         fixMessageAlignment();
