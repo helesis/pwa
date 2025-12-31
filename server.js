@@ -124,7 +124,17 @@ io.on('connection', (socket) => {
         LIMIT 50
       `, [roomNumber]);
       
-      socket.emit('chat_history', result.rows.reverse());
+      // Map database column names (snake_case) to frontend format (camelCase)
+      const messages = result.rows.reverse().map(row => ({
+        id: row.id,
+        roomNumber: row.room_number,
+        senderType: row.sender_type,
+        senderName: row.sender_name,
+        message: row.message,
+        timestamp: row.timestamp
+      }));
+      
+      socket.emit('chat_history', messages);
     } catch (error) {
       console.error('Error loading chat history:', error);
       socket.emit('chat_history', []);
@@ -144,7 +154,17 @@ io.on('connection', (socket) => {
         LIMIT $3
       `, [roomNumber, beforeTimestamp, limit]);
       
-      socket.emit('older_messages', result.rows.reverse());
+      // Map database column names (snake_case) to frontend format (camelCase)
+      const messages = result.rows.reverse().map(row => ({
+        id: row.id,
+        roomNumber: row.room_number,
+        senderType: row.sender_type,
+        senderName: row.sender_name,
+        message: row.message,
+        timestamp: row.timestamp
+      }));
+      
+      socket.emit('older_messages', messages);
     } catch (error) {
       console.error('Error loading older messages:', error);
       socket.emit('older_messages', []);
@@ -244,7 +264,17 @@ app.get('/api/messages/:roomNumber', async (req, res) => {
       LIMIT 100
     `, [req.params.roomNumber]);
     
-    res.json(result.rows.reverse());
+    // Map database column names (snake_case) to frontend format (camelCase)
+    const messages = result.rows.reverse().map(row => ({
+      id: row.id,
+      roomNumber: row.room_number,
+      senderType: row.sender_type,
+      senderName: row.sender_name,
+      message: row.message,
+      timestamp: row.timestamp
+    }));
+    
+    res.json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ error: 'Database error' });
