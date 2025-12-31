@@ -1746,15 +1746,26 @@
             
             if (!message) return;
             
-            console.log('📤 Sending message:', { roomNumber: ROOM_NUMBER, message: message.substring(0, 30) });
+            console.log('📤 Sending message:', { roomNumber: ROOM_NUMBER, checkinDate: CHECKIN_DATE, message: message.substring(0, 30) });
             
-            // Send to server
-            socket.emit('send_message', {
+            // Create temporary message ID for optimistic update
+            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Optimistic update - show message immediately
+            const optimisticMessage = {
+                id: tempId,
                 roomNumber: ROOM_NUMBER,
+                checkinDate: CHECKIN_DATE,
                 senderType: 'guest',
                 senderName: GUEST_NAME,
-                message: message
-            });
+                message: message,
+                timestamp: new Date().toISOString(),
+                status: 'sent'
+            };
+            
+            // Display message immediately
+            displayMessage(optimisticMessage, true);
+            scrollToBottom();
             
             // Clear input
             input.value = '';
@@ -1768,6 +1779,40 @@
                 });
                 isTyping = false;
             }
+            
+            // Send to server
+            socket.emit('send_message', {
+                roomNumber: ROOM_NUMBER,
+                checkinDate: CHECKIN_DATE,
+                senderType: 'guest',
+                senderName: GUEST_NAME,
+                message: message
+            });
+            
+            // When real message arrives, replace the temporary one
+            const replaceTempMessage = (realMessage) => {
+                const tempMessageEl = document.querySelector(`[data-message-id="${tempId}"]`);
+                if (tempMessageEl) {
+                    // Update the message ID
+                    tempMessageEl.setAttribute('data-message-id', realMessage.id);
+                    
+                    // Update status if needed
+                    if (realMessage.status) {
+                        const statusEl = tempMessageEl.querySelector('.message-status');
+                        if (statusEl) {
+                            statusEl.classList.remove('sent', 'delivered', 'read');
+                            statusEl.classList.add(realMessage.status);
+                        }
+                    }
+                }
+            };
+            
+            // Listen for the real message once
+            socket.once('new_message', (realMessage) => {
+                if (realMessage.message === message && realMessage.senderType === 'guest') {
+                    replaceTempMessage(realMessage);
+                }
+            });
         }
 
         // Handle input change (typing indicator)
