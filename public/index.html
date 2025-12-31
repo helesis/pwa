@@ -1620,6 +1620,7 @@
                 isTyping = true;
                 socket.emit('typing', {
                     roomNumber: ROOM_NUMBER,
+                    checkinDate: CHECKIN_DATE,
                     senderName: GUEST_NAME,
                     senderType: 'guest'
                 });
@@ -1632,7 +1633,10 @@
             if (input.value.trim()) {
                 typingTimeout = setTimeout(() => {
                     if (isTyping && socket) {
-                        socket.emit('stop_typing', { roomNumber: ROOM_NUMBER });
+                        socket.emit('stop_typing', { 
+                            roomNumber: ROOM_NUMBER,
+                            checkinDate: CHECKIN_DATE
+                        });
                         isTyping = false;
                     }
                 }, 2000);

@@ -514,9 +514,10 @@
         }
 
         // Select room and load chat
-        function selectRoom(roomNumber, guestName, guestSurname, element) {
+        function selectRoom(roomNumber, guestName, guestSurname, checkinDate, element) {
             currentRoomNumber = roomNumber;
-            currentRoom = { roomNumber, guestName, guestSurname };
+            currentCheckinDate = checkinDate;
+            currentRoom = { roomNumber, guestName, guestSurname, checkinDate };
             
             // Update UI
             document.querySelectorAll('.room-item').forEach(item => {
@@ -537,7 +538,7 @@
                 roomNumber: roomNumber,
                 checkinDate: checkinDate
             });
-            loadChatHistory(roomNumber, checkinDate);
+            // Note: loadChatHistory is handled by socket.on('chat_history')
         }
 
         // Load chat history
