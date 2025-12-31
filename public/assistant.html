@@ -620,7 +620,31 @@
         // New message
         socket.on('new_message', (data) => {
             const isSent = data.senderType === 'assistant' || data.senderType === 'staff';
+            
+            // If this is a message we sent, mark it as delivered
+            if (isSent) {
+                socket.emit('message_delivered', { messageId: data.id });
+            }
+            
             displayMessage(data, isSent);
+        });
+        
+        // Message sent confirmation
+        socket.on('message_sent', (data) => {
+            updateMessageStatus(data.messageId, 'sent');
+        });
+        
+        // Message status update (delivered/read)
+        socket.on('message_status_update', (data) => {
+            if (data.messageIds && Array.isArray(data.messageIds)) {
+                // Multiple messages (read status)
+                data.messageIds.forEach(msgId => {
+                    updateMessageStatus(msgId, data.status);
+                });
+            } else if (data.messageId) {
+                // Single message (delivered status)
+                updateMessageStatus(data.messageId, data.status);
+            }
         });
 
         // Display message
@@ -632,18 +656,99 @@
             
             const time = new Date(data.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
             
+            // Status HTML (for both sent and received messages)
+            let statusHTML = '';
+            const status = data.status || 'sent';
+            const statusClass = status === 'read' ? 'read' : 
+                               status === 'delivered' ? 'delivered' : 'sent';
+            
+            statusHTML = `
+                <span class="message-status ${statusClass}">
+                    <span class="message-status-icon"></span>
+                </span>
+            `;
+            
             const messageHTML = `
-                <div class="message ${isSent ? 'sent' : ''}">
+                <div class="message ${isSent ? 'sent' : ''}" data-message-id="${data.id}" data-is-sent="${isSent}">
                     <div class="message-avatar">${isSent ? '👤' : '🏨'}</div>
                     <div class="message-bubble">
                         <div>${escapeHtml(data.message)}</div>
-                        <div class="message-time">${time}</div>
+                        <div class="message-time">${time}${statusHTML}</div>
                     </div>
                 </div>
             `;
             
             chatContainer.insertAdjacentHTML('beforeend', messageHTML);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Observe new message for read status
+            if (messageObserver) {
+                const messageEl = chatContainer.querySelector(`[data-message-id="${data.id}"]`);
+                if (messageEl) {
+                    messageObserver.observe(messageEl);
+                }
+            }
+        }
+        
+        // Update message status
+        function updateMessageStatus(messageId, status) {
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (!messageEl) return;
+            
+            const statusEl = messageEl.querySelector('.message-status');
+            if (!statusEl) return;
+            
+            // Remove old status classes
+            statusEl.classList.remove('sent', 'delivered', 'read');
+            // Add new status class
+            statusEl.classList.add(status);
+        }
+        
+        // Intersection Observer for read status
+        let messageObserver = null;
+        
+        function initMessageObserver() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return;
+            
+            const observerOptions = {
+                root: chatContainer,
+                rootMargin: '0px',
+                threshold: 0.5 // Message is considered read when 50% visible
+            };
+            
+            messageObserver = new IntersectionObserver((entries) => {
+                const unreadMessageIds = [];
+                
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const messageEl = entry.target;
+                        const messageId = messageEl.getAttribute('data-message-id');
+                        const isSent = messageEl.getAttribute('data-is-sent') === 'true';
+                        
+                        // Only track read status for messages we sent
+                        if (isSent && messageId && !messageId.startsWith('temp_')) {
+                            const statusEl = messageEl.querySelector('.message-status');
+                            const isRead = statusEl && statusEl.classList.contains('read');
+                            
+                            if (!isRead && !unreadMessageIds.includes(messageId)) {
+                                unreadMessageIds.push(messageId);
+                            }
+                        }
+                    }
+                });
+                
+                // Send read status for all unread messages
+                if (unreadMessageIds.length > 0) {
+                    socket.emit('message_read', { messageIds: unreadMessageIds });
+                }
+            }, observerOptions);
+            
+            // Observe all existing messages
+            const existingMessages = chatContainer.querySelectorAll('.message[data-message-id]');
+            existingMessages.forEach(msg => {
+                messageObserver.observe(msg);
+            });
         }
 
         // Send message
