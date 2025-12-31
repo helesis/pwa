@@ -1433,20 +1433,19 @@
                             }
                         }
                         
-                        // Mark as delivered
-                        socket.emit('message_delivered', { messageId: data.id });
+                        // Don't mark as delivered here - this is our own message
                         return; // Don't add duplicate message
                     }
                 }
                 
                 // If message doesn't exist, add it
                 if (!existingMessage) {
-                    // If this is a message we sent, mark it as delivered
-                    if (isSent) {
+                    // If this is a message we RECEIVED (not sent), mark it as delivered
+                    if (!isSent) {
                         socket.emit('message_delivered', { messageId: data.id });
                     }
                     
-                    displayMessage(data, true);
+                    displayMessage(data, !isSent);
                     scrollToBottom();
                 }
                 
