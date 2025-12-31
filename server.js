@@ -155,7 +155,12 @@ async function initializeDatabase() {
 
 // Socket.IO Connection
 io.on('connection', (socket) => {
-  console.log('🔌 Client connected:', socket.id);
+  console.log('🟢 ========== NEW CLIENT CONNECTION ==========');
+  console.log('🟢 Socket ID:', socket.id);
+  console.log('🟢 Time:', new Date().toISOString());
+  console.log('🟢 Client IP:', socket.handshake.address);
+  console.log('🟢 User Agent:', socket.handshake.headers['user-agent']);
+  console.log('🟢 Transport:', socket.conn.transport.name);
 
   // Join room
   socket.on('join_room', async (roomNumber) => {
