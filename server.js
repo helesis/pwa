@@ -839,7 +839,58 @@ app.get('/health', async (req, res) => {
 });
 
 // Serve frontend pages
+
+// Ana sayfa - Landing page (chat yok)
 app.get('/', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'landing.html'));
+});
+
+// Token doğrulaması ile chat sayfası
+app.get('/invite/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Token'ı doğrula
+    const result = await pool.query(`
+      SELECT 
+        ri.invite_token,
+        ri.room_number,
+        ri.expires_at,
+        ri.is_active
+      FROM room_invites ri
+      WHERE ri.invite_token = $1 AND ri.is_active = true
+    `, [token]);
+    
+    if (result.rows.length === 0) {
+      // Geçersiz token - hata sayfası
+      return res.status(404).sendFile(join(__dirname, 'public', 'invalid-token.html'));
+    }
+    
+    const invite = result.rows[0];
+    
+    // Token süresi dolmuş mu kontrol et
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+      return res.status(410).sendFile(join(__dirname, 'public', 'expired-token.html'));
+    }
+    
+    // Geçerli token - chat sayfasını göster (token URL parametresi ile)
+    res.redirect(`/join?token=${token}`);
+  } catch (error) {
+    console.error('Error validating token:', error);
+    res.status(500).sendFile(join(__dirname, 'public', 'invalid-token.html'));
+  }
+});
+
+// /join route'unda token kontrolü
+app.get('/join', (req, res) => {
+  const token = req.query.token;
+  
+  // Token yoksa hata sayfası
+  if (!token) {
+    return res.status(400).sendFile(join(__dirname, 'public', 'invalid-token.html'));
+  }
+  
+  // Chat sayfasını göster (index.html kullanıyoruz)
   res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
@@ -849,14 +900,6 @@ app.get('/assistant', (req, res) => {
 
 app.get('/assistant.html', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'assistant.html'));
-});
-
-app.get('/join', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'join.html'));
-});
-
-app.get('/join.html', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'join.html'));
 });
 
 const PORT = process.env.PORT || 3000;

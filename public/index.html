@@ -804,76 +804,74 @@
         async function loadGuestInfo() {
             console.log('🔍 Loading guest info...', { ROOM_NUMBER, INVITE_TOKEN });
             
-            // Önce URL'den room parametresini kontrol et (en güvenilir)
-            if (ROOM_NUMBER) {
-                console.log('✅ Room number from URL:', ROOM_NUMBER);
-                // Room number zaten var, token'dan guest name ve checkin date'i yükle
-                if (INVITE_TOKEN) {
-                    try {
-                        const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
-                        if (response.ok) {
-                            const data = await response.json();
-                            GUEST_NAME = data.guestName || 'Misafir';
-                            CHECKIN_DATE = data.checkinDate || null;
-                            console.log('✅ Guest info loaded from token:', { GUEST_NAME, CHECKIN_DATE });
-                        } else {
-                            console.warn('Token already used or invalid, using default name');
-                        }
-                    } catch (error) {
-                        console.warn('Could not load guest info from token:', error);
+            // Token ZORUNLU - token yoksa hata göster
+            if (!INVITE_TOKEN) {
+                console.error('❌ No invite token provided');
+                document.body.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; flex-direction: column; padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                        <h1 style="font-size: 24px; margin-bottom: 15px; color: #1A4D6D; font-weight: 600;">Geçersiz Erişim</h1>
+                        <p style="font-size: 16px; color: #666; margin-bottom: 30px; line-height: 1.6;">Bu sayfaya erişmek için geçerli bir davet linki gereklidir.</p>
+                        <a href="/" style="background: #1A4D6D; color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; display: inline-block; transition: all 0.3s;">Ana Sayfaya Dön</a>
+                    </div>
+                `;
+                return false;
+            }
+            
+            // Token'dan bilgi yükle
+            try {
+                const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
+                if (!response.ok) {
+                    console.error('❌ Invalid or expired token:', response.status);
+                    let errorMessage = 'Bu davet linki geçersiz veya süresi dolmuş.';
+                    if (response.status === 410) {
+                        errorMessage = 'Bu davet linkinin süresi dolmuş.';
                     }
+                    document.body.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; flex-direction: column; padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                            <div style="font-size: 64px; margin-bottom: 20px;">${response.status === 410 ? '⏰' : '❌'}</div>
+                            <h1 style="font-size: 24px; margin-bottom: 15px; color: #1A4D6D; font-weight: 600;">${response.status === 410 ? 'Süresi Dolmuş Davet Linki' : 'Geçersiz Davet Linki'}</h1>
+                            <p style="font-size: 16px; color: #666; margin-bottom: 30px; line-height: 1.6;">${errorMessage} Lütfen otel personelimizden yeni bir link isteyin.</p>
+                            <a href="/" style="background: #1A4D6D; color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; display: inline-block; transition: all 0.3s;">Ana Sayfaya Dön</a>
+                        </div>
+                    `;
+                    return false;
                 }
+                
+                const data = await response.json();
+                ROOM_NUMBER = data.roomNumber;
+                GUEST_NAME = data.guestName || 'Misafir';
+                CHECKIN_DATE = data.checkinDate || null;
+                console.log('✅ Guest info loaded from token:', { ROOM_NUMBER, GUEST_NAME, CHECKIN_DATE });
                 
                 // If checkin_date not loaded, try to get from room
                 if (!CHECKIN_DATE && ROOM_NUMBER) {
                     try {
-                        const response = await fetch(`/api/rooms/${ROOM_NUMBER}`);
-                        if (response.ok) {
-                            const data = await response.json();
-                            CHECKIN_DATE = data.checkin_date || null;
+                        const roomResponse = await fetch(`/api/rooms/${ROOM_NUMBER}`);
+                        if (roomResponse.ok) {
+                            const roomData = await roomResponse.json();
+                            CHECKIN_DATE = roomData.checkin_date || null;
                             console.log('✅ Check-in date loaded from room:', CHECKIN_DATE);
                         }
                     } catch (error) {
                         console.warn('Could not load check-in date from room:', error);
                     }
                 }
+                
                 guestInfoLoaded = true;
                 return true;
+            } catch (error) {
+                console.error('❌ Error loading guest info:', error);
+                document.body.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; flex-direction: column; padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                        <h1 style="font-size: 24px; margin-bottom: 15px; color: #1A4D6D; font-weight: 600;">Bağlantı Hatası</h1>
+                        <p style="font-size: 16px; color: #666; margin-bottom: 30px; line-height: 1.6;">Bilgiler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.</p>
+                        <a href="/" style="background: #1A4D6D; color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; display: inline-block; transition: all 0.3s;">Ana Sayfaya Dön</a>
+                    </div>
+                `;
+                return false;
             }
-            
-            // Room number yoksa token'dan yükle
-            if (INVITE_TOKEN) {
-                try {
-                    const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        ROOM_NUMBER = data.roomNumber;
-                        GUEST_NAME = data.guestName || 'Misafir';
-                        CHECKIN_DATE = data.checkinDate || null;
-                        console.log('✅ Guest info loaded from token:', { ROOM_NUMBER, GUEST_NAME, CHECKIN_DATE });
-                        guestInfoLoaded = true;
-                        return true;
-                    } else {
-                        console.error('Failed to load guest info:', response.status);
-                        // Token geçersizse default room kullan
-                        ROOM_NUMBER = '301';
-                        guestInfoLoaded = true;
-                        return true;
-                    }
-                } catch (error) {
-                    console.error('Error loading guest info:', error);
-                    // Hata durumunda default room kullan
-                    ROOM_NUMBER = '301';
-                    guestInfoLoaded = true;
-                    return true;
-                }
-            }
-            
-            // Hiçbir şey yoksa default room kullan
-            console.warn('⚠️ No room or token, using default room 301');
-            ROOM_NUMBER = '301';
-            guestInfoLoaded = true;
-            return true;
         }
 
         // Profile Photo Management
