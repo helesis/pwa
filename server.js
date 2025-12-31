@@ -375,19 +375,28 @@ app.post('/api/rooms', async (req, res) => {
 // Get profile photo for a room
 app.get('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
   try {
+    const { roomNumber } = req.params;
+    console.log('📸 Fetching profile photo for room:', roomNumber);
+    
     const result = await pool.query(
       'SELECT profile_photo FROM rooms WHERE room_number = $1',
-      [req.params.roomNumber]
+      [roomNumber]
     );
     
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+      console.log('⚠️ Room not found:', roomNumber);
+      // Return null instead of 404 - room might not exist yet
+      return res.json({ profilePhoto: null });
     }
     
-    res.json({ profilePhoto: result.rows[0].profile_photo || null });
+    const profilePhoto = result.rows[0].profile_photo || null;
+    console.log('✅ Profile photo fetched:', profilePhoto ? 'exists' : 'null');
+    res.json({ profilePhoto });
   } catch (error) {
-    console.error('Error fetching profile photo:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('❌ Error fetching profile photo:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Return null instead of 500 - don't break the app
+    res.json({ profilePhoto: null });
   }
 });
 
