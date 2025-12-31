@@ -28,8 +28,11 @@ const io = new Server(httpServer, {
       ? allowedOrigins 
       : "*",
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 
 // Middleware
