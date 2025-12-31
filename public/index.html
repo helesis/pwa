@@ -1326,8 +1326,11 @@
                 }
 
                 // Update oldest message timestamp
-                oldestMessageTimestamp = messages[0].timestamp;
+                if (messages.length > 0) {
+                    oldestMessageTimestamp = messages[0].timestamp;
+                }
                 isLoadingOlderMessages = false;
+                console.log('✅ Loaded', messages.length, 'older messages');
             });
         }
 
