@@ -740,24 +740,43 @@
         // Configuration
         // Get room number and token from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        let ROOM_NUMBER = urlParams.get('room') || '301'; // Default to 301 if not provided
+        let ROOM_NUMBER = urlParams.get('room') || null;
         const INVITE_TOKEN = urlParams.get('token');
         let GUEST_NAME = 'Misafir';
         const SERVER_URL = window.location.origin;
 
-        // Load guest info from token if available
-        if (INVITE_TOKEN) {
-            fetch(`/api/invite/${INVITE_TOKEN}`)
-                .then(response => response.json())
-                .then(data => {
-                    ROOM_NUMBER = data.roomNumber;
-                    GUEST_NAME = data.guestName || 'Misafir';
-                    // Update header if needed
-                    console.log('✅ Guest info loaded:', { ROOM_NUMBER, GUEST_NAME });
-                })
-                .catch(error => {
+        // Load guest info from token if available (must complete before socket connection)
+        let guestInfoLoaded = false;
+        
+        async function loadGuestInfo() {
+            if (INVITE_TOKEN) {
+                try {
+                    const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        ROOM_NUMBER = data.roomNumber;
+                        GUEST_NAME = data.guestName || 'Misafir';
+                        console.log('✅ Guest info loaded:', { ROOM_NUMBER, GUEST_NAME });
+                        guestInfoLoaded = true;
+                        return true;
+                    } else {
+                        console.error('Failed to load guest info:', response.status);
+                        return false;
+                    }
+                } catch (error) {
                     console.error('Error loading guest info:', error);
-                });
+                    return false;
+                }
+            } else if (ROOM_NUMBER) {
+                // Room number provided directly, use it
+                guestInfoLoaded = true;
+                return true;
+            } else {
+                // No token or room, use default
+                ROOM_NUMBER = '301';
+                guestInfoLoaded = true;
+                return true;
+            }
         }
 
         // Profile Photo Management
@@ -987,96 +1006,124 @@
             event.target.value = '';
         }
 
-        // Socket.IO Connection
-        const socket = io(SERVER_URL);
+        // Socket.IO Connection - Wait for guest info to load first
+        let socket = null;
         let isTyping = false;
         let typingTimeout;
 
-        // Connection Events
-        socket.on('connect', () => {
-            console.log('✅ Connected to server');
-            updateConnectionStatus(true);
-            socket.emit('join_room', ROOM_NUMBER);
-        });
-
-        socket.on('disconnect', () => {
-            console.log('❌ Disconnected from server');
-            updateConnectionStatus(false);
-        });
-
-        socket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
-            updateConnectionStatus(false);
-        });
-
-        // Update connection status
-        function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            const text = document.getElementById('statusText');
+        // Initialize socket after guest info is loaded
+        async function initializeSocket() {
+            // Wait for guest info to load
+            await loadGuestInfo();
             
-            if (connected) {
-                status.classList.remove('disconnected');
-                text.textContent = 'Çevrimiçi';
-            } else {
-                status.classList.add('disconnected');
-                text.textContent = 'Bağlantı Kesildi';
-            }
-        }
-
-        // Load chat history
-        socket.on('chat_history', (messages) => {
-            console.log('📜 Chat history loaded:', messages.length, 'messages');
-            const chatContainer = document.getElementById('chatContainer');
-            chatContainer.innerHTML = '';
-            
-            // Ensure profile photo is loaded before displaying messages
-            if (!guestProfilePhoto) {
-                loadProfilePhoto();
+            if (!ROOM_NUMBER) {
+                console.error('❌ Room number not available');
+                return;
             }
             
-            if (messages.length === 0) {
-                // Show welcome message
-                addWelcomeMessage();
-                oldestMessageTimestamp = null;
-            } else {
-                messages.forEach(msg => {
-                    // Verify senderType is correct
-                    const senderType = (msg.senderType || '').toString().toLowerCase().trim();
-                    const isSent = senderType === 'guest';
-                    console.log('📨 Loading message:', {
-                        senderType: msg.senderType,
-                        normalized: senderType,
-                        isSent: isSent,
-                        preview: msg.message.substring(0, 20)
+            // Now create socket connection
+            socket = io(SERVER_URL);
+            
+            // Connection Events
+            socket.on('connect', () => {
+                console.log('✅ Connected to server');
+                updateConnectionStatus(true);
+                socket.emit('join_room', ROOM_NUMBER);
+            });
+
+            socket.on('disconnect', () => {
+                console.log('❌ Disconnected from server');
+                updateConnectionStatus(false);
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                updateConnectionStatus(false);
+            });
+
+            // Load chat history
+            socket.on('chat_history', (messages) => {
+                console.log('📜 Chat history loaded:', messages.length, 'messages');
+                const chatContainer = document.getElementById('chatContainer');
+                chatContainer.innerHTML = '';
+                
+                // Ensure profile photo is loaded before displaying messages
+                if (!guestProfilePhoto) {
+                    loadProfilePhoto();
+                }
+                
+                if (messages.length === 0) {
+                    // Show welcome message
+                    addWelcomeMessage();
+                    oldestMessageTimestamp = null;
+                } else {
+                    messages.forEach(msg => {
+                        // Verify senderType is correct
+                        const senderType = (msg.senderType || '').toString().toLowerCase().trim();
+                        const isSent = senderType === 'guest';
+                        console.log('📨 Loading message:', {
+                            senderType: msg.senderType,
+                            normalized: senderType,
+                            isSent: isSent,
+                            preview: msg.message.substring(0, 20)
+                        });
+                        displayMessage(msg, false);
                     });
-                    displayMessage(msg, false);
-                });
+                    
+                    // Set oldest message timestamp for pagination
+                    oldestMessageTimestamp = messages[0].timestamp;
+                    
+                    // Fix alignment for all messages after loading - use multiple checks
+                    setTimeout(() => {
+                        fixMessageAlignment();
+                    }, 50);
+                    
+                    // Double-check after a bit more time (for slow rendering)
+                    setTimeout(() => {
+                        fixMessageAlignment();
+                    }, 300);
+                    
+                    // Final check after scroll
+                    setTimeout(() => {
+                        scrollToBottom();
+                        fixMessageAlignment();
+                    }, 500);
+                }
                 
-                // Set oldest message timestamp for pagination
-                oldestMessageTimestamp = messages[0].timestamp;
+                scrollToBottom();
                 
-                // Fix alignment for all messages after loading - use multiple checks
-                setTimeout(() => {
-                    fixMessageAlignment();
-                }, 50);
+                // Setup scroll listener for loading older messages
+                setupScrollListener();
+            });
+
+            // New message from server
+            socket.on('new_message', (data) => {
+                console.log('📨 New message:', data);
+                displayMessage(data, true);
+                scrollToBottom();
                 
-                // Double-check after a bit more time (for slow rendering)
-                setTimeout(() => {
-                    fixMessageAlignment();
-                }, 300);
-                
-                // Final check after scroll
-                setTimeout(() => {
-                    scrollToBottom();
-                    fixMessageAlignment();
-                }, 500);
-            }
-            
-            scrollToBottom();
-            
-            // Setup scroll listener for loading older messages
-            setupScrollListener();
-        });
+                // Send notification if message is from staff/hotel and page is not visible
+                if (data.senderType !== 'guest' && document.hidden) {
+                    sendNotification(data);
+                } else if (data.senderType !== 'guest') {
+                    // Even if page is visible, show notification if permission granted
+                    if (Notification.permission === 'granted') {
+                        sendNotification(data);
+                    }
+                }
+            });
+
+            // Typing indicators
+            socket.on('user_typing', (data) => {
+                const indicator = document.getElementById('typingIndicator');
+                indicator.classList.add('active');
+            });
+
+            socket.on('user_stopped_typing', () => {
+                const indicator = document.getElementById('typingIndicator');
+                indicator.classList.remove('active');
+            });
+        }
 
         // Fix message alignment - ensure all sent messages have correct class and alignment
         function fixMessageAlignment() {
@@ -1121,34 +1168,6 @@
                 console.log(`✅ Fixed alignment for ${fixedCount} messages`);
             }
         }
-
-        // New message from server
-        socket.on('new_message', (data) => {
-            console.log('📨 New message:', data);
-            displayMessage(data, true);
-            scrollToBottom();
-            
-            // Send notification if message is from staff/hotel and page is not visible
-            if (data.senderType !== 'guest' && document.hidden) {
-                sendNotification(data);
-            } else if (data.senderType !== 'guest') {
-                // Even if page is visible, show notification if permission granted
-                if (Notification.permission === 'granted') {
-                    sendNotification(data);
-                }
-            }
-        });
-
-        // Typing indicators
-        socket.on('user_typing', (data) => {
-            const indicator = document.getElementById('typingIndicator');
-            indicator.classList.add('active');
-        });
-
-        socket.on('user_stopped_typing', () => {
-            const indicator = document.getElementById('typingIndicator');
-            indicator.classList.remove('active');
-        });
 
         // Display message
         function displayMessage(data, animate) {
@@ -1304,6 +1323,11 @@
 
         // Send message
         function sendMessage() {
+            if (!socket) {
+                console.error('Socket not initialized');
+                return;
+            }
+            
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
@@ -1322,7 +1346,7 @@
             input.style.height = 'auto';
             
             // Stop typing indicator
-            if (isTyping) {
+            if (isTyping && socket) {
                 socket.emit('stop_typing', { roomNumber: ROOM_NUMBER });
                 isTyping = false;
             }
@@ -1337,7 +1361,7 @@
             input.style.height = Math.min(input.scrollHeight, 100) + 'px';
             
             // Typing indicator
-            if (input.value.trim() && !isTyping) {
+            if (input.value.trim() && !isTyping && socket) {
                 isTyping = true;
                 socket.emit('typing', {
                     roomNumber: ROOM_NUMBER,
@@ -1352,7 +1376,7 @@
             // Set new timeout
             if (input.value.trim()) {
                 typingTimeout = setTimeout(() => {
-                    if (isTyping) {
+                    if (isTyping && socket) {
                         socket.emit('stop_typing', { roomNumber: ROOM_NUMBER });
                         isTyping = false;
                     }
@@ -1401,6 +1425,10 @@
             const randomStaffName = staffNames[Math.floor(Math.random() * staffNames.length)];
 
             // Mesajı gönder (senderType: 'staff' veya 'hotel')
+            if (!socket) {
+                console.error('Socket not initialized');
+                return;
+            }
             socket.emit('send_message', {
                 roomNumber: ROOM_NUMBER,
                 senderType: 'staff',
@@ -1530,7 +1558,7 @@
         }
 
         async function loadOlderMessages() {
-            if (isLoadingOlderMessages || !oldestMessageTimestamp) return;
+            if (isLoadingOlderMessages || !oldestMessageTimestamp || !socket) return;
 
             isLoadingOlderMessages = true;
             const chatContainer = document.getElementById('chatContainer');
@@ -1724,8 +1752,12 @@
         }
 
         // Initialize on load
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             console.log('🚀 Voyage Sorgun Chat initialized');
+            
+            // Initialize socket connection (will load guest info first)
+            await initializeSocket();
+            
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
             loadProfilePhoto();

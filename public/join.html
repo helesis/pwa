@@ -346,7 +346,7 @@
                     await Notification.requestPermission();
                 }
 
-                // Redirect to chat with room number
+                // Redirect to chat with room number and token
                 const chatUrl = `/?room=${roomData.roomNumber}&token=${token}`;
                 window.location.href = chatUrl;
 
