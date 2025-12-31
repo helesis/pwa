@@ -498,6 +498,7 @@ app.post('/api/assistant/:assistantId/rooms/:roomNumber/invite', async (req, res
 });
 
 // Get room info by invite token (for guest onboarding)
+// Note: Returns info even if token is already used (for guest name loading)
 app.get('/api/invite/:token', async (req, res) => {
   try {
     const { token } = req.params;
@@ -528,6 +529,7 @@ app.get('/api/invite/:token', async (req, res) => {
       return res.status(410).json({ error: 'Invite token has expired' });
     }
     
+    // Return info even if token is already used (for guest name loading after redirect)
     res.json({
       roomNumber: invite.room_number,
       guestName: invite.guest_name,

@@ -749,6 +749,31 @@
         let guestInfoLoaded = false;
         
         async function loadGuestInfo() {
+            console.log('🔍 Loading guest info...', { ROOM_NUMBER, INVITE_TOKEN });
+            
+            // Önce URL'den room parametresini kontrol et (en güvenilir)
+            if (ROOM_NUMBER) {
+                console.log('✅ Room number from URL:', ROOM_NUMBER);
+                // Room number zaten var, token'dan sadece guest name'i yükle
+                if (INVITE_TOKEN) {
+                    try {
+                        const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            GUEST_NAME = data.guestName || 'Misafir';
+                            console.log('✅ Guest name loaded from token:', GUEST_NAME);
+                        } else {
+                            console.warn('Token already used or invalid, using default name');
+                        }
+                    } catch (error) {
+                        console.warn('Could not load guest name from token:', error);
+                    }
+                }
+                guestInfoLoaded = true;
+                return true;
+            }
+            
+            // Room number yoksa token'dan yükle
             if (INVITE_TOKEN) {
                 try {
                     const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
@@ -756,27 +781,30 @@
                         const data = await response.json();
                         ROOM_NUMBER = data.roomNumber;
                         GUEST_NAME = data.guestName || 'Misafir';
-                        console.log('✅ Guest info loaded:', { ROOM_NUMBER, GUEST_NAME });
+                        console.log('✅ Guest info loaded from token:', { ROOM_NUMBER, GUEST_NAME });
                         guestInfoLoaded = true;
                         return true;
                     } else {
                         console.error('Failed to load guest info:', response.status);
-                        return false;
+                        // Token geçersizse default room kullan
+                        ROOM_NUMBER = '301';
+                        guestInfoLoaded = true;
+                        return true;
                     }
                 } catch (error) {
                     console.error('Error loading guest info:', error);
-                    return false;
+                    // Hata durumunda default room kullan
+                    ROOM_NUMBER = '301';
+                    guestInfoLoaded = true;
+                    return true;
                 }
-            } else if (ROOM_NUMBER) {
-                // Room number provided directly, use it
-                guestInfoLoaded = true;
-                return true;
-            } else {
-                // No token or room, use default
-                ROOM_NUMBER = '301';
-                guestInfoLoaded = true;
-                return true;
             }
+            
+            // Hiçbir şey yoksa default room kullan
+            console.warn('⚠️ No room or token, using default room 301');
+            ROOM_NUMBER = '301';
+            guestInfoLoaded = true;
+            return true;
         }
 
         // Profile Photo Management
@@ -1014,19 +1042,23 @@
         // Initialize socket after guest info is loaded
         async function initializeSocket() {
             // Wait for guest info to load
-            await loadGuestInfo();
+            const loaded = await loadGuestInfo();
             
             if (!ROOM_NUMBER) {
-                console.error('❌ Room number not available');
-                return;
+                console.error('❌ Room number not available after loading guest info');
+                console.log('Current state:', { ROOM_NUMBER, INVITE_TOKEN, loaded });
+                // Fallback to default
+                ROOM_NUMBER = '301';
             }
+            
+            console.log('🔌 Initializing socket with room:', ROOM_NUMBER);
             
             // Now create socket connection
             socket = io(SERVER_URL);
             
             // Connection Events
             socket.on('connect', () => {
-                console.log('✅ Connected to server');
+                console.log('✅ Connected to server, joining room:', ROOM_NUMBER);
                 updateConnectionStatus(true);
                 socket.emit('join_room', ROOM_NUMBER);
             });
@@ -1324,7 +1356,14 @@
         // Send message
         function sendMessage() {
             if (!socket) {
-                console.error('Socket not initialized');
+                console.error('❌ Socket not initialized');
+                alert('Bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
+                return;
+            }
+            
+            if (!ROOM_NUMBER) {
+                console.error('❌ Room number not available');
+                alert('Oda bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
                 return;
             }
             
@@ -1332,6 +1371,8 @@
             const message = input.value.trim();
             
             if (!message) return;
+            
+            console.log('📤 Sending message:', { roomNumber: ROOM_NUMBER, message: message.substring(0, 30) });
             
             // Send to server
             socket.emit('send_message', {
