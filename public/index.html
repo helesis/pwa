@@ -1051,31 +1051,79 @@
                 ROOM_NUMBER = '301';
             }
             
-            console.log('🔌 Initializing socket with room:', ROOM_NUMBER);
+            console.log('🔌 Initializing socket with room:', ROOM_NUMBER, 'Server URL:', SERVER_URL);
             
             // Now create socket connection
-            socket = io(SERVER_URL);
+            socket = io(SERVER_URL, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5
+            });
             
             // Connection Events
             socket.on('connect', () => {
-                console.log('✅ Connected to server, joining room:', ROOM_NUMBER);
-                updateConnectionStatus(true);
+                console.log('✅ Connected to server, socket ID:', socket.id);
+                const statusText = document.getElementById('statusText');
+                if (statusText) {
+                    statusText.textContent = 'Çevrimiçi';
+                }
+                console.log('📤 Emitting join_room with:', ROOM_NUMBER);
                 socket.emit('join_room', ROOM_NUMBER);
             });
 
-            socket.on('disconnect', () => {
-                console.log('❌ Disconnected from server');
+            socket.on('disconnect', (reason) => {
+                console.log('❌ Disconnected from server, reason:', reason);
                 updateConnectionStatus(false);
             });
 
             socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
+                console.error('❌ Connection error:', error);
                 updateConnectionStatus(false);
+            });
+
+            socket.on('reconnect', (attemptNumber) => {
+                console.log('🔄 Reconnected after', attemptNumber, 'attempts');
+                const statusText = document.getElementById('statusText');
+                if (statusText) {
+                    statusText.textContent = 'Çevrimiçi';
+                }
+                socket.emit('join_room', ROOM_NUMBER);
+            });
+
+            socket.on('reconnect_error', (error) => {
+                console.error('❌ Reconnection error:', error);
+            });
+
+            socket.on('reconnect_failed', () => {
+                console.error('❌ Reconnection failed');
+                const statusText = document.getElementById('statusText');
+                if (statusText) {
+                    statusText.textContent = 'Bağlantı başarısız';
+                }
+            });
+
+            // Timeout kontrolü - 10 saniye içinde bağlanmazsa hata göster
+            const connectionTimeout = setTimeout(() => {
+                if (!socket.connected) {
+                    console.error('❌ Connection timeout - socket not connected after 10 seconds');
+                    updateConnectionStatus(false);
+                    const statusText = document.getElementById('statusText');
+                    if (statusText) {
+                        statusText.textContent = 'Bağlantı hatası';
+                    }
+                }
+            }, 10000);
+
+            // Bağlantı başarılı olunca timeout'u temizle
+            socket.on('connect', () => {
+                clearTimeout(connectionTimeout);
             });
 
             // Load chat history
             socket.on('chat_history', (messages) => {
-                console.log('📜 Chat history loaded:', messages.length, 'messages');
+                console.log('📜 Chat history received:', messages.length, 'messages');
+                console.log('📜 Sample message:', messages[0] ? messages[0].message.substring(0, 30) : 'none');
                 const chatContainer = document.getElementById('chatContainer');
                 chatContainer.innerHTML = '';
                 
