@@ -1305,6 +1305,14 @@
             // New message from server
             socket.on('new_message', (data) => {
                 console.log('📨 New message:', data);
+                
+                // If this is a message we sent, mark it as delivered
+                const isSent = (data.senderType || '').toString().toLowerCase().trim() === 'guest';
+                if (isSent) {
+                    // Mark as delivered when received by others
+                    socket.emit('message_delivered', { messageId: data.id });
+                }
+                
                 displayMessage(data, true);
                 scrollToBottom();
                 
@@ -1518,6 +1526,15 @@
             } else {
                 // Insert at the end (for new messages)
                 chatContainer.insertAdjacentHTML('beforeend', messageHTML);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Observe new message for read status
+            if (messageObserver) {
+                const messageEl = chatContainer.querySelector(`[data-message-id="${data.id}"]`);
+                if (messageEl) {
+                    messageObserver.observe(messageEl);
+                }
             }
             
             // Double-check the message was added with correct class and alignment
