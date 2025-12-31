@@ -282,8 +282,11 @@ io.on('connection', (socket) => {
     socket.to(data.roomNumber).emit('user_stopped_typing');
   });
 
-  socket.on('disconnect', () => {
-    console.log('🔌 Client disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log('🔴 ========== CLIENT DISCONNECTED ==========');
+    console.log('🔴 Socket ID:', socket.id);
+    console.log('🔴 Reason:', reason);
+    console.log('🔴 Time:', new Date().toISOString());
   });
 });
 
