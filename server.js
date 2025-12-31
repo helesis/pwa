@@ -238,15 +238,28 @@ io.on('connection', (socket) => {
       console.log('📊 Messages found:', result.rows.length);
       
       // Map database column names (snake_case) to frontend format (camelCase)
-      const messages = result.rows.reverse().map(row => ({
-        id: row.id,
-        roomNumber: row.room_number,
-        checkinDate: row.checkin_date,
-        senderType: row.sender_type,
-        senderName: row.sender_name,
-        message: row.message,
-        timestamp: row.timestamp
-      }));
+      const messages = result.rows.reverse().map(row => {
+        // Determine status based on delivered_at and read_at
+        let status = 'sent';
+        if (row.read_at) {
+          status = 'read';
+        } else if (row.delivered_at) {
+          status = 'delivered';
+        }
+        
+        return {
+          id: row.id,
+          roomNumber: row.room_number,
+          checkinDate: row.checkin_date,
+          senderType: row.sender_type,
+          senderName: row.sender_name,
+          message: row.message,
+          timestamp: row.timestamp,
+          status: status,
+          deliveredAt: row.delivered_at,
+          readAt: row.read_at
+        };
+      });
       
       console.log('📤 Sending chat_history to client');
       console.log('📤 Message count:', messages.length);
