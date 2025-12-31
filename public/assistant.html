@@ -526,6 +526,27 @@
         
         const socket = io(SERVER_URL, socketOptions);
         
+        // Connection event handlers
+        socket.on('connect', () => {
+            console.log('✅ Socket connected:', socket.id);
+        });
+        
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Socket disconnected:', reason);
+        });
+        
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+        });
+        
+        socket.on('reconnect_error', (error) => {
+            console.error('❌ Reconnection error:', error);
+        });
+        
+        socket.on('reconnect_failed', () => {
+            console.error('❌ Reconnection failed - please refresh the page');
+        });
+        
         let currentRoom = null;
         let currentRoomNumber = null;
         let currentCheckinDate = null;
