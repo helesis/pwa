@@ -758,6 +758,28 @@
             
             if (!message || !currentRoomNumber) return;
             
+            // Create temporary message ID for optimistic update
+            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Optimistic update - show message immediately
+            const optimisticMessage = {
+                id: tempId,
+                roomNumber: currentRoomNumber,
+                checkinDate: currentCheckinDate,
+                senderType: 'assistant',
+                senderName: 'Assistant',
+                message: message,
+                timestamp: new Date().toISOString(),
+                status: 'sent'
+            };
+            
+            // Display message immediately
+            displayMessage(optimisticMessage, true);
+            
+            // Clear input
+            input.value = '';
+            
+            // Send to server
             socket.emit('send_message', {
                 roomNumber: currentRoomNumber,
                 checkinDate: currentCheckinDate,
@@ -766,7 +788,25 @@
                 message: message
             });
             
-            input.value = '';
+            // When real message arrives, replace the temporary one
+            socket.once('new_message', (realMessage) => {
+                if (realMessage.message === message && realMessage.senderType === 'assistant') {
+                    const tempMessageEl = document.querySelector(`[data-message-id="${tempId}"]`);
+                    if (tempMessageEl) {
+                        // Update the message ID
+                        tempMessageEl.setAttribute('data-message-id', realMessage.id);
+                        
+                        // Update status if needed
+                        if (realMessage.status) {
+                            const statusEl = tempMessageEl.querySelector('.message-status');
+                            if (statusEl) {
+                                statusEl.classList.remove('sent', 'delivered', 'read');
+                                statusEl.classList.add(realMessage.status);
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Enter key to send
