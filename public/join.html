@@ -322,6 +322,7 @@
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             document.getElementById('joinButton').disabled = true;
+            console.error('🚨 Error:', message);
         }
 
         // Join chat
