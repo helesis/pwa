@@ -927,6 +927,9 @@
         // Save profile photo to backend
         async function saveProfilePhotoToBackend(photoData) {
             try {
+                console.log('📤 Saving profile photo to backend for room:', ROOM_NUMBER);
+                console.log('📤 Photo data size:', photoData ? photoData.length : 0, 'bytes');
+                
                 const response = await fetch(`/api/rooms/${ROOM_NUMBER}/profile-photo`, {
                     method: 'POST',
                     headers: {
@@ -936,14 +939,24 @@
                 });
                 
                 if (response.ok) {
-                    console.log('✅ Profile photo saved to backend');
+                    const result = await response.json();
+                    console.log('✅ Profile photo saved to backend:', result);
                     return true;
                 } else {
-                    console.error('Failed to save profile photo to backend');
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('❌ Failed to save profile photo to backend:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorData
+                    });
                     return false;
                 }
             } catch (error) {
-                console.error('Error saving profile photo to backend:', error);
+                console.error('❌ Error saving profile photo to backend:', error);
+                console.error('❌ Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
                 return false;
             }
         }
