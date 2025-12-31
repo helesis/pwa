@@ -812,7 +812,13 @@
 
         // Load profile photo from backend
         async function loadProfilePhoto() {
+            if (!ROOM_NUMBER) {
+                console.warn('⚠️ Cannot load profile photo: ROOM_NUMBER not set');
+                return;
+            }
+            
             try {
+                console.log('📸 Loading profile photo for room:', ROOM_NUMBER);
                 // First try backend
                 const response = await fetch(`/api/rooms/${ROOM_NUMBER}/profile-photo`);
                 if (response.ok) {
@@ -824,7 +830,11 @@
                         updateProfilePhotoDisplay();
                         console.log('✅ Profile photo loaded from backend');
                         return;
+                    } else {
+                        console.log('ℹ️ No profile photo for this room');
                     }
+                } else {
+                    console.warn('⚠️ Profile photo response not OK:', response.status);
                 }
                 
                 // Fallback to localStorage
@@ -835,7 +845,7 @@
                     console.log('✅ Profile photo loaded from localStorage');
                 }
             } catch (error) {
-                console.error('Error loading profile photo:', error);
+                console.warn('⚠️ Error loading profile photo (non-critical):', error.message);
                 // Fallback to localStorage
                 const savedPhoto = localStorage.getItem('guestProfilePhoto');
                 if (savedPhoto) {
