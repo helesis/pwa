@@ -283,26 +283,41 @@
                 return;
             }
 
+            console.log('🔍 Loading room info for token:', token);
+            
             try {
                 const response = await fetch(`/api/invite/${token}`);
                 
+                console.log('📡 API Response status:', response.status);
+                
                 if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        errorData = { error: 'Unknown error' };
+                    }
+                    console.error('❌ API Error:', errorData);
+                    
                     if (response.status === 404) {
                         showError('Bu bağlantı geçersiz veya süresi dolmuş.');
                     } else if (response.status === 410) {
                         showError('Bu bağlantının süresi dolmuş.');
                     } else {
-                        showError('Bir hata oluştu. Lütfen tekrar deneyin.');
+                        showError(`Bir hata oluştu: ${errorData.error || 'Bilinmeyen hata'}`);
                     }
                     return;
                 }
 
                 roomData = await response.json();
+                console.log('✅ Room data loaded:', roomData);
                 
                 // Display room info
-                document.getElementById('roomNumber').textContent = roomData.roomNumber;
-                document.getElementById('guestName').textContent = `${roomData.guestName} ${roomData.guestSurname || ''}`;
-                document.getElementById('checkinDate').textContent = new Date(roomData.checkinDate).toLocaleDateString('tr-TR');
+                document.getElementById('roomNumber').textContent = roomData.roomNumber || '-';
+                document.getElementById('guestName').textContent = `${roomData.guestName || ''} ${roomData.guestSurname || ''}`.trim() || '-';
+                document.getElementById('checkinDate').textContent = roomData.checkinDate 
+                    ? new Date(roomData.checkinDate).toLocaleDateString('tr-TR')
+                    : '-';
                 document.getElementById('roomInfo').style.display = 'block';
 
                 // Show iOS instructions if needed
@@ -311,8 +326,8 @@
                 }
 
             } catch (error) {
-                console.error('Error loading room info:', error);
-                showError('Bağlantı hatası. Lütfen tekrar deneyin.');
+                console.error('❌ Error loading room info:', error);
+                showError(`Bağlantı hatası: ${error.message}. Lütfen internet bağlantınızı kontrol edin.`);
             }
         }
 
