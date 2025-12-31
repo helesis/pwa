@@ -335,6 +335,34 @@
             cursor: pointer;
         }
 
+        /* Context Menu Styles */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+            padding: 4px 0;
+        }
+
+        .context-menu-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #111b21;
+            transition: background 0.2s;
+        }
+
+        .context-menu-item:hover {
+            background: #f0f2f5;
+        }
+
+        .context-menu-item:active {
+            background: #e4e6e9;
+        }
+
         .empty-state {
             flex: 1;
             display: flex;
@@ -413,7 +441,7 @@
     <!-- QR Code Modal -->
     <div class="qr-modal" id="qrModal" onclick="closeQRModal(event)">
         <div class="qr-modal-content" onclick="event.stopPropagation()">
-            <h3>QR Kod</h3>
+            <h3 id="qrModalTitle">QR Kod</h3>
             <img id="qrCodeImage" class="qr-code-image" src="" alt="QR Code">
             <div class="qr-link" id="qrLink"></div>
             <button class="close-btn" onclick="closeQRModal()">Kapat</button>
@@ -470,6 +498,13 @@
                         </div>
                     `;
                     roomElement.addEventListener('click', () => selectRoom(room.room_number, room.guest_name, room.guest_surname, roomElement));
+                    
+                    // Sağ tıklama menüsü ekle
+                    roomElement.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        showContextMenu(e, room.room_number, room.guest_name, room.guest_surname);
+                    });
+                    
                     roomsList.appendChild(roomElement);
                 });
             } catch (error) {
@@ -571,7 +606,77 @@
             }
         });
 
-        // Show QR modal
+        // Context menu göster
+        function showContextMenu(event, roomNumber, guestName, guestSurname) {
+            // Mevcut context menu'yu kaldır
+            const existingMenu = document.getElementById('contextMenu');
+            if (existingMenu) {
+                existingMenu.remove();
+            }
+            
+            // Yeni context menu oluştur
+            const contextMenu = document.createElement('div');
+            contextMenu.id = 'contextMenu';
+            contextMenu.className = 'context-menu';
+            contextMenu.innerHTML = `
+                <div class="context-menu-item" onclick="inviteGuest('${roomNumber}', '${guestName}', '${guestSurname}')">
+                    👤 Misafir Davet Et
+                </div>
+            `;
+            
+            document.body.appendChild(contextMenu);
+            
+            // Pozisyon ayarla
+            contextMenu.style.left = `${event.pageX}px`;
+            contextMenu.style.top = `${event.pageY}px`;
+            
+            // Dışarı tıklanınca kapat
+            setTimeout(() => {
+                const closeMenu = () => {
+                    contextMenu.remove();
+                    document.removeEventListener('click', closeMenu);
+                };
+                document.addEventListener('click', closeMenu);
+            }, 10);
+        }
+
+        // Misafir davet et (QR kod oluştur)
+        async function inviteGuest(roomNumber, guestName, guestSurname) {
+            // Context menu'yu kapat
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu) {
+                contextMenu.remove();
+            }
+            
+            try {
+                const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms/${roomNumber}/invite`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('QR kod oluşturulamadı');
+                }
+                
+                const inviteData = await response.json();
+                
+                // QR kod modal'ını göster
+                document.getElementById('qrCodeImage').src = inviteData.qrCodeUrl;
+                document.getElementById('qrLink').textContent = inviteData.inviteLink;
+                
+                // Modal başlığını güncelle
+                const modalTitle = document.getElementById('qrModalTitle');
+                if (modalTitle) {
+                    modalTitle.textContent = `${guestName} ${guestSurname} - Oda ${roomNumber}`;
+                }
+                
+                document.getElementById('qrModal').classList.add('active');
+            } catch (error) {
+                console.error('Error creating invite:', error);
+                alert('QR kod oluşturulurken bir hata oluştu');
+            }
+        }
+
+        // Show QR modal (mevcut buton için)
         async function showQRModal() {
             if (!currentRoomNumber) return;
             
@@ -584,6 +689,13 @@
                 
                 document.getElementById('qrCodeImage').src = inviteData.qrCodeUrl;
                 document.getElementById('qrLink').textContent = inviteData.inviteLink;
+                
+                // Modal başlığını güncelle
+                const modalTitle = document.getElementById('qrModalTitle');
+                if (modalTitle && currentRoom) {
+                    modalTitle.textContent = `${currentRoom.guestName} ${currentRoom.guestSurname} - Oda ${currentRoomNumber}`;
+                }
+                
                 document.getElementById('qrModal').classList.add('active');
             } catch (error) {
                 console.error('Error creating invite:', error);
