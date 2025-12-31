@@ -1795,19 +1795,6 @@
             });
         }
 
-            // Restore scroll position (prevent jump)
-            const newScrollHeight = chatContainer.scrollHeight;
-            chatContainer.scrollTop = newScrollHeight - previousScrollHeight;
-
-            // Update oldest message timestamp
-            if (messages.length > 0) {
-                oldestMessageTimestamp = messages[0].timestamp;
-            }
-
-            isLoadingOlderMessages = false;
-            console.log('✅ Loaded', messages.length, 'older messages');
-        });
-
         // Service Worker Registration (PWA) with Auto-Update
         if ('serviceWorker' in navigator) {
             let refreshing = false;
