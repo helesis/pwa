@@ -98,6 +98,20 @@ async function initializeDatabase() {
         profile_photo TEXT
       );
 
+      -- Add checkin_date column to messages if it doesn't exist
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS checkin_date DATE;
+      
+      -- Update existing messages: set checkin_date from rooms table where possible
+      UPDATE messages m
+      SET checkin_date = (
+        SELECT r.checkin_date 
+        FROM rooms r 
+        WHERE r.room_number = m.room_number 
+        ORDER BY r.checkin_date DESC 
+        LIMIT 1
+      )
+      WHERE m.checkin_date IS NULL;
+      
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
       CREATE INDEX IF NOT EXISTS idx_messages_room_checkin ON messages(room_number, checkin_date);
