@@ -626,12 +626,51 @@
         socket.on('new_message', (data) => {
             const isSent = data.senderType === 'assistant' || data.senderType === 'staff';
             
-            // If this is a message we sent, mark it as delivered
+            // Check if this message already exists (optimistic update)
+            const existingMessage = document.querySelector(`[data-message-id="${data.id}"]`);
+            
+            // If this is a message we sent, check if we already showed it optimistically
             if (isSent) {
-                socket.emit('message_delivered', { messageId: data.id });
+                // Find temp message with same content
+                const tempMessages = document.querySelectorAll(`[data-message-id^="temp_"]`);
+                let tempMessageEl = null;
+                
+                for (const tempMsg of tempMessages) {
+                    const messageText = tempMsg.querySelector('.message-bubble div')?.textContent || '';
+                    if (messageText.includes(data.message.substring(0, 20))) {
+                        tempMessageEl = tempMsg;
+                        break;
+                    }
+                }
+                
+                if (tempMessageEl && !existingMessage) {
+                    // Update the temp message with real ID
+                    tempMessageEl.setAttribute('data-message-id', data.id);
+                    
+                    // Update status
+                    if (data.status) {
+                        const statusEl = tempMessageEl.querySelector('.message-status');
+                        if (statusEl) {
+                            statusEl.classList.remove('sent', 'delivered', 'read');
+                            statusEl.classList.add(data.status);
+                        }
+                    }
+                    
+                    // Mark as delivered
+                    socket.emit('message_delivered', { messageId: data.id });
+                    return; // Don't add duplicate message
+                }
             }
             
-            displayMessage(data, isSent);
+            // If message doesn't exist, add it
+            if (!existingMessage) {
+                // If this is a message we sent, mark it as delivered
+                if (isSent) {
+                    socket.emit('message_delivered', { messageId: data.id });
+                }
+                
+                displayMessage(data, isSent);
+            }
         });
         
         // Message sent confirmation
