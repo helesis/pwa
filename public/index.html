@@ -1795,37 +1795,6 @@
             });
         }
 
-        // Handle older messages from server
-        socket.on('older_messages', (messages) => {
-            const chatContainer = document.getElementById('chatContainer');
-            const loadingIndicator = document.getElementById('loadingOlder');
-            
-            if (loadingIndicator) {
-                loadingIndicator.remove();
-            }
-
-            if (messages.length === 0) {
-                isLoadingOlderMessages = false;
-                // Show "No more messages" indicator
-                const noMoreIndicator = document.createElement('div');
-                noMoreIndicator.style.textAlign = 'center';
-                noMoreIndicator.style.padding = '10px';
-                noMoreIndicator.style.color = '#667781';
-                noMoreIndicator.style.fontSize = '12px';
-                noMoreIndicator.innerHTML = '📜 Tüm mesajlar yüklendi';
-                chatContainer.insertBefore(noMoreIndicator, chatContainer.firstChild);
-                oldestMessageTimestamp = null; // No more messages to load
-                return;
-            }
-
-            // Save current scroll position
-            const previousScrollHeight = chatContainer.scrollHeight;
-
-            // Add messages to the top (prepend)
-            messages.forEach(msg => {
-                displayMessage(msg, false, true);
-            });
-
             // Restore scroll position (prevent jump)
             const newScrollHeight = chatContainer.scrollHeight;
             chatContainer.scrollTop = newScrollHeight - previousScrollHeight;
