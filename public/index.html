@@ -212,14 +212,6 @@
             overflow-y: auto;
             padding: 16px 8px;
             background: #efeae2;
-            background-image: 
-                repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 10px,
-                    rgba(0,0,0,.03) 10px,
-                    rgba(0,0,0,.03) 20px
-                );
             scroll-behavior: smooth;
             display: flex;
             flex-direction: column;
@@ -297,6 +289,19 @@
             font-weight: 500;
             object-fit: cover;
             overflow: hidden;
+        }
+
+        .message-avatar .voyage-logo {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-avatar .voyage-logo svg {
+            width: 28px;
+            height: 28px;
         }
 
         .message.sent .message-avatar {
@@ -664,7 +669,17 @@
         </div>
 
         <div class="typing-indicator" id="typingIndicator">
-            <div class="message-avatar">🏨</div>
+            <div class="message-avatar">
+                <div class="voyage-logo">
+                    <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                        <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                        <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                        <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                        <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                    </svg>
+                </div>
+            </div>
             <div class="typing-dots">
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
@@ -723,9 +738,27 @@
 
     <script>
         // Configuration
-        const ROOM_NUMBER = '301'; // Demo için sabit oda numarası
-        const GUEST_NAME = 'Ali Bey';
+        // Get room number and token from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        let ROOM_NUMBER = urlParams.get('room') || '301'; // Default to 301 if not provided
+        const INVITE_TOKEN = urlParams.get('token');
+        let GUEST_NAME = 'Misafir';
         const SERVER_URL = window.location.origin;
+
+        // Load guest info from token if available
+        if (INVITE_TOKEN) {
+            fetch(`/api/invite/${INVITE_TOKEN}`)
+                .then(response => response.json())
+                .then(data => {
+                    ROOM_NUMBER = data.roomNumber;
+                    GUEST_NAME = data.guestName || 'Misafir';
+                    // Update header if needed
+                    console.log('✅ Guest info loaded:', { ROOM_NUMBER, GUEST_NAME });
+                })
+                .catch(error => {
+                    console.error('Error loading guest info:', error);
+                });
+        }
 
         // Profile Photo Management
         let guestProfilePhoto = null;
@@ -1150,8 +1183,18 @@
                     avatarHTML = '<div class="message-avatar">👤</div>';
                 }
             } else {
-                // Not sent - it's from hotel/staff
-                avatarHTML = '<div class="message-avatar">🏨</div>';
+                // Not sent - it's from hotel/staff - use VOYAGE HOTELS logo
+                avatarHTML = `<div class="message-avatar">
+                    <div class="voyage-logo">
+                        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                            <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                            <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                            <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                            <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                        </svg>
+                    </div>
+                </div>`;
             }
             
             // Ensure 'sent' class is applied correctly
@@ -1235,7 +1278,17 @@
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.innerHTML = `
                 <div class="message">
-                    <div class="message-avatar">🏨</div>
+                    <div class="message-avatar">
+                        <div class="voyage-logo">
+                            <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                                <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                                <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                                <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                                <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                            </svg>
+                        </div>
+                    </div>
                     <div class="message-content">
                         <div class="message-bubble">
                             <div class="message-text">

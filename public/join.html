@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#008069">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Voyage Chat'e Katıl</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #008069 0%, #006d58 100%);
+            color: #111b21;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .join-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #111b21;
+        }
+
+        .subtitle {
+            color: #667781;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .room-info {
+            background: #f0f2f5;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: #667781;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #111b21;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .steps {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #008069;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #111b21;
+        }
+
+        .step-desc {
+            font-size: 13px;
+            color: #667781;
+        }
+
+        .join-button {
+            width: 100%;
+            background: #008069;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .join-button:hover {
+            background: #006d58;
+        }
+
+        .join-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .ios-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .ios-instructions ol {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+
+        .ios-instructions li {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="join-container">
+        <div class="logo">🏨</div>
+        <h1>Voyage Sorgun Chat</h1>
+        <div class="subtitle">Hoş geldiniz! Chat'e katılmak için aşağıdaki adımları takip edin.</div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <div id="roomInfo" class="room-info" style="display: none;">
+            <div class="info-row">
+                <span class="info-label">Oda Numarası:</span>
+                <span class="info-value" id="roomNumber">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Misafir:</span>
+                <span class="info-value" id="guestName">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Check-in:</span>
+                <span class="info-value" id="checkinDate">-</span>
+            </div>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">Ana Ekrana Ekle</div>
+                    <div class="step-desc">Uygulamayı ana ekranınıza ekleyin</div>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">Bildirimleri Aç</div>
+                    <div class="step-desc">Mesajlarınızı kaçırmamak için bildirim izni verin</div>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">Chat'e Başla</div>
+                    <div class="step-desc">Otel personeli ile iletişime geçin</div>
+                </div>
+            </div>
+        </div>
+
+        <button class="join-button" id="joinButton" onclick="joinChat()">
+            <span id="joinButtonText">Chat'e Katıl</span>
+        </button>
+
+        <div id="iosInstructions" class="ios-instructions" style="display: none;">
+            <strong>iOS için:</strong>
+            <ol>
+                <li>Safari menüsünden "Ana Ekrana Ekle" seçin</li>
+                <li>Uygulamayı ana ekrandan açın</li>
+                <li>Bildirim izni verin</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        let roomData = null;
+
+        // Check if iOS
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        // Check if standalone (PWA)
+        function isStandalone() {
+            return window.navigator.standalone === true || 
+                   window.matchMedia('(display-mode: standalone)').matches;
+        }
+
+        // Load room info
+        async function loadRoomInfo() {
+            if (!token) {
+                showError('Geçersiz bağlantı. Lütfen QR kodu tekrar tarayın.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/invite/${token}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showError('Bu bağlantı geçersiz veya süresi dolmuş.');
+                    } else if (response.status === 410) {
+                        showError('Bu bağlantının süresi dolmuş.');
+                    } else {
+                        showError('Bir hata oluştu. Lütfen tekrar deneyin.');
+                    }
+                    return;
+                }
+
+                roomData = await response.json();
+                
+                // Display room info
+                document.getElementById('roomNumber').textContent = roomData.roomNumber;
+                document.getElementById('guestName').textContent = `${roomData.guestName} ${roomData.guestSurname || ''}`;
+                document.getElementById('checkinDate').textContent = new Date(roomData.checkinDate).toLocaleDateString('tr-TR');
+                document.getElementById('roomInfo').style.display = 'block';
+
+                // Show iOS instructions if needed
+                if (isIOS() && !isStandalone()) {
+                    document.getElementById('iosInstructions').style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Error loading room info:', error);
+                showError('Bağlantı hatası. Lütfen tekrar deneyin.');
+            }
+        }
+
+        // Show error
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('joinButton').disabled = true;
+        }
+
+        // Join chat
+        async function joinChat() {
+            if (!roomData || !token) {
+                showError('Oda bilgileri yüklenemedi.');
+                return;
+            }
+
+            const button = document.getElementById('joinButton');
+            const buttonText = document.getElementById('joinButtonText');
+            
+            button.disabled = true;
+            buttonText.innerHTML = '<span class="loading"></span> Yükleniyor...';
+
+            try {
+                // Mark token as used
+                await fetch(`/api/invite/${token}/use`, { method: 'POST' });
+
+                // Request notification permission
+                if ('Notification' in window && Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+
+                // Redirect to chat with room number
+                const chatUrl = `/?room=${roomData.roomNumber}&token=${token}`;
+                window.location.href = chatUrl;
+
+            } catch (error) {
+                console.error('Error joining chat:', error);
+                button.disabled = false;
+                buttonText.textContent = 'Chat\'e Katıl';
+                showError('Chat\'e katılırken bir hata oluştu. Lütfen tekrar deneyin.');
+            }
+        }
+
+        // Load room info on page load
+        window.addEventListener('load', () => {
+            loadRoomInfo();
+        });
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered');
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
+

@@ -6,6 +6,8 @@ import pg from 'pg';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
+import QRCode from 'qrcode';
+import { randomBytes } from 'crypto';
 
 dotenv.config();
 
@@ -94,6 +96,49 @@ async function initializeDatabase() {
 
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_rooms_room_checkin ON rooms(room_number, checkin_date);
+
+      -- Assistant'lar tablosu
+      CREATE TABLE IF NOT EXISTS assistants (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        password_hash VARCHAR(255),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Assistant'a atanan odalar
+      CREATE TABLE IF NOT EXISTS assistant_assignments (
+        id SERIAL PRIMARY KEY,
+        assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,
+        room_number VARCHAR(50) REFERENCES rooms(room_number) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT true,
+        UNIQUE(assistant_id, room_number)
+      );
+
+      -- QR kod ve davet sistemi
+      CREATE TABLE IF NOT EXISTS room_invites (
+        id SERIAL PRIMARY KEY,
+        room_number VARCHAR(50) REFERENCES rooms(room_number) ON DELETE CASCADE,
+        assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,
+        invite_token VARCHAR(255) UNIQUE NOT NULL,
+        qr_code_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        used_at TIMESTAMP,
+        is_active BOOLEAN DEFAULT true
+      );
+
+      -- Rooms tablosuna guest_surname ekle
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS guest_surname VARCHAR(100);
+
+      -- Index'ler
+      CREATE INDEX IF NOT EXISTS idx_assistant_assignments_assistant ON assistant_assignments(assistant_id);
+      CREATE INDEX IF NOT EXISTS idx_assistant_assignments_room ON assistant_assignments(room_number);
+      CREATE INDEX IF NOT EXISTS idx_room_invites_token ON room_invites(invite_token);
+      CREATE INDEX IF NOT EXISTS idx_room_invites_room ON room_invites(room_number);
     `);
     
     console.log('✅ Database tables initialized');
@@ -103,8 +148,7 @@ async function initializeDatabase() {
   }
 }
 
-// Initialize on startup
-initializeDatabase().catch(console.error);
+// Initialize on startup (test data will be initialized after DB setup)
 
 // Socket.IO Connection
 io.on('connection', (socket) => {
@@ -359,6 +403,237 @@ app.get('/api/stats', async (req, res) => {
     res.status(500).json({ error: 'Database error' });
   }
 });
+
+// Assistant API Endpoints
+
+// Get assistant's assigned rooms (filtered by check-in date)
+app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
+  try {
+    const { assistantId } = req.params;
+    const { date } = req.query; // Optional: filter by date (default: today)
+    
+    const checkinDate = date || new Date().toISOString().split('T')[0];
+    
+    const result = await pool.query(`
+      SELECT 
+        r.id,
+        r.room_number,
+        r.guest_name,
+        r.guest_surname,
+        r.checkin_date,
+        r.checkout_date,
+        r.is_active,
+        aa.assigned_at
+      FROM rooms r
+      INNER JOIN assistant_assignments aa ON r.room_number = aa.room_number
+      WHERE aa.assistant_id = $1 
+        AND aa.is_active = true
+        AND r.checkin_date = $2
+        AND r.is_active = true
+      ORDER BY r.room_number ASC
+    `, [assistantId, checkinDate]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching assistant rooms:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Create invite and generate QR code for a room
+app.post('/api/assistant/:assistantId/rooms/:roomNumber/invite', async (req, res) => {
+  try {
+    const { assistantId, roomNumber } = req.params;
+    
+    // Verify assistant has access to this room
+    const assignmentCheck = await pool.query(`
+      SELECT * FROM assistant_assignments 
+      WHERE assistant_id = $1 AND room_number = $2 AND is_active = true
+    `, [assistantId, roomNumber]);
+    
+    if (assignmentCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Assistant does not have access to this room' });
+    }
+    
+    // Generate unique token
+    const inviteToken = randomBytes(32).toString('hex');
+    
+    // Create invite link
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const inviteLink = `${frontendUrl}/join?token=${inviteToken}`;
+    
+    // Generate QR code
+    const qrCodeDataUrl = await QRCode.toDataURL(inviteLink, {
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    
+    // Save to database
+    const result = await pool.query(`
+      INSERT INTO room_invites (room_number, assistant_id, invite_token, qr_code_url, expires_at)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, created_at
+    `, [
+      roomNumber,
+      assistantId,
+      inviteToken,
+      qrCodeDataUrl,
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days expiry
+    ]);
+    
+    res.json({
+      inviteToken,
+      qrCodeUrl: qrCodeDataUrl,
+      inviteLink,
+      expiresAt: result.rows[0].created_at
+    });
+  } catch (error) {
+    console.error('Error creating invite:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get room info by invite token (for guest onboarding)
+app.get('/api/invite/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const result = await pool.query(`
+      SELECT 
+        ri.invite_token,
+        ri.room_number,
+        ri.used_at,
+        ri.expires_at,
+        r.guest_name,
+        r.guest_surname,
+        r.checkin_date,
+        r.checkout_date
+      FROM room_invites ri
+      INNER JOIN rooms r ON ri.room_number = r.room_number
+      WHERE ri.invite_token = $1 AND ri.is_active = true
+    `, [token]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invalid or expired invite token' });
+    }
+    
+    const invite = result.rows[0];
+    
+    // Check if expired
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+      return res.status(410).json({ error: 'Invite token has expired' });
+    }
+    
+    res.json({
+      roomNumber: invite.room_number,
+      guestName: invite.guest_name,
+      guestSurname: invite.guest_surname,
+      checkinDate: invite.checkin_date,
+      checkoutDate: invite.checkout_date,
+      used: !!invite.used_at
+    });
+  } catch (error) {
+    console.error('Error fetching invite:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Mark invite as used
+app.post('/api/invite/:token/use', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const result = await pool.query(`
+      UPDATE room_invites 
+      SET used_at = CURRENT_TIMESTAMP
+      WHERE invite_token = $1 AND used_at IS NULL
+      RETURNING id
+    `, [token]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invite not found or already used' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking invite as used:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Initialize test data (rooms with today's check-in date)
+async function initializeTestData() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Create test assistant if not exists
+    const assistantResult = await pool.query(`
+      INSERT INTO assistants (name, email, is_active)
+      VALUES ('Test Assistant', 'assistant@voyage.com', true)
+      ON CONFLICT (email) DO NOTHING
+      RETURNING id
+    `);
+    
+    let assistantId;
+    if (assistantResult.rows.length > 0) {
+      assistantId = assistantResult.rows[0].id;
+    } else {
+      const existing = await pool.query('SELECT id FROM assistants WHERE email = $1', ['assistant@voyage.com']);
+      assistantId = existing.rows[0].id;
+    }
+    
+    // Create test rooms with today's check-in date
+    const testRooms = [
+      { number: '301', name: 'Ali', surname: 'Yılmaz' },
+      { number: '302', name: 'Ayşe', surname: 'Demir' },
+      { number: '303', name: 'Mehmet', surname: 'Kaya' },
+      { number: '304', name: 'Zeynep', surname: 'Şahin' },
+      { number: '305', name: 'Can', surname: 'Özkan' }
+    ];
+    
+    for (const room of testRooms) {
+      // Create or update room
+      await pool.query(`
+        INSERT INTO rooms (room_number, guest_name, guest_surname, checkin_date, checkout_date, is_active)
+        VALUES ($1, $2, $3, $4, $5, true)
+        ON CONFLICT (room_number) 
+        DO UPDATE SET 
+          guest_name = EXCLUDED.guest_name,
+          guest_surname = EXCLUDED.guest_surname,
+          checkin_date = EXCLUDED.checkin_date,
+          checkout_date = EXCLUDED.checkout_date,
+          is_active = true
+      `, [
+        room.number,
+        room.name,
+        room.surname,
+        today,
+        new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 3 days later
+      ]);
+      
+      // Assign to assistant
+      await pool.query(`
+        INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
+        VALUES ($1, $2, true)
+        ON CONFLICT (assistant_id, room_number) 
+        DO UPDATE SET is_active = true
+      `, [assistantId, room.number]);
+    }
+    
+    console.log('✅ Test data initialized');
+  } catch (error) {
+    console.error('❌ Error initializing test data:', error);
+  }
+}
+
+// Initialize test data after database setup
+initializeDatabase().then(() => {
+  initializeTestData();
+}).catch(console.error);
 
 // Health check
 app.get('/health', async (req, res) => {
