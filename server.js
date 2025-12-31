@@ -515,18 +515,55 @@ app.post('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
     const { profilePhoto } = req.body;
     const { roomNumber } = req.params;
     
-    // Update or insert room with profile photo
-    await pool.query(`
-      INSERT INTO rooms (room_number, profile_photo)
-      VALUES ($1, $2)
-      ON CONFLICT(room_number) 
-      DO UPDATE SET profile_photo = EXCLUDED.profile_photo
-    `, [roomNumber, profilePhoto]);
+    console.log('📸 Saving profile photo for room:', roomNumber);
+    console.log('📸 Photo data length:', profilePhoto ? profilePhoto.length : 0);
     
+    if (!profilePhoto) {
+      return res.status(400).json({ error: 'Profile photo data is required' });
+    }
+    
+    // Check if photo data is too large (PostgreSQL TEXT can handle up to 1GB, but we'll limit to 5MB for base64)
+    if (profilePhoto.length > 5 * 1024 * 1024) {
+      console.error('❌ Profile photo too large:', profilePhoto.length);
+      return res.status(400).json({ error: 'Profile photo is too large (max 5MB)' });
+    }
+    
+    // Update or insert room with profile photo
+    // First check if room exists
+    const roomCheck = await pool.query(
+      'SELECT id FROM rooms WHERE room_number = $1',
+      [roomNumber]
+    );
+    
+    if (roomCheck.rows.length === 0) {
+      // Room doesn't exist, create it with minimal data
+      await pool.query(`
+        INSERT INTO rooms (room_number, profile_photo, is_active)
+        VALUES ($1, $2, true)
+      `, [roomNumber, profilePhoto]);
+    } else {
+      // Room exists, update profile photo
+      await pool.query(`
+        UPDATE rooms 
+        SET profile_photo = $1
+        WHERE room_number = $2
+      `, [profilePhoto, roomNumber]);
+    }
+    
+    console.log('✅ Profile photo saved successfully');
     res.json({ success: true });
   } catch (error) {
-    console.error('Error saving profile photo:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('❌ Error saving profile photo:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Database error',
+      message: error.message 
+    });
   }
 });
 
