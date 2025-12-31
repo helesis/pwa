@@ -594,6 +594,11 @@
                 checkinDate: checkinDate
             });
             // Note: loadChatHistory is handled by socket.on('chat_history')
+            
+            // Initialize observer when room is selected
+            setTimeout(() => {
+                initMessageObserver();
+            }, 500);
         }
 
         // Load chat history
