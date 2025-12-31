@@ -81,6 +81,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         room_number VARCHAR(50) NOT NULL,
+        checkin_date DATE NOT NULL,
         sender_type VARCHAR(20) NOT NULL,
         sender_name VARCHAR(100),
         message TEXT NOT NULL,
@@ -99,6 +100,7 @@ async function initializeDatabase() {
 
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_messages_room_checkin ON messages(room_number, checkin_date);
       CREATE INDEX IF NOT EXISTS idx_rooms_room_checkin ON rooms(room_number, checkin_date);
 
       -- Assistant'lar tablosu
@@ -163,26 +165,57 @@ io.on('connection', (socket) => {
   console.log('🟢 Transport:', socket.conn.transport.name);
 
   // Join room
-  socket.on('join_room', async (roomNumber) => {
+  socket.on('join_room', async (data) => {
+    // Support both old format (just roomNumber) and new format (object with roomNumber and checkinDate)
+    const roomNumber = typeof data === 'string' ? data : data.roomNumber;
+    const checkinDate = typeof data === 'object' && data.checkinDate ? data.checkinDate : null;
+    
     console.log('🔵 ========== SERVER: JOIN ROOM ==========');
     console.log('🔵 Socket ID:', socket.id);
     console.log('🔵 Room Number:', roomNumber);
+    console.log('🔵 Check-in Date:', checkinDate);
     console.log('🔵 Time:', new Date().toISOString());
     console.log('🔵 Client IP:', socket.handshake.address);
     console.log('🔵 User Agent:', socket.handshake.headers['user-agent']);
     
-    socket.join(roomNumber);
-    console.log(`✅ Client joined room: ${roomNumber}`);
+    // If checkinDate not provided, get it from room
+    let actualCheckinDate = checkinDate;
+    if (!actualCheckinDate) {
+      const roomResult = await pool.query(
+        'SELECT checkin_date FROM rooms WHERE room_number = $1',
+        [roomNumber]
+      );
+      if (roomResult.rows.length > 0) {
+        actualCheckinDate = roomResult.rows[0].checkin_date;
+        console.log('🔵 Check-in date from room:', actualCheckinDate);
+      }
+    }
+    
+    // Use room_number + checkin_date as unique room identifier
+    const roomId = actualCheckinDate ? `${roomNumber}_${actualCheckinDate}` : roomNumber;
+    socket.join(roomId);
+    console.log(`✅ Client joined room: ${roomId}`);
     
     try {
-      console.log('📊 Fetching chat history for room:', roomNumber);
-      // Send chat history (last 50 messages)
-      const result = await pool.query(`
-        SELECT * FROM messages 
-        WHERE room_number = $1 
-        ORDER BY timestamp DESC 
-        LIMIT 50
-      `, [roomNumber]);
+      console.log('📊 Fetching chat history for room:', roomNumber, 'check-in:', actualCheckinDate);
+      // Send chat history (last 50 messages) filtered by room_number AND checkin_date
+      let result;
+      if (actualCheckinDate) {
+        result = await pool.query(`
+          SELECT * FROM messages 
+          WHERE room_number = $1 AND checkin_date = $2
+          ORDER BY timestamp DESC 
+          LIMIT 50
+        `, [roomNumber, actualCheckinDate]);
+      } else {
+        // Fallback: if no checkin_date, use only room_number (for backward compatibility)
+        result = await pool.query(`
+          SELECT * FROM messages 
+          WHERE room_number = $1 
+          ORDER BY timestamp DESC 
+          LIMIT 50
+        `, [roomNumber]);
+      }
       
       console.log('📊 Messages found:', result.rows.length);
       
@@ -190,6 +223,7 @@ io.on('connection', (socket) => {
       const messages = result.rows.reverse().map(row => ({
         id: row.id,
         roomNumber: row.room_number,
+        checkinDate: row.checkin_date,
         senderType: row.sender_type,
         senderName: row.sender_name,
         message: row.message,
@@ -208,16 +242,29 @@ io.on('connection', (socket) => {
 
   // Load older messages
   socket.on('load_older_messages', async (data) => {
-    const { roomNumber, beforeTimestamp, limit = 50 } = data;
+    const { roomNumber, checkinDate, beforeTimestamp, limit = 50 } = data;
     
     try {
-      const result = await pool.query(`
-        SELECT * FROM messages 
-        WHERE room_number = $1 
-        AND timestamp < $2
-        ORDER BY timestamp DESC 
-        LIMIT $3
-      `, [roomNumber, beforeTimestamp, limit]);
+      let result;
+      if (checkinDate) {
+        result = await pool.query(`
+          SELECT * FROM messages 
+          WHERE room_number = $1 
+          AND checkin_date = $2
+          AND timestamp < $3
+          ORDER BY timestamp DESC 
+          LIMIT $4
+        `, [roomNumber, checkinDate, beforeTimestamp, limit]);
+      } else {
+        // Fallback for backward compatibility
+        result = await pool.query(`
+          SELECT * FROM messages 
+          WHERE room_number = $1 
+          AND timestamp < $2
+          ORDER BY timestamp DESC 
+          LIMIT $3
+        `, [roomNumber, beforeTimestamp, limit]);
+      }
       
       // Map database column names (snake_case) to frontend format (camelCase)
       const messages = result.rows.reverse().map(row => ({
@@ -240,16 +287,35 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     console.log('📨 Message received:', data);
     
-    const { roomNumber, senderType, senderName, message } = data;
+    const { roomNumber, checkinDate, senderType, senderName, message } = data;
+    
+    // Get checkin_date if not provided
+    let actualCheckinDate = checkinDate;
+    if (!actualCheckinDate) {
+      const roomResult = await pool.query(
+        'SELECT checkin_date FROM rooms WHERE room_number = $1',
+        [roomNumber]
+      );
+      if (roomResult.rows.length > 0) {
+        actualCheckinDate = roomResult.rows[0].checkin_date;
+      }
+    }
+    
+    if (!actualCheckinDate) {
+      console.error('❌ Cannot save message: checkin_date not found for room:', roomNumber);
+      socket.emit('error', { message: 'Oda bilgisi bulunamadı' });
+      return;
+    }
     
     try {
-      // Save to database
+      // Save to database with checkin_date
       const result = await pool.query(`
-        INSERT INTO messages (room_number, sender_type, sender_name, message)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO messages (room_number, checkin_date, sender_type, sender_name, message)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id, timestamp
       `, [
         roomNumber,
+        actualCheckinDate,
         senderType,
         senderName,
         message
@@ -258,17 +324,21 @@ io.on('connection', (socket) => {
       const messageId = result.rows[0].id;
       const timestamp = result.rows[0].timestamp;
       
+      // Use room_number + checkin_date as unique room identifier for broadcasting
+      const roomId = `${roomNumber}_${actualCheckinDate}`;
+      
       // Broadcast message
       const messageData = {
         id: messageId,
         roomNumber,
+        checkinDate: actualCheckinDate,
         senderType,
         senderName,
         message,
         timestamp: timestamp.toISOString()
       };
       
-      io.to(roomNumber).emit('new_message', messageData);
+      io.to(roomId).emit('new_message', messageData);
     } catch (error) {
       console.error('Error saving message:', error);
       socket.emit('error', { message: 'Mesaj kaydedilemedi' });

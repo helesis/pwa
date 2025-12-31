@@ -743,6 +743,7 @@
         let ROOM_NUMBER = urlParams.get('room') || null;
         const INVITE_TOKEN = urlParams.get('token');
         let GUEST_NAME = 'Misafir';
+        let CHECKIN_DATE = null; // Will be loaded from token or room
         const SERVER_URL = window.location.origin;
 
         // Load guest info from token if available (must complete before socket connection)
@@ -754,19 +755,34 @@
             // Önce URL'den room parametresini kontrol et (en güvenilir)
             if (ROOM_NUMBER) {
                 console.log('✅ Room number from URL:', ROOM_NUMBER);
-                // Room number zaten var, token'dan sadece guest name'i yükle
+                // Room number zaten var, token'dan guest name ve checkin date'i yükle
                 if (INVITE_TOKEN) {
                     try {
                         const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
                         if (response.ok) {
                             const data = await response.json();
                             GUEST_NAME = data.guestName || 'Misafir';
-                            console.log('✅ Guest name loaded from token:', GUEST_NAME);
+                            CHECKIN_DATE = data.checkinDate || null;
+                            console.log('✅ Guest info loaded from token:', { GUEST_NAME, CHECKIN_DATE });
                         } else {
                             console.warn('Token already used or invalid, using default name');
                         }
                     } catch (error) {
-                        console.warn('Could not load guest name from token:', error);
+                        console.warn('Could not load guest info from token:', error);
+                    }
+                }
+                
+                // If checkin_date not loaded, try to get from room
+                if (!CHECKIN_DATE && ROOM_NUMBER) {
+                    try {
+                        const response = await fetch(`/api/rooms/${ROOM_NUMBER}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            CHECKIN_DATE = data.checkin_date || null;
+                            console.log('✅ Check-in date loaded from room:', CHECKIN_DATE);
+                        }
+                    } catch (error) {
+                        console.warn('Could not load check-in date from room:', error);
                     }
                 }
                 guestInfoLoaded = true;
@@ -781,7 +797,8 @@
                         const data = await response.json();
                         ROOM_NUMBER = data.roomNumber;
                         GUEST_NAME = data.guestName || 'Misafir';
-                        console.log('✅ Guest info loaded from token:', { ROOM_NUMBER, GUEST_NAME });
+                        CHECKIN_DATE = data.checkinDate || null;
+                        console.log('✅ Guest info loaded from token:', { ROOM_NUMBER, GUEST_NAME, CHECKIN_DATE });
                         guestInfoLoaded = true;
                         return true;
                     } else {
@@ -1116,7 +1133,11 @@
                 
                 console.log('📤 Step 6: Emitting join_room');
                 console.log('📤 Room Number:', ROOM_NUMBER);
-                socket.emit('join_room', ROOM_NUMBER);
+                console.log('📤 Check-in Date:', CHECKIN_DATE);
+                socket.emit('join_room', {
+                    roomNumber: ROOM_NUMBER,
+                    checkinDate: CHECKIN_DATE
+                });
                 console.log('📤 join_room event emitted');
             });
 
@@ -1170,7 +1191,10 @@
                 if (statusText) {
                     statusText.textContent = 'Çevrimiçi';
                 }
-                socket.emit('join_room', ROOM_NUMBER);
+                socket.emit('join_room', {
+                    roomNumber: ROOM_NUMBER,
+                    checkinDate: CHECKIN_DATE
+                });
             });
 
             socket.on('reconnect_error', (error) => {
@@ -1575,7 +1599,10 @@
             
             // Stop typing indicator
             if (isTyping && socket) {
-                socket.emit('stop_typing', { roomNumber: ROOM_NUMBER });
+                socket.emit('stop_typing', { 
+                    roomNumber: ROOM_NUMBER,
+                    checkinDate: CHECKIN_DATE
+                });
                 isTyping = false;
             }
         }
@@ -1659,6 +1686,7 @@
             }
             socket.emit('send_message', {
                 roomNumber: ROOM_NUMBER,
+                checkinDate: CHECKIN_DATE,
                 senderType: 'staff',
                 senderName: randomStaffName,
                 message: randomMessage

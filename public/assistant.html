@@ -455,6 +455,7 @@
         
         let currentRoom = null;
         let currentRoomNumber = null;
+        let currentCheckinDate = null;
         let inviteData = null;
 
         // Set today's date as default
@@ -497,7 +498,7 @@
                             </div>
                         </div>
                     `;
-                    roomElement.addEventListener('click', () => selectRoom(room.room_number, room.guest_name, room.guest_surname, roomElement));
+                    roomElement.addEventListener('click', () => selectRoom(room.room_number, room.guest_name, room.guest_surname, room.checkin_date, roomElement));
                     
                     // Sağ tıklama menüsü ekle
                     roomElement.addEventListener('contextmenu', (e) => {
@@ -531,9 +532,12 @@
             document.getElementById('qrButton').style.display = 'block';
             document.getElementById('inputContainer').style.display = 'flex';
             
-            // Join room and load chat
-            socket.emit('join_room', roomNumber);
-            loadChatHistory(roomNumber);
+            // Join room and load chat with checkin_date
+            socket.emit('join_room', {
+                roomNumber: roomNumber,
+                checkinDate: checkinDate
+            });
+            loadChatHistory(roomNumber, checkinDate);
         }
 
         // Load chat history
@@ -590,6 +594,7 @@
             
             socket.emit('send_message', {
                 roomNumber: currentRoomNumber,
+                checkinDate: currentCheckinDate,
                 senderType: 'assistant',
                 senderName: 'Assistant',
                 message: message
