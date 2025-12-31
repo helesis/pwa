@@ -627,7 +627,8 @@ async function initializeTestData() {
       { number: '302', name: 'Ayşe', surname: 'Demir' },
       { number: '303', name: 'Mehmet', surname: 'Kaya' },
       { number: '304', name: 'Zeynep', surname: 'Şahin' },
-      { number: '305', name: 'Can', surname: 'Özkan' }
+      { number: '305', name: 'Can', surname: 'Özkan' },
+      { number: '306', name: 'Lena', surname: 'Podorozhna' }
     ];
     
     for (const room of testRooms) {
