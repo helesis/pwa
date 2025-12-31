@@ -262,45 +262,32 @@
 
         /* WhatsApp style tick icons */
         .message-status-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
+            display: inline-block;
+            width: auto;
             height: 14px;
-            position: relative;
+            line-height: 1;
             font-family: 'Segoe UI', Arial, sans-serif;
             font-weight: normal;
+            vertical-align: middle;
         }
 
         /* Single tick (sent) */
-        .message-status.sent .message-status-icon::before {
+        .message-status.sent .message-status-icon::after {
             content: '✓';
             font-size: 16px;
-            line-height: 1;
         }
 
-        /* Double tick (delivered/read) - Two separate ticks */
-        .message-status.delivered .message-status-icon::before,
-        .message-status.read .message-status-icon::before {
-            content: '✓';
+        /* Double tick (delivered/read) - Two ticks side by side */
+        .message-status.delivered .message-status-icon::after {
+            content: '✓✓';
             font-size: 16px;
-            line-height: 1;
-            position: absolute;
-            left: 0;
+            letter-spacing: -4px;
         }
 
-        .message-status.delivered .message-status-icon::after,
         .message-status.read .message-status-icon::after {
-            content: '✓';
+            content: '✓✓';
             font-size: 16px;
-            line-height: 1;
-            position: absolute;
-            left: 6px; /* Second tick offset */
-        }
-
-        /* Read status - blue color */
-        .message-status.read .message-status-icon::before,
-        .message-status.read .message-status-icon::after {
+            letter-spacing: -4px;
             color: #34B7F1;
         }
 
