@@ -85,7 +85,9 @@ async function initializeDatabase() {
         sender_type VARCHAR(20) NOT NULL,
         sender_name VARCHAR(100),
         message TEXT NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        delivered_at TIMESTAMP,
+        read_at TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS rooms (
@@ -115,6 +117,8 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
       CREATE INDEX IF NOT EXISTS idx_messages_room_checkin ON messages(room_number, checkin_date);
+      CREATE INDEX IF NOT EXISTS idx_messages_delivered ON messages(delivered_at);
+      CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read_at);
       CREATE INDEX IF NOT EXISTS idx_rooms_room_checkin ON rooms(room_number, checkin_date);
 
       -- Assistant'lar tablosu
@@ -281,15 +285,28 @@ io.on('connection', (socket) => {
       }
       
       // Map database column names (snake_case) to frontend format (camelCase)
-      const messages = result.rows.reverse().map(row => ({
-        id: row.id,
-        roomNumber: row.room_number,
-        checkinDate: row.checkin_date,
-        senderType: row.sender_type,
-        senderName: row.sender_name,
-        message: row.message,
-        timestamp: row.timestamp
-      }));
+      const messages = result.rows.reverse().map(row => {
+        // Determine status based on delivered_at and read_at
+        let status = 'sent';
+        if (row.read_at) {
+          status = 'read';
+        } else if (row.delivered_at) {
+          status = 'delivered';
+        }
+        
+        return {
+          id: row.id,
+          roomNumber: row.room_number,
+          checkinDate: row.checkin_date,
+          senderType: row.sender_type,
+          senderName: row.sender_name,
+          message: row.message,
+          timestamp: row.timestamp,
+          status: status,
+          deliveredAt: row.delivered_at,
+          readAt: row.read_at
+        };
+      });
       
       socket.emit('older_messages', messages);
     } catch (error) {
@@ -342,7 +359,7 @@ io.on('connection', (socket) => {
       // Use room_number + checkin_date as unique room identifier for broadcasting
       const roomId = `${roomNumber}_${actualCheckinDate}`;
       
-      // Broadcast message
+      // Broadcast message with status
       const messageData = {
         id: messageId,
         roomNumber,
@@ -350,9 +367,16 @@ io.on('connection', (socket) => {
         senderType,
         senderName,
         message,
-        timestamp: timestamp.toISOString()
+        timestamp: timestamp.toISOString(),
+        status: 'sent', // Initial status: sent
+        deliveredAt: null,
+        readAt: null
       };
       
+      // Send confirmation to sender first
+      socket.emit('message_sent', { messageId, status: 'sent' });
+      
+      // Broadcast to room (other users will mark as delivered when received)
       io.to(roomId).emit('new_message', messageData);
     } catch (error) {
       console.error('Error saving message:', error);

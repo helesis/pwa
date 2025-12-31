@@ -234,6 +234,61 @@
             font-size: 11px;
             color: #667781;
             margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Message Status Ticks (WhatsApp style) */
+        .message-status {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 4px;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .message-status.sent {
+            color: #667781; /* Grey single tick */
+        }
+
+        .message-status.delivered {
+            color: #667781; /* Grey double tick */
+        }
+
+        .message-status.read {
+            color: #53bdeb; /* Blue double tick */
+        }
+
+        /* WhatsApp style tick icons */
+        .message-status-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            position: relative;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .message-status.sent .message-status-icon::after {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 16px;
+        }
+
+        .message-status.delivered .message-status-icon::after,
+        .message-status.read .message-status-icon::after {
+            content: '✓✓';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 16px;
+            letter-spacing: -3px;
+        }
+
+        .message-status.read .message-status-icon::after {
+            color: #53bdeb;
         }
 
         .input-container {
@@ -555,6 +610,11 @@
                 const isSent = msg.senderType === 'assistant' || msg.senderType === 'staff';
                 displayMessage(msg, isSent);
             });
+            
+            // Initialize observer after messages loaded
+            setTimeout(() => {
+                initMessageObserver();
+            }, 300);
         });
 
         // New message

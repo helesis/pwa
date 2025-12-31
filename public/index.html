@@ -1131,6 +1131,11 @@
                     statusText.textContent = 'Çevrimiçi';
                 }
                 
+                // Initialize message observer for read status
+                setTimeout(() => {
+                    initMessageObserver();
+                }, 500);
+                
                 console.log('📤 Step 6: Emitting join_room');
                 console.log('📤 Room Number:', ROOM_NUMBER);
                 console.log('📤 Check-in Date:', CHECKIN_DATE);
@@ -1252,6 +1257,11 @@
                     // Show welcome message
                     addWelcomeMessage();
                     oldestMessageTimestamp = null;
+                    
+                    // Initialize observer after welcome message
+                    setTimeout(() => {
+                        initMessageObserver();
+                    }, 300);
                 } else {
                     messages.forEach(msg => {
                         // Verify senderType is correct
@@ -1474,15 +1484,27 @@
                 inlineStyle += ' animation: messageSlide 0.3s ease;';
             }
             
+            // Status HTML (for both sent and received messages)
+            let statusHTML = '';
+            const status = data.status || 'sent';
+            const statusClass = status === 'read' ? 'read' : 
+                               status === 'delivered' ? 'delivered' : 'sent';
+            
+            statusHTML = `
+                <span class="message-status ${statusClass}">
+                    <span class="message-status-icon"></span>
+                </span>
+            `;
+            
             // Add data attribute to track senderType for reliable alignment fixing
             const messageHTML = `
-                <div class="message ${sentClass}" style="${inlineStyle}" data-sender-type="${senderType}" data-is-sent="${isSent}">
+                <div class="message ${sentClass}" style="${inlineStyle}" data-sender-type="${senderType}" data-is-sent="${isSent}" data-message-id="${data.id}">
                     ${avatarHTML}
                     <div class="message-content">
                         <div class="message-bubble">
                             <div class="message-text">${escapeHtml(data.message)}</div>
                         </div>
-                        <div class="message-time">${time}</div>
+                        <div class="message-time">${time}${statusHTML}</div>
                     </div>
                 </div>
             `;
@@ -1535,6 +1557,73 @@
             });
         }
 
+        // Update message status
+        function updateMessageStatus(messageId, status) {
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (!messageEl) {
+                console.log('⚠️ Message element not found for ID:', messageId);
+                return;
+            }
+            
+            const statusEl = messageEl.querySelector('.message-status');
+            if (!statusEl) {
+                console.log('⚠️ Status element not found for message:', messageId);
+                return;
+            }
+            
+            // Remove old status classes
+            statusEl.classList.remove('sent', 'delivered', 'read');
+            // Add new status class
+            statusEl.classList.add(status);
+        }
+        
+        // Intersection Observer for read status
+        let messageObserver = null;
+        
+        function initMessageObserver() {
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return;
+            
+            const observerOptions = {
+                root: chatContainer,
+                rootMargin: '0px',
+                threshold: 0.5 // Message is considered read when 50% visible
+            };
+            
+            messageObserver = new IntersectionObserver((entries) => {
+                const unreadMessageIds = [];
+                
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const messageEl = entry.target;
+                        const messageId = messageEl.getAttribute('data-message-id');
+                        const isSent = messageEl.getAttribute('data-is-sent') === 'true';
+                        
+                        // Only track read status for messages we sent
+                        if (isSent && messageId && !messageId.startsWith('temp_')) {
+                            const statusEl = messageEl.querySelector('.message-status');
+                            const isRead = statusEl && statusEl.classList.contains('read');
+                            
+                            if (!isRead && !unreadMessageIds.includes(messageId)) {
+                                unreadMessageIds.push(messageId);
+                            }
+                        }
+                    }
+                });
+                
+                // Send read status for all unread messages
+                if (unreadMessageIds.length > 0) {
+                    socket.emit('message_read', { messageIds: unreadMessageIds });
+                }
+            }, observerOptions);
+            
+            // Observe all existing messages
+            const existingMessages = chatContainer.querySelectorAll('.message[data-message-id]');
+            existingMessages.forEach(msg => {
+                messageObserver.observe(msg);
+            });
+        }
+        
         // Add welcome message
         function addWelcomeMessage() {
             const chatContainer = document.getElementById('chatContainer');
