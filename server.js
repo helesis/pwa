@@ -103,6 +103,10 @@ async function initializeDatabase() {
       -- Add checkin_date column to messages if it doesn't exist
       ALTER TABLE messages ADD COLUMN IF NOT EXISTS checkin_date DATE;
       
+      -- Add delivered_at and read_at columns if they don't exist
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
+      
       -- Update existing messages: set checkin_date from rooms table where possible
       UPDATE messages m
       SET checkin_date = (
