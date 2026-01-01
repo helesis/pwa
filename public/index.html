@@ -1493,14 +1493,19 @@
             
             // Message status update (delivered/read)
             socket.on('message_status_update', (data) => {
+                console.log('📬 message_status_update received:', data);
                 if (data.messageIds && Array.isArray(data.messageIds)) {
                     // Multiple messages (read status)
+                    console.log('📬 Updating multiple messages to read:', data.messageIds);
                     data.messageIds.forEach(msgId => {
                         updateMessageStatus(msgId, data.status);
                     });
                 } else if (data.messageId) {
                     // Single message (delivered status)
+                    console.log('📬 Updating single message to delivered:', data.messageId);
                     updateMessageStatus(data.messageId, data.status);
+                } else {
+                    console.log('⚠️ message_status_update: No messageId or messageIds found:', data);
                 }
             });
 
@@ -1755,6 +1760,7 @@
 
         // Update message status
         function updateMessageStatus(messageId, status) {
+            console.log('🔄 Updating message status:', { messageId, status });
             const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
             if (!messageEl) {
                 console.log('⚠️ Message element not found for ID:', messageId);
@@ -1771,6 +1777,7 @@
             statusEl.classList.remove('sent', 'delivered', 'read');
             // Add new status class
             statusEl.classList.add(status);
+            console.log('✅ Status updated to:', status, 'Classes:', statusEl.className);
         }
         
         // Intersection Observer for read status
