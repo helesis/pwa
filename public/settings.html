@@ -422,6 +422,7 @@
             <button class="tab active" onclick="switchTab('assistants')">👥 Assistant'lar</button>
             <button class="tab" onclick="switchTab('teams')">👨‍👩‍👧‍👦 Takımlar</button>
             <button class="tab" onclick="switchTab('assignments')">🔗 Eşleştirmeler</button>
+            <button class="tab" onclick="switchTab('unassigned')">⚠️ Eşleşmemiş Odalar</button>
         </div>
 
         <!-- Assistants Tab -->
@@ -466,6 +467,27 @@
                     <button class="btn btn-secondary" onclick="loadAllRoomsForDate()">O Tarihte Tüm Odaları Göster</button>
                 </div>
                 <div id="assignments-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unassigned Rooms Tab -->
+        <div id="unassigned-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Eşleşmemiş Odalar</h2>
+                    <button class="btn btn-primary" onclick="loadUnassignedRooms()">🔄 Yenile</button>
+                </div>
+                <div class="date-filter">
+                    <div class="form-group">
+                        <label class="form-label">Check-in Tarihi (Opsiyonel)</label>
+                        <input type="date" id="unassigned-date-filter" class="form-input" onchange="loadUnassignedRooms()">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadUnassignedRooms()">Filtrele</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('unassigned-date-filter').value = ''; loadUnassignedRooms();">Filtreyi Temizle</button>
+                </div>
+                <div id="unassigned-list">
                     <div class="loading">Yükleniyor...</div>
                 </div>
             </div>
@@ -573,6 +595,7 @@
             if (tabName === 'assistants') loadAssistants();
             if (tabName === 'teams') loadTeams();
             if (tabName === 'assignments') loadAssignments();
+            if (tabName === 'unassigned') loadUnassignedRooms();
         }
 
         // Load assistants
@@ -1349,6 +1372,137 @@
             alert.textContent = message;
             document.querySelector('.container').insertBefore(alert, document.querySelector('.tabs'));
             setTimeout(() => alert.remove(), 3000);
+        }
+
+        // Load unassigned rooms
+        async function loadUnassignedRooms() {
+            try {
+                const dateFilter = document.getElementById('unassigned-date-filter').value;
+                console.log('⚠️ Loading unassigned rooms with filter:', dateFilter || 'all dates');
+                
+                const listEl = document.getElementById('unassigned-list');
+                listEl.innerHTML = '<div class="loading">Yükleniyor...</div>';
+                
+                // Load all assignments to find which rooms are assigned
+                const assignmentsResponse = await fetch('/api/team-assignments');
+                if (!assignmentsResponse.ok) {
+                    throw new Error(`Failed to load assignments: ${assignmentsResponse.status}`);
+                }
+                const assignments = await assignmentsResponse.json();
+                console.log('✅ Assignments loaded:', assignments.length);
+                
+                // Create a set of assigned room keys (room_number + checkin_date)
+                const assignedKeys = new Set(
+                    assignments.map(a => `${a.room_number}_${a.checkin_date}`)
+                );
+                console.log('🔑 Assigned room keys:', Array.from(assignedKeys).slice(0, 10), '...');
+                
+                // Load all rooms (next 30 days or filtered date)
+                let roomsUrl = '/api/rooms';
+                if (dateFilter) {
+                    roomsUrl = `/api/rooms?start_date=${dateFilter}&end_date=${dateFilter}`;
+                } else {
+                    // Load next 30 days
+                    const today = new Date();
+                    const endDate = new Date(today);
+                    endDate.setDate(today.getDate() + 30);
+                    const startDateStr = today.toISOString().split('T')[0];
+                    const endDateStr = endDate.toISOString().split('T')[0];
+                    roomsUrl = `/api/rooms?start_date=${startDateStr}&end_date=${endDateStr}`;
+                }
+                
+                console.log('🏨 Fetching rooms from:', roomsUrl);
+                const roomsResponse = await fetch(roomsUrl);
+                if (!roomsResponse.ok) {
+                    throw new Error(`Failed to load rooms: ${roomsResponse.status}`);
+                }
+                const rooms = await roomsResponse.json();
+                console.log('🏨 Total rooms found:', rooms.length);
+                
+                // Filter unassigned rooms
+                const unassignedRooms = rooms.filter(r => {
+                    const key = `${r.room_number}_${r.checkin_date}`;
+                    return !assignedKeys.has(key);
+                });
+                
+                console.log('⚠️ Unassigned rooms:', unassignedRooms.length);
+                
+                if (unassignedRooms.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <p>${dateFilter ? dateFilter + ' tarihi için' : 'Tüm'} eşleşmemiş oda bulunamadı. Tüm odalar eşleştirilmiş!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Group by date for better organization
+                const roomsByDate = {};
+                unassignedRooms.forEach(r => {
+                    const date = r.checkin_date || 'Tarih Yok';
+                    if (!roomsByDate[date]) {
+                        roomsByDate[date] = [];
+                    }
+                    roomsByDate[date].push(r);
+                });
+                
+                const sortedDates = Object.keys(roomsByDate).sort();
+                
+                let html = `
+                    <div style="margin-bottom: 16px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ff9800;">
+                        <strong>⚠️ Toplam ${unassignedRooms.length} eşleşmemiş oda bulundu</strong>
+                    </div>
+                `;
+                
+                sortedDates.forEach(date => {
+                    const dateRooms = roomsByDate[date];
+                    html += `
+                        <div style="margin-bottom: 24px;">
+                            <h3 style="margin-bottom: 12px; color: #ff9800; font-size: 16px; padding: 8px; background: #fff3cd; border-radius: 6px;">
+                                📅 ${date} - ${dateRooms.length} Oda
+                            </h3>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Oda No</th>
+                                        <th>Misafir</th>
+                                        <th>Check-in Tarihi</th>
+                                        <th>Yetişkin</th>
+                                        <th>Çocuk</th>
+                                        <th>Ülke</th>
+                                        <th>Acente</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${dateRooms.map(r => `
+                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoom('${r.room_number}', '${r.checkin_date}')">
+                                            <td><strong>${r.room_number}</strong></td>
+                                            <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
+                                            <td>${r.checkin_date || '-'}</td>
+                                            <td>${r.adult_count || '-'}</td>
+                                            <td>${r.child_count || '-'}</td>
+                                            <td>${r.country || '-'}</td>
+                                            <td>${r.agency || '-'}</td>
+                                            <td>
+                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoom('${r.room_number}', '${r.checkin_date}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                });
+                
+                listEl.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading unassigned rooms:', error);
+                document.getElementById('unassigned-list').innerHTML = `
+                    <div class="alert alert-error">Eşleşmemiş odalar yüklenirken hata oluştu: ${error.message}</div>
+                `;
+            }
         }
 
         // Initialize
