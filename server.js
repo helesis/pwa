@@ -1857,7 +1857,7 @@ app.get('/join-team', (req, res) => {
         // Get assistant ID from localStorage or prompt
         let assistantId = localStorage.getItem('assistant_id');
         if (!assistantId) {
-          assistantId = prompt('Assistant ID\'nizi girin:');
+          assistantId = prompt("Assistant ID'nizi girin:");
           if (assistantId) {
             localStorage.setItem('assistant_id', assistantId);
           } else {
