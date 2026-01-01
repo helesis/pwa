@@ -278,7 +278,7 @@
             background: white;
             border-radius: 12px;
             padding: 24px;
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -373,6 +373,47 @@
             border-radius: 8px;
         }
 
+        .team-cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .team-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .team-card:hover {
+            border-color: var(--voyage-navy);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .team-card.selected {
+            border-color: var(--voyage-navy);
+            background: var(--voyage-light-blue);
+        }
+
+        .team-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--voyage-navy);
+            margin-bottom: 8px;
+        }
+
+        .team-card-description {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-top: 8px;
+        }
+
         .checkbox-item {
             display: flex;
             align-items: center;
@@ -415,7 +456,6 @@
     <div class="container">
         <div class="header">
             <h1>⚙️ Ayarlar</h1>
-            <a href="/assistant" class="nav-link">← Dashboard'a Dön</a>
         </div>
 
         <div class="tabs">
@@ -576,18 +616,37 @@
                 <button class="close-btn" onclick="closeAssignmentModal()">&times;</button>
             </div>
             <form id="assignment-form" onsubmit="saveAssignment(event)">
+                <!-- Oda Bilgileri (tek oda için eşleştirme yapıldığında gösterilir) -->
+                <div id="assignment-room-info" class="form-group" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 12px; color: var(--voyage-navy);">Oda Bilgileri</h4>
+                    <div id="assignment-room-details" style="font-size: 14px; line-height: 1.8;">
+                        <!-- Oda bilgileri buraya eklenecek -->
+                    </div>
+                </div>
+
+                <!-- Takım Seçimi - Kartlar (tek oda için) -->
                 <div class="form-group">
-                    <label class="form-label">Takım *</label>
-                    <select id="assignment-team" class="form-select" required>
+                    <label class="form-label">Takım Seçin *</label>
+                    <select id="assignment-team" class="form-select" required style="display: none;">
                         <option value="">Takım Seçin</option>
                     </select>
+                    <div id="assignment-teams-cards" class="team-cards-container">
+                        <div class="loading">Yükleniyor...</div>
+                    </div>
                 </div>
-                <div class="form-group">
+
+                <!-- Eski checkbox grubu (çoklu oda seçimi için - gizli) -->
+                <div class="form-group" id="assignment-guests-group" style="display: none;">
                     <label class="form-label">Misafirler (Room Number - Guest Name)</label>
                     <div id="assignment-guests-checkboxes" class="checkbox-group">
                         <div class="loading">Yükleniyor...</div>
                     </div>
                 </div>
+
+                <!-- Hidden input for selected room (tek oda eşleştirmesi için) -->
+                <input type="hidden" id="assignment-selected-room-number">
+                <input type="hidden" id="assignment-selected-checkin-date">
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeAssignmentModal()">İptal</button>
                     <button type="submit" class="btn btn-primary">Eşleştir</button>
@@ -638,6 +697,7 @@
                                 <th>ID</th>
                                 <th>Ad</th>
                                 <th>Email</th>
+                                <th>Takım</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
@@ -648,6 +708,13 @@
                                     <td>${a.id}</td>
                                     <td>${a.name}</td>
                                     <td>${a.email || '-'}</td>
+                                    <td>
+                                        ${a.teams ? `
+                                            <span class="badge badge-success">${a.teams}</span>
+                                        ` : `
+                                            <span style="color: #999; font-style: italic;">Takım yok</span>
+                                        `}
+                                    </td>
                                     <td>
                                         <span class="badge ${a.is_active ? 'badge-success' : 'badge-danger'}">
                                             ${a.is_active ? 'Aktif' : 'Pasif'}
@@ -714,6 +781,7 @@
                                 <th>Takım Adı</th>
                                 <th>Açıklama</th>
                                 <th>Assistant'lar</th>
+                                <th>Aktif Oda Sayısı</th>
                                 <th>QR Kod</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
@@ -726,6 +794,9 @@
                                     <td>${t.name}</td>
                                     <td>${t.description || '-'}</td>
                                     <td>${t.assistants.map(a => a.name).join(', ') || '-'}</td>
+                                    <td>
+                                        <span class="badge badge-success">${t.active_room_count || 0} Oda</span>
+                                    </td>
                                     <td>
                                         ${t.qrData ? `
                                             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1174,29 +1245,108 @@
         async function openAssignmentModalForRoom(roomNumber, checkinDate) {
             console.log('📂 Opening assignment modal for room:', roomNumber, checkinDate);
             
-            // Set the checkin date filter first
-            const dateFilter = document.getElementById('checkin-date-filter');
-            if (dateFilter) {
-                dateFilter.value = checkinDate;
+            // Store selected room info
+            document.getElementById('assignment-selected-room-number').value = roomNumber;
+            document.getElementById('assignment-selected-checkin-date').value = checkinDate;
+            
+            // Hide guest checkboxes, show room info
+            document.getElementById('assignment-room-info').style.display = 'block';
+            document.getElementById('assignment-guests-group').style.display = 'none';
+            
+            // Load room details
+            try {
+                const roomsUrl = `/api/rooms?start_date=${checkinDate}&end_date=${checkinDate}`;
+                const roomsRes = await fetch(roomsUrl);
+                const rooms = await roomsRes.json();
+                const room = rooms.find(r => r.room_number === roomNumber && r.checkin_date === checkinDate);
+                
+                if (room) {
+                    // Show room info
+                    const roomDetailsEl = document.getElementById('assignment-room-details');
+                    roomDetailsEl.innerHTML = `
+                        <div><strong>Oda No:</strong> ${room.room_number}</div>
+                        <div><strong>Misafir:</strong> ${room.guest_name || ''} ${room.guest_surname || ''}</div>
+                        <div><strong>Check-in:</strong> ${new Date(room.checkin_date).toLocaleDateString('tr-TR')}</div>
+                        ${room.adult_count ? `<div><strong>Yetişkin:</strong> ${room.adult_count}</div>` : ''}
+                        ${room.child_count ? `<div><strong>Çocuk:</strong> ${room.child_count}</div>` : ''}
+                        ${room.country ? `<div><strong>Ülke:</strong> ${room.country}</div>` : ''}
+                        ${room.agency ? `<div><strong>Acente:</strong> ${room.agency}</div>` : ''}
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading room details:', error);
             }
             
-            await openAssignmentModal();
+            // Hide dropdown, show team cards
+            document.getElementById('assignment-team').style.display = 'none';
+            document.getElementById('assignment-teams-cards').style.display = 'grid';
             
-            // Pre-select the room in the modal
-            setTimeout(() => {
-                const checkbox = document.getElementById(`guest-${roomNumber}-${checkinDate}`);
-                if (checkbox) {
-                    checkbox.checked = true;
-                    // Scroll to the checkbox
-                    checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 800);
+            // Load teams as cards
+            await loadTeamsForAssignment();
+            
+            // Open modal
+            document.getElementById('assignment-modal').classList.add('active');
         }
 
-        // Assignment modal functions
+        // Load teams as cards for selection
+        async function loadTeamsForAssignment() {
+            try {
+                const teamsRes = await fetch('/api/teams');
+                const teams = await teamsRes.json();
+                
+                const cardsContainer = document.getElementById('assignment-teams-cards');
+                
+                if (teams.length === 0) {
+                    cardsContainer.innerHTML = '<div class="empty-state">Henüz takım oluşturulmamış</div>';
+                    return;
+                }
+                
+                cardsContainer.innerHTML = teams
+                    .filter(t => t.is_active)
+                    .map(team => `
+                        <div class="team-card" onclick="selectTeamCard(${team.id})" data-team-id="${team.id}">
+                            <div class="team-card-title">${team.name}</div>
+                            ${team.description ? `<div class="team-card-description">${team.description}</div>` : '<div class="team-card-description" style="color: #999; font-style: italic;">Açıklama yok</div>'}
+                        </div>
+                    `).join('');
+            } catch (error) {
+                console.error('Error loading teams:', error);
+                document.getElementById('assignment-teams-cards').innerHTML = 
+                    '<div class="alert alert-error">Takımlar yüklenirken hata oluştu</div>';
+            }
+        }
+
+        // Select team card
+        function selectTeamCard(teamId) {
+            // Remove previous selection
+            document.querySelectorAll('.team-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Select clicked card
+            const card = document.querySelector(`.team-card[data-team-id="${teamId}"]`);
+            if (card) {
+                card.classList.add('selected');
+                document.getElementById('assignment-team').value = teamId;
+            }
+        }
+
+        // Assignment modal functions (for multi-room assignment)
         async function openAssignmentModal() {
-            console.log('📂 Opening assignment modal');
+            console.log('📂 Opening assignment modal (multi-room)');
             document.getElementById('assignment-modal').classList.add('active');
+            
+            // Hide room info, show guest checkboxes
+            document.getElementById('assignment-room-info').style.display = 'none';
+            document.getElementById('assignment-guests-group').style.display = 'block';
+            
+            // Clear selected room
+            document.getElementById('assignment-selected-room-number').value = '';
+            document.getElementById('assignment-selected-checkin-date').value = '';
+            
+            // Hide team cards, show dropdown
+            document.getElementById('assignment-teams-cards').style.display = 'none';
+            document.getElementById('assignment-team').style.display = 'block';
             
             // Load teams
             console.log('👥 Loading teams...');
@@ -1206,8 +1356,9 @@
             console.log('👥 Teams loaded:', teams.length, teams);
             
             const teamSelect = document.getElementById('assignment-team');
+            teamSelect.style.display = 'block';
             teamSelect.innerHTML = '<option value="">Takım Seçin</option>' + 
-                teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                teams.filter(t => t.is_active).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
 
             // Load guests (rooms) - next 10 days
             const today = new Date();
@@ -1268,23 +1419,53 @@
         function closeAssignmentModal() {
             document.getElementById('assignment-modal').classList.remove('active');
             document.getElementById('assignment-form').reset();
+            // Reset UI elements
+            document.getElementById('assignment-room-info').style.display = 'none';
+            document.getElementById('assignment-guests-group').style.display = 'none';
+            document.getElementById('assignment-teams-cards').style.display = 'grid';
+            document.getElementById('assignment-team').style.display = 'none';
+            // Clear selections
+            document.querySelectorAll('.team-card').forEach(card => {
+                card.classList.remove('selected');
+            });
         }
 
         async function saveAssignment(e) {
             e.preventDefault();
             const teamId = parseInt(document.getElementById('assignment-team').value);
-            const selectedGuests = Array.from(document.querySelectorAll('#assignment-guests-checkboxes input:checked'))
-                .map(cb => {
-                    const [roomNumber, date] = cb.value.split('|');
-                    if (!date) {
-                        throw new Error('Misafir seçiminde check-in tarihi bulunamadı');
-                    }
-                    return { room_number: roomNumber, checkin_date: date };
-                });
-
-            if (selectedGuests.length === 0) {
-                showAlert('Lütfen en az bir misafir seçin', 'error');
+            
+            if (!teamId) {
+                showAlert('Lütfen bir takım seçin', 'error');
                 return;
+            }
+            
+            // Check if single room assignment
+            const selectedRoomNumber = document.getElementById('assignment-selected-room-number').value;
+            const selectedCheckinDate = document.getElementById('assignment-selected-checkin-date').value;
+            
+            let selectedGuests = [];
+            
+            if (selectedRoomNumber && selectedCheckinDate) {
+                // Single room assignment
+                selectedGuests = [{ 
+                    room_number: selectedRoomNumber, 
+                    checkin_date: selectedCheckinDate 
+                }];
+            } else {
+                // Multi-room assignment (from checkboxes)
+                selectedGuests = Array.from(document.querySelectorAll('#assignment-guests-checkboxes input:checked'))
+                    .map(cb => {
+                        const [roomNumber, date] = cb.value.split('|');
+                        if (!date) {
+                            throw new Error('Misafir seçiminde check-in tarihi bulunamadı');
+                        }
+                        return { room_number: roomNumber, checkin_date: date };
+                    });
+                
+                if (selectedGuests.length === 0) {
+                    showAlert('Lütfen en az bir misafir seçin', 'error');
+                    return;
+                }
             }
 
             try {
@@ -1300,6 +1481,7 @@
                 if (response.ok) {
                     closeAssignmentModal();
                     loadAssignments();
+                    loadUnassignedRooms(); // Yenile
                     showAlert('Eşleştirme başarıyla yapıldı', 'success');
                 } else {
                     showAlert('Hata: ' + (await response.text()), 'error');

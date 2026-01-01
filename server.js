@@ -797,7 +797,23 @@ app.get('/api/stats', async (req, res) => {
 // Get all assistants
 app.get('/api/assistants', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM assistants ORDER BY name');
+    const result = await pool.query(`
+      SELECT 
+        a.*,
+        COALESCE(
+          (
+            SELECT string_agg(t.name, ', ' ORDER BY t.name)
+            FROM teams t
+            INNER JOIN assistant_teams at ON t.id = at.team_id
+            WHERE at.assistant_id = a.id 
+              AND at.is_active = true 
+              AND t.is_active = true
+          ),
+          ''
+        ) as teams
+      FROM assistants a
+      ORDER BY a.name
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching assistants:', error);
@@ -871,7 +887,30 @@ app.delete('/api/assistants/:id', async (req, res) => {
 // Get all teams
 app.get('/api/teams', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM teams ORDER BY name');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const result = await pool.query(`
+      SELECT 
+        t.*,
+        COALESCE((
+          SELECT COUNT(DISTINCT tra.room_number || '_' || tra.checkin_date)
+          FROM team_room_assignments tra
+          INNER JOIN rooms r ON tra.room_number = r.room_number 
+            AND tra.checkin_date = r.checkin_date
+          WHERE tra.team_id = t.id
+            AND tra.is_active = true
+            AND r.is_active = true
+            AND (
+              r.checkout_date IS NULL 
+              OR (r.checkout_date + INTERVAL '1 day') >= $1::date
+            )
+        ), 0) as active_room_count
+      FROM teams t
+      ORDER BY t.name
+    `, [todayStr]);
+    
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching teams:', error);
