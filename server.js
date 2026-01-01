@@ -664,6 +664,69 @@ app.get('/api/stats', async (req, res) => {
 
 // Assistant API Endpoints
 
+// Update yesterday's checkin dates to today (for testing/demo purposes)
+app.post('/api/admin/update-checkin-dates', async (req, res) => {
+  try {
+    // Get yesterday's date
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Get today's date
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // First, check how many rooms have yesterday's checkin date
+    const checkResult = await pool.query(
+      `SELECT room_number, guest_name, checkin_date 
+       FROM rooms 
+       WHERE checkin_date = $1::date`,
+      [yesterdayStr]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No rooms found with yesterday\'s checkin date',
+        updatedRooms: 0,
+        updatedMessages: 0
+      });
+    }
+    
+    // Update checkin_date to today
+    const updateResult = await pool.query(
+      `UPDATE rooms 
+       SET checkin_date = $1::date 
+       WHERE checkin_date = $2::date 
+       RETURNING room_number, guest_name, checkin_date`,
+      [todayStr, yesterdayStr]
+    );
+    
+    // Also update messages' checkin_date if they reference these rooms
+    const messagesUpdateResult = await pool.query(
+      `UPDATE messages 
+       SET checkin_date = $1::date 
+       WHERE checkin_date = $2::date`,
+      [todayStr, yesterdayStr]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `Updated ${updateResult.rows.length} rooms and ${messagesUpdateResult.rowCount} messages`,
+      updatedRooms: updateResult.rows.length,
+      updatedMessages: messagesUpdateResult.rowCount,
+      rooms: updateResult.rows.map(r => ({
+        roomNumber: r.room_number,
+        guestName: r.guest_name,
+        checkinDate: r.checkin_date
+      }))
+    });
+  } catch (error) {
+    console.error('Error updating checkin dates:', error);
+    res.status(500).json({ error: 'Database error', details: error.message });
+  }
+});
+
 // Get assistant's assigned rooms (filtered by check-in date)
 app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
   try {
