@@ -605,7 +605,7 @@
     </style>
 </head>
 <body>
-    <a href="/settings" class="settings-link">⚙️ Ayarlar</a>
+    <a href="/settings" id="settingsLink" class="settings-link">⚙️ Ayarlar</a>
     <div class="dashboard-container">
         <!-- Left Panel: Room List -->
         <div class="rooms-panel">
@@ -815,12 +815,38 @@
         async function loadRooms(date) {
             try {
                 const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms?date=${date}`);
-                const rooms = await response.json();
                 
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Error loading rooms:', response.status, errorData);
+                    const roomsList = document.getElementById('roomsList');
+                    if (roomsList) {
+                        roomsList.innerHTML = 
+                            `<div class="empty-state">Odalar yüklenirken hata oluştu: ${errorData.error || 'Bilinmeyen hata'}</div>`;
+                    }
+                    return;
+                }
+                
+                const rooms = await response.json();
                 const roomsList = document.getElementById('roomsList');
                 
+                if (!Array.isArray(rooms)) {
+                    console.error('Invalid rooms response:', rooms);
+                    if (roomsList) {
+                        roomsList.innerHTML = '<div class="empty-state">Geçersiz veri formatı</div>';
+                    }
+                    return;
+                }
+                
                 if (rooms.length === 0) {
-                    roomsList.innerHTML = '<div class="empty-state">Bu tarihte check-in olan oda bulunamadı</div>';
+                    if (roomsList) {
+                        roomsList.innerHTML = '<div class="empty-state">Bu tarihte check-in olan oda bulunamadı</div>';
+                    }
+                    return;
+                }
+                
+                if (!roomsList) {
+                    console.error('roomsList element not found');
                     return;
                 }
                 
@@ -971,14 +997,30 @@
         async function checkAssistantTeams() {
             try {
                 const response = await fetch(`/api/assistant/${ASSISTANT_ID}/teams`);
+                
+                if (!response.ok) {
+                    console.error('Error fetching teams:', response.status);
+                    return;
+                }
+                
                 const teams = await response.json();
+                
+                if (!Array.isArray(teams)) {
+                    console.error('Invalid teams response:', teams);
+                    return;
+                }
+                
+                const settingsLink = document.getElementById('settingsLink');
+                const dateFilterContainer = document.getElementById('dateFilterContainer');
                 
                 if (teams.length > 0) {
                     // Assistant is in a team - hide settings, show WhatsApp mode
-                    document.getElementById('settingsLink').classList.add('hidden');
+                    if (settingsLink) {
+                        settingsLink.classList.add('hidden');
+                    }
                     // Hide date filter in WhatsApp mode
-                    if (window.innerWidth <= 768) {
-                        document.getElementById('dateFilterContainer').style.display = 'none';
+                    if (window.innerWidth <= 768 && dateFilterContainer) {
+                        dateFilterContainer.style.display = 'none';
                     }
                     // Set initial view to list view on mobile
                     if (window.innerWidth <= 768) {
@@ -986,8 +1028,12 @@
                     }
                 } else {
                     // Assistant not in team - show settings
-                    document.getElementById('settingsLink').classList.remove('hidden');
-                    document.getElementById('dateFilterContainer').style.display = 'block';
+                    if (settingsLink) {
+                        settingsLink.classList.remove('hidden');
+                    }
+                    if (dateFilterContainer) {
+                        dateFilterContainer.style.display = 'block';
+                    }
                 }
             } catch (error) {
                 console.error('Error checking assistant teams:', error);
