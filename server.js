@@ -1082,7 +1082,8 @@ app.get('/api/team-assignments', async (req, res) => {
         tra.checkin_date,
         t.name as team_name,
         r.guest_name,
-        r.guest_surname
+        r.guest_surname,
+        r.profile_photo
       FROM team_room_assignments tra
       INNER JOIN teams t ON tra.team_id = t.id
       LEFT JOIN rooms r ON tra.room_number = r.room_number AND tra.checkin_date = r.checkin_date
