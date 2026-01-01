@@ -527,6 +527,9 @@
             <div class="rooms-header">
                 <div>🏨</div>
                 <h1>Voyage Assistant</h1>
+                <button onclick="scanTeamQR()" style="margin-left: auto; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                    📷 Takım QR'ı Okut
+                </button>
             </div>
             
             <div class="date-filter">
@@ -1179,6 +1182,70 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Scan team QR code
+        async function scanTeamQR() {
+            // Check if browser supports camera
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                // Fallback: prompt for token
+                const token = prompt('QR kod token\'ını girin:');
+                if (token) {
+                    await joinTeamWithToken(token);
+                }
+                return;
+            }
+            
+            // Try to use camera for QR scanning
+            // For now, we'll use a simple input prompt
+            // In production, you might want to use a QR scanner library like jsQR
+            const token = prompt('QR kod token\'ını girin veya QR kod linkini yapıştırın:');
+            if (token) {
+                // Extract token from URL if full URL is pasted
+                const urlMatch = token.match(/token=([^&]+)/);
+                const actualToken = urlMatch ? urlMatch[1] : token;
+                await joinTeamWithToken(actualToken);
+            }
+        }
+
+        async function joinTeamWithToken(token) {
+            try {
+                const response = await fetch('/api/teams/join', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        assistant_id: ASSISTANT_ID
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alert(data.message || 'Takıma başarıyla katıldınız!');
+                    // Reload rooms to show new team assignments
+                    const today = new Date().toISOString().split('T')[0];
+                    loadRooms(today);
+                } else {
+                    alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                }
+            } catch (error) {
+                console.error('Error joining team:', error);
+                alert('Takıma katılırken bir hata oluştu: ' + error.message);
+            }
+        }
+
+        // Check URL for team join token on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            if (token && window.location.pathname === '/assistant') {
+                joinTeamWithToken(token);
+                // Clean URL
+                window.history.replaceState({}, document.title, '/assistant');
+            }
+        });
     </script>
 </body>
 </html>

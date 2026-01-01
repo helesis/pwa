@@ -548,6 +548,26 @@
         </div>
     </div>
 
+    <!-- Team QR Modal -->
+    <div id="team-qr-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="team-qr-modal-title">Takım QR Kodu</h3>
+                <button class="close-btn" onclick="closeTeamQRModal()">&times;</button>
+            </div>
+            <div style="text-align: center;">
+                <img id="team-qr-code-image" src="" alt="QR Code" style="max-width: 300px; width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin: 20px 0;">
+                <div class="qr-link" id="team-qr-link" style="margin-top: 20px; padding: 12px; background: #f0f2f5; border-radius: 8px; word-break: break-all; font-size: 12px; color: #667781;"></div>
+                <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 8px; font-size: 14px; color: #1976d2;">
+                    <strong>ℹ️ Bilgi:</strong> Bu QR kodu okutan assistant otomatik olarak takıma katılacaktır.
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeTeamQRModal()">Kapat</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Assignment Modal -->
     <div id="assignment-modal" class="modal">
         <div class="modal-content">
@@ -667,11 +687,23 @@
                     return;
                 }
 
-                // Load assistants for each team
-                const teamsWithAssistants = await Promise.all(teams.map(async (team) => {
+                // Load assistants and QR codes for each team
+                const teamsWithData = await Promise.all(teams.map(async (team) => {
                     const assistantsRes = await fetch(`/api/teams/${team.id}/assistants`);
                     const assistants = await assistantsRes.json();
-                    return { ...team, assistants };
+                    
+                    // Load QR code
+                    let qrData = null;
+                    try {
+                        const qrRes = await fetch(`/api/teams/${team.id}/invite`);
+                        if (qrRes.ok) {
+                            qrData = await qrRes.json();
+                        }
+                    } catch (e) {
+                        console.error('Error loading QR for team:', team.id, e);
+                    }
+                    
+                    return { ...team, assistants, qrData };
                 }));
 
                 listEl.innerHTML = `
@@ -682,17 +714,28 @@
                                 <th>Takım Adı</th>
                                 <th>Açıklama</th>
                                 <th>Assistant'lar</th>
+                                <th>QR Kod</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${teamsWithAssistants.map(t => `
+                            ${teamsWithData.map(t => `
                                 <tr>
                                     <td>${t.id}</td>
                                     <td>${t.name}</td>
                                     <td>${t.description || '-'}</td>
                                     <td>${t.assistants.map(a => a.name).join(', ') || '-'}</td>
+                                    <td>
+                                        ${t.qrData ? `
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <img src="${t.qrData.qrCodeUrl}" alt="QR Code" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;" onclick="showTeamQRModal(${t.id}, '${t.name}')">
+                                                <button class="btn btn-primary" onclick="showTeamQRModal(${t.id}, '${t.name}')" style="padding: 6px 12px; font-size: 12px;">📱 Göster</button>
+                                            </div>
+                                        ` : `
+                                            <button class="btn btn-secondary" onclick="generateTeamQR(${t.id})" style="padding: 6px 12px; font-size: 12px;">QR Oluştur</button>
+                                        `}
+                                    </td>
                                     <td>
                                         <span class="badge ${t.is_active ? 'badge-success' : 'badge-danger'}">
                                             ${t.is_active ? 'Aktif' : 'Pasif'}
@@ -1495,6 +1538,62 @@
                     <div class="alert alert-error">Eşleşmemiş odalar yüklenirken hata oluştu: ${error.message}</div>
                 `;
             }
+        }
+
+        // Team QR Code Functions
+        async function generateTeamQR(teamId) {
+            try {
+                const response = await fetch(`/api/teams/${teamId}/invite`, {
+                    method: 'GET'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('QR kod oluşturulamadı');
+                }
+                
+                const qrData = await response.json();
+                showTeamQRModal(teamId, null, qrData);
+                loadTeams(); // Refresh list to show QR
+            } catch (error) {
+                console.error('Error generating team QR:', error);
+                showAlert('QR kod oluşturulurken hata oluştu', 'error');
+            }
+        }
+
+        async function showTeamQRModal(teamId, teamName, qrData = null) {
+            if (!qrData) {
+                try {
+                    const response = await fetch(`/api/teams/${teamId}/invite`);
+                    if (!response.ok) {
+                        throw new Error('QR kod yüklenemedi');
+                    }
+                    qrData = await response.json();
+                } catch (error) {
+                    console.error('Error loading QR:', error);
+                    showAlert('QR kod yüklenirken hata oluştu', 'error');
+                    return;
+                }
+            }
+            
+            document.getElementById('team-qr-code-image').src = qrData.qrCodeUrl;
+            document.getElementById('team-qr-link').textContent = qrData.inviteLink;
+            
+            const title = teamName ? `${teamName} - QR Kod` : 'Takım QR Kodu';
+            document.getElementById('team-qr-modal-title').textContent = title;
+            
+            document.getElementById('team-qr-modal').classList.add('active');
+        }
+
+        function closeTeamQRModal() {
+            document.getElementById('team-qr-modal').classList.remove('active');
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type === 'success' ? 'success' : 'error'}`;
+            alert.textContent = message;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.tabs'));
+            setTimeout(() => alert.remove(), 3000);
         }
 
         // Initialize

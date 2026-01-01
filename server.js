@@ -198,6 +198,18 @@ async function initializeDatabase() {
         UNIQUE(team_id, room_number, checkin_date)
       );
 
+      -- Team invite QR codes
+      CREATE TABLE IF NOT EXISTS team_invites (
+        id SERIAL PRIMARY KEY,
+        team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+        invite_token VARCHAR(255) UNIQUE NOT NULL,
+        qr_code_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        used_at TIMESTAMP,
+        is_active BOOLEAN DEFAULT true
+      );
+
       -- Index'ler
       CREATE INDEX IF NOT EXISTS idx_assistant_assignments_assistant ON assistant_assignments(assistant_id);
       CREATE INDEX IF NOT EXISTS idx_assistant_assignments_room ON assistant_assignments(room_number);
@@ -207,6 +219,8 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_assistant_teams_team ON assistant_teams(team_id);
       CREATE INDEX IF NOT EXISTS idx_team_room_assignments_team ON team_room_assignments(team_id);
       CREATE INDEX IF NOT EXISTS idx_team_room_assignments_room_checkin ON team_room_assignments(room_number, checkin_date);
+      CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(invite_token);
+      CREATE INDEX IF NOT EXISTS idx_team_invites_team ON team_invites(team_id);
     `);
     
     console.log('✅ Database tables initialized');
@@ -917,6 +931,37 @@ app.post('/api/teams', async (req, res) => {
       }
     }
     
+    // Auto-generate QR code for the team
+    try {
+      const inviteToken = randomBytes(32).toString('hex');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const inviteLink = `${frontendUrl}/join-team?token=${inviteToken}`;
+      
+      const qrCodeDataUrl = await QRCode.toDataURL(inviteLink, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      await pool.query(`
+        INSERT INTO team_invites (team_id, invite_token, qr_code_url, expires_at)
+        VALUES ($1, $2, $3, $4)
+      `, [
+        team.id,
+        inviteToken,
+        qrCodeDataUrl,
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      ]);
+      
+      console.log(`✅ Auto-generated QR code for team ${team.id}`);
+    } catch (qrError) {
+      console.error('⚠️ Error auto-generating QR code for team:', qrError);
+      // Don't fail team creation if QR generation fails
+    }
+    
     res.json(team);
   } catch (error) {
     console.error('Error creating team:', error);
@@ -1106,6 +1151,151 @@ app.delete('/api/team-assignments/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting team assignment:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Team Invite QR Code Endpoints
+
+// Generate or get team invite QR code
+app.get('/api/teams/:teamId/invite', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    
+    // Check if active invite exists
+    const existingInvite = await pool.query(`
+      SELECT invite_token, qr_code_url, created_at, expires_at
+      FROM team_invites
+      WHERE team_id = $1 
+        AND is_active = true 
+        AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+        AND used_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [teamId]);
+    
+    if (existingInvite.rows.length > 0) {
+      const invite = existingInvite.rows[0];
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const inviteLink = `${frontendUrl}/join-team?token=${invite.invite_token}`;
+      
+      return res.json({
+        inviteToken: invite.invite_token,
+        qrCodeUrl: invite.qr_code_url,
+        inviteLink,
+        expiresAt: invite.expires_at,
+        createdAt: invite.created_at
+      });
+    }
+    
+    // Create new invite
+    const inviteToken = randomBytes(32).toString('hex');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const inviteLink = `${frontendUrl}/join-team?token=${inviteToken}`;
+    
+    // Generate QR code
+    const qrCodeDataUrl = await QRCode.toDataURL(inviteLink, {
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    
+    // Save to database (7 days expiry)
+    const result = await pool.query(`
+      INSERT INTO team_invites (team_id, invite_token, qr_code_url, expires_at)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, created_at
+    `, [
+      teamId,
+      inviteToken,
+      qrCodeDataUrl,
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    ]);
+    
+    res.json({
+      inviteToken,
+      qrCodeUrl: qrCodeDataUrl,
+      inviteLink,
+      expiresAt: result.rows[0].created_at,
+      createdAt: result.rows[0].created_at
+    });
+  } catch (error) {
+    console.error('Error generating team invite:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Join team via invite token
+app.post('/api/teams/join', async (req, res) => {
+  try {
+    const { token, assistant_id } = req.body;
+    
+    if (!token || !assistant_id) {
+      return res.status(400).json({ error: 'Token ve assistant_id gereklidir' });
+    }
+    
+    // Find invite token
+    const inviteResult = await pool.query(`
+      SELECT team_id, expires_at, used_at, is_active
+      FROM team_invites
+      WHERE invite_token = $1
+    `, [token]);
+    
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Geçersiz token' });
+    }
+    
+    const { team_id, expires_at, used_at, is_active } = inviteResult.rows[0];
+    
+    if (!is_active) {
+      return res.status(410).json({ error: 'Bu davet artık aktif değil' });
+    }
+    
+    if (expires_at && new Date(expires_at) < new Date()) {
+      return res.status(410).json({ error: 'Token süresi dolmuş' });
+    }
+    
+    // Check if assistant already in team
+    const existingMembership = await pool.query(`
+      SELECT id FROM assistant_teams
+      WHERE assistant_id = $1 AND team_id = $2
+    `, [assistant_id, team_id]);
+    
+    if (existingMembership.rows.length > 0) {
+      // Already in team, just activate
+      await pool.query(`
+        UPDATE assistant_teams SET is_active = true
+        WHERE assistant_id = $1 AND team_id = $2
+      `, [assistant_id, team_id]);
+      
+      return res.json({ 
+        success: true, 
+        team_id,
+        message: 'Zaten bu takımdasınız',
+        already_member: true
+      });
+    }
+    
+    // Add assistant to team
+    await pool.query(`
+      INSERT INTO assistant_teams (assistant_id, team_id, is_active)
+      VALUES ($1, $2, true)
+      ON CONFLICT (assistant_id, team_id) 
+      DO UPDATE SET is_active = true
+    `, [assistant_id, team_id]);
+    
+    console.log(`✅ Assistant ${assistant_id} joined team ${team_id} via token`);
+    
+    res.json({ 
+      success: true, 
+      team_id,
+      message: 'Takıma başarıyla katıldınız'
+    });
+  } catch (error) {
+    console.error('Error joining team:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -1607,6 +1797,104 @@ app.get('/settings', (req, res) => {
 
 app.get('/assistant.html', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'assistant.html'));
+});
+
+// Join team page (for QR code scanning)
+app.get('/join-team', (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Hata - Takım Daveti</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0f2f5; }
+          .error { background: white; padding: 30px; border-radius: 12px; max-width: 500px; margin: 0 auto; }
+          h1 { color: #dc3545; }
+          a { color: #008069; text-decoration: none; }
+        </style>
+      </head>
+      <body>
+        <div class="error">
+          <h1>❌ Geçersiz Davet</h1>
+          <p>Token bulunamadı. Lütfen geçerli bir QR kod kullanın.</p>
+          <a href="/assistant">Assistant Dashboard'a Dön</a>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+  
+  // Redirect to assistant page with token
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Takıma Katıl</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0f2f5; }
+        .container { background: white; padding: 30px; border-radius: 12px; max-width: 500px; margin: 0 auto; }
+        h1 { color: #008069; }
+        .loading { margin: 20px 0; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #008069; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Takıma Katılıyorsunuz...</h1>
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+        <p>Lütfen bekleyin...</p>
+      </div>
+      <script>
+        // Get assistant ID from localStorage or prompt
+        let assistantId = localStorage.getItem('assistant_id');
+        if (!assistantId) {
+          assistantId = prompt('Assistant ID\'nizi girin:');
+          if (assistantId) {
+            localStorage.setItem('assistant_id', assistantId);
+          } else {
+            alert('Assistant ID gereklidir!');
+            window.location.href = '/assistant';
+            return;
+          }
+        }
+        
+        // Join team
+        fetch('/api/teams/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: '${token}',
+            assistant_id: parseInt(assistantId)
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message || 'Takıma başarıyla katıldınız!');
+            window.location.href = '/assistant';
+          } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+            window.location.href = '/assistant';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+          window.location.href = '/assistant';
+        });
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 const PORT = process.env.PORT || 3000;
