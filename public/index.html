@@ -1459,6 +1459,24 @@
                     }
                 }
             });
+            
+            // Message sent confirmation
+            socket.on('message_sent', (data) => {
+                updateMessageStatus(data.messageId, 'sent');
+            });
+            
+            // Message status update (delivered/read)
+            socket.on('message_status_update', (data) => {
+                if (data.messageIds && Array.isArray(data.messageIds)) {
+                    // Multiple messages (read status)
+                    data.messageIds.forEach(msgId => {
+                        updateMessageStatus(msgId, data.status);
+                    });
+                } else if (data.messageId) {
+                    // Single message (delivered status)
+                    updateMessageStatus(data.messageId, data.status);
+                }
+            });
 
             // Typing indicators
             socket.on('user_typing', (data) => {
