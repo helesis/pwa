@@ -1425,14 +1425,14 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           ORDER BY m.timestamp DESC 
           LIMIT 1
         ) as last_message_time,
-        (
-          SELECT COUNT(*) 
+        COALESCE((
+          SELECT COUNT(*)::INTEGER
           FROM messages m 
           WHERE m.room_number = r.room_number 
             AND m.checkin_date = r.checkin_date
             AND m.sender_type != 'assistant'
             AND m.read_at IS NULL
-        ) as unread_count
+        ), 0) as unread_count
       FROM rooms r
       INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
         AND r.checkin_date = tra.checkin_date
