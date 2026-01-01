@@ -638,6 +638,11 @@
                         <div>
                             <h2 id="chatRoomName">Bir oda seçin</h2>
                             <div style="font-size: 12px; color: #667781;" id="chatRoomDetails"></div>
+                            <!-- Assistant info (shown when in team) -->
+                            <div id="assistantInfo" style="display: none; font-size: 11px; color: #667781; margin-top: 2px;">
+                                <span id="assistantName"></span>
+                                <span id="assistantTeam" style="margin-left: 4px;"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1001,9 +1006,18 @@
             document.getElementById('inputContainer').style.display = 'none';
         }
 
-        // Check if assistant is in a team
+        // Check if assistant is in a team and load assistant info
         async function checkAssistantTeams() {
             try {
+                // Load assistant info
+                const assistantRes = await fetch(`/api/assistants/${ASSISTANT_ID}`);
+                let assistantName = 'Assistant';
+                if (assistantRes.ok) {
+                    const assistant = await assistantRes.json();
+                    assistantName = assistant.name || 'Assistant';
+                }
+                
+                // Load teams
                 const response = await fetch(`/api/assistant/${ASSISTANT_ID}/teams`);
                 
                 if (!response.ok) {
@@ -1020,6 +1034,9 @@
                 
                 const settingsLink = document.getElementById('settingsLink');
                 const dateFilterContainer = document.getElementById('dateFilterContainer');
+                const assistantInfo = document.getElementById('assistantInfo');
+                const assistantNameEl = document.getElementById('assistantName');
+                const assistantTeamEl = document.getElementById('assistantTeam');
                 
                 if (teams.length > 0) {
                     // Assistant is in a team - hide settings, show WhatsApp mode
@@ -1034,6 +1051,13 @@
                     if (window.innerWidth <= 768) {
                         showListView();
                     }
+                    
+                    // Show assistant info in chat header
+                    if (assistantInfo && assistantNameEl && assistantTeamEl) {
+                        assistantNameEl.textContent = assistantName;
+                        assistantTeamEl.textContent = `• ${teams.map(t => t.name).join(', ')}`;
+                        assistantInfo.style.display = 'block';
+                    }
                 } else {
                     // Assistant not in team - show settings
                     if (settingsLink) {
@@ -1041,6 +1065,11 @@
                     }
                     if (dateFilterContainer) {
                         dateFilterContainer.style.display = 'block';
+                    }
+                    
+                    // Hide assistant info
+                    if (assistantInfo) {
+                        assistantInfo.style.display = 'none';
                     }
                 }
             } catch (error) {
