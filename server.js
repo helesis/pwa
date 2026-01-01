@@ -167,6 +167,9 @@ async function initializeDatabase() {
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS child_count INTEGER DEFAULT 0;
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS agency VARCHAR(100);
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS country VARCHAR(100);
+      
+      -- Rooms tablosuna profile_photo ekle (eğer yoksa)
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS profile_photo TEXT;
 
       -- Assistants ve Teams tablolarına avatar kolonu ekle
       ALTER TABLE assistants ADD COLUMN IF NOT EXISTS avatar TEXT;
