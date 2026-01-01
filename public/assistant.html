@@ -261,6 +261,26 @@
         }
 
         /* WhatsApp style tick icons */
+        .message-status {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 4px;
+            font-size: 14px;
+            line-height: 1;
+        }
+        
+        .message-status.sent {
+            color: #667781; /* Grey */
+        }
+        
+        .message-status.delivered {
+            color: #667781; /* Grey */
+        }
+        
+        .message-status.read {
+            color: #34B7F1; /* WhatsApp blue */
+        }
+        
         .message-status-icon {
             display: inline-block;
             position: relative;
@@ -275,8 +295,12 @@
         /* Single tick (sent) */
         .message-status.sent .message-status-icon::after {
             content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0;
             font-size: 16px;
             line-height: 1;
+            color: #667781;
         }
 
         /* Double tick (delivered) - Two ticks overlapped */
@@ -287,6 +311,7 @@
             top: 0;
             font-size: 16px;
             line-height: 1;
+            color: #667781;
         }
         
         .message-status.delivered .message-status-icon::after {
@@ -296,6 +321,7 @@
             top: 0;
             font-size: 16px;
             line-height: 1;
+            color: #667781;
         }
 
         /* Double tick (read) - Two ticks overlapped, blue color */
