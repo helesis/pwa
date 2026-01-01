@@ -1026,11 +1026,12 @@ app.post('/api/team-assignments', async (req, res) => {
       }
       
       // Notify all team assistants to join the room via Socket.IO
-      const roomId = `${room_number}_${checkin_date}`;
-      io.to(`assistant_${assistantIds.join('_')}`).emit('auto_join_room', {
+      // Broadcast to all connected clients (assistants will filter on frontend)
+      io.emit('auto_join_room', {
         roomNumber: room_number,
         checkinDate: checkin_date,
-        teamId: team_id
+        teamId: team_id,
+        assistantIds: assistantIds
       });
     }
     
