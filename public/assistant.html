@@ -720,6 +720,8 @@
                 rooms.forEach(room => {
                     const roomElement = document.createElement('div');
                     roomElement.className = 'room-item';
+                    roomElement.setAttribute('data-room-number', room.room_number);
+                    roomElement.setAttribute('data-checkin-date', room.checkin_date);
                     roomElement.innerHTML = `
                         <div class="room-avatar">${room.room_number}</div>
                         <div class="room-info">
@@ -735,7 +737,7 @@
                     // Sağ tıklama menüsü ekle
                     roomElement.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
-                        showContextMenu(e, room.room_number, room.guest_name, room.guest_surname);
+                        showContextMenu(e, room.room_number, room.guest_name, room.guest_surname, room.checkin_date);
                     });
                     
                     roomsList.appendChild(roomElement);
@@ -1041,7 +1043,7 @@
         });
 
         // Context menu göster
-        function showContextMenu(event, roomNumber, guestName, guestSurname) {
+        function showContextMenu(event, roomNumber, guestName, guestSurname, checkinDate) {
             // Mevcut context menu'yu kaldır
             const existingMenu = document.getElementById('contextMenu');
             if (existingMenu) {
@@ -1053,7 +1055,7 @@
             contextMenu.id = 'contextMenu';
             contextMenu.className = 'context-menu';
             contextMenu.innerHTML = `
-                <div class="context-menu-item" onclick="inviteGuest('${roomNumber}', '${guestName}', '${guestSurname}')">
+                <div class="context-menu-item" onclick="inviteGuest('${roomNumber}', '${guestName}', '${guestSurname}', '${checkinDate || ''}')">
                     👤 Misafir Davet Et
                 </div>
             `;
@@ -1075,16 +1077,34 @@
         }
 
         // Misafir davet et (QR kod oluştur)
-        async function inviteGuest(roomNumber, guestName, guestSurname) {
+        async function inviteGuest(roomNumber, guestName, guestSurname, checkinDate) {
             // Context menu'yu kapat
             const contextMenu = document.getElementById('contextMenu');
             if (contextMenu) {
                 contextMenu.remove();
             }
             
+            // Get checkin_date from parameter or room data
+            let actualCheckinDate = checkinDate;
+            if (!actualCheckinDate) {
+                const roomElement = document.querySelector(`[data-room-number="${roomNumber}"]`);
+                actualCheckinDate = roomElement ? roomElement.getAttribute('data-checkin-date') : null;
+            }
+            
+            if (!actualCheckinDate) {
+                alert('Oda bilgisi bulunamadı');
+                return;
+            }
+            
             try {
                 const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms/${roomNumber}/invite`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        checkin_date: actualCheckinDate
+                    })
                 });
                 
                 if (!response.ok) {
@@ -1112,12 +1132,22 @@
 
         // Show QR modal (mevcut buton için)
         async function showQRModal() {
-            if (!currentRoomNumber) return;
+            if (!currentRoomNumber || !currentCheckinDate) return;
             
             try {
                 const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms/${currentRoomNumber}/invite`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        checkin_date: currentCheckinDate
+                    })
                 });
+                
+                if (!response.ok) {
+                    throw new Error('QR kod oluşturulamadı');
+                }
                 
                 inviteData = await response.json();
                 

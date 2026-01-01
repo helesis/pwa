@@ -1180,9 +1180,14 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
     const { date } = req.query; // Optional: filter by date (default: today)
     
     const checkinDate = date || new Date().toISOString().split('T')[0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
     
+    // Get rooms assigned to assistant's teams
+    // Filter: checkout_date + 1 day must be >= today (hide rooms that checked out more than 1 day ago)
     const result = await pool.query(`
-      SELECT 
+      SELECT DISTINCT
         r.id,
         r.room_number,
         r.guest_name,
@@ -1190,16 +1195,28 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
         r.checkin_date,
         r.checkout_date,
         r.is_active,
-        aa.assigned_at
+        r.adult_count,
+        r.child_count,
+        r.country,
+        r.agency,
+        tra.assigned_at
       FROM rooms r
-      INNER JOIN assistant_assignments aa ON r.room_number = aa.room_number
-      WHERE aa.assistant_id = $1 
-        AND aa.is_active = true
+      INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
+        AND r.checkin_date = tra.checkin_date
+      INNER JOIN assistant_teams at ON tra.team_id = at.team_id
+      WHERE at.assistant_id = $1 
+        AND at.is_active = true
+        AND tra.is_active = true
         AND r.checkin_date = $2
         AND r.is_active = true
+        AND (
+          r.checkout_date IS NULL 
+          OR (r.checkout_date + INTERVAL '1 day') >= $3::date
+        )
       ORDER BY r.room_number ASC
-    `, [assistantId, checkinDate]);
+    `, [assistantId, checkinDate, todayStr]);
     
+    console.log(`📋 Assistant ${assistantId} rooms for ${checkinDate}:`, result.rows.length);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching assistant rooms:', error);
@@ -1211,23 +1228,39 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
 app.post('/api/assistant/:assistantId/rooms/:roomNumber/invite', async (req, res) => {
   try {
     const { assistantId, roomNumber } = req.params;
+    const { checkin_date } = req.body; // Get checkin_date from request body
     
-    // Verify assistant has access to this room
+    // Verify assistant has access to this room through team assignment
     const assignmentCheck = await pool.query(`
-      SELECT * FROM assistant_assignments 
-      WHERE assistant_id = $1 AND room_number = $2 AND is_active = true
-    `, [assistantId, roomNumber]);
+      SELECT r.checkin_date, r.checkout_date
+      FROM rooms r
+      INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
+        AND r.checkin_date = tra.checkin_date
+      INNER JOIN assistant_teams at ON tra.team_id = at.team_id
+      WHERE at.assistant_id = $1 
+        AND r.room_number = $2
+        AND at.is_active = true
+        AND tra.is_active = true
+        AND r.is_active = true
+        AND ($3::date IS NULL OR r.checkin_date = $3::date)
+      LIMIT 1
+    `, [assistantId, roomNumber, checkin_date || null]);
     
     if (assignmentCheck.rows.length === 0) {
       return res.status(403).json({ error: 'Assistant does not have access to this room' });
     }
     
+    const roomCheckinDate = checkin_date || assignmentCheck.rows[0].checkin_date;
+    
     // Generate unique token
     const inviteToken = randomBytes(32).toString('hex');
     
-    // Create invite link
+    // Create invite link with checkin_date if available
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const inviteLink = `${frontendUrl}/join?token=${inviteToken}`;
+    let inviteLink = `${frontendUrl}/join?token=${inviteToken}`;
+    if (roomCheckinDate) {
+      inviteLink += `&checkin_date=${roomCheckinDate}`;
+    }
     
     // Generate QR code
     const qrCodeDataUrl = await QRCode.toDataURL(inviteLink, {
@@ -1256,7 +1289,8 @@ app.post('/api/assistant/:assistantId/rooms/:roomNumber/invite', async (req, res
       inviteToken,
       qrCodeUrl: qrCodeDataUrl,
       inviteLink,
-      expiresAt: result.rows[0].created_at
+      expiresAt: result.rows[0].created_at,
+      checkinDate: roomCheckinDate
     });
   } catch (error) {
     console.error('Error creating invite:', error);
