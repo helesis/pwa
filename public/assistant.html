@@ -638,7 +638,13 @@
         // Auto-join room when team is assigned
         socket.on('auto_join_room', (data) => {
             console.log('🔔 Auto-join room notification:', data);
-            const { roomNumber, checkinDate, teamId } = data;
+            const { roomNumber, checkinDate, teamId, assistantIds } = data;
+            
+            // Check if this assistant is in the team
+            if (!assistantIds || !assistantIds.includes(ASSISTANT_ID)) {
+                console.log('ℹ️ This assistant is not in the assigned team');
+                return;
+            }
             
             // Check if this room is already selected
             if (currentRoomNumber === roomNumber && currentCheckinDate === checkinDate) {
@@ -646,6 +652,24 @@
                 return;
             }
             
+            // Update date filter if needed
+            if (checkinDate) {
+                const dateFilter = document.getElementById('dateFilter');
+                const checkinDateStr = checkinDate.split('T')[0];
+                if (dateFilter.value !== checkinDateStr) {
+                    dateFilter.value = checkinDateStr;
+                    loadRooms(checkinDateStr);
+                    // Wait for rooms to load, then select
+                    setTimeout(() => selectRoomFromAutoJoin(roomNumber, checkinDate), 500);
+                } else {
+                    selectRoomFromAutoJoin(roomNumber, checkinDate);
+                }
+            } else {
+                selectRoomFromAutoJoin(roomNumber, checkinDate);
+            }
+        });
+
+        function selectRoomFromAutoJoin(roomNumber, checkinDate) {
             // Find room in the list and select it
             const roomElements = document.querySelectorAll('.room-item');
             for (const roomEl of roomElements) {
@@ -659,7 +683,7 @@
                     break;
                 }
             }
-        });
+        }
         
         let currentRoom = null;
         let currentRoomNumber = null;
