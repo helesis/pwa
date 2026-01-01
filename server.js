@@ -1413,7 +1413,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           SELECT m.message 
           FROM messages m 
           WHERE m.room_number = r.room_number 
-            AND m.checkin_date = r.checkin_date
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
           ORDER BY m.timestamp DESC 
           LIMIT 1
         ) as last_message,
@@ -1421,7 +1421,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           SELECT m.timestamp 
           FROM messages m 
           WHERE m.room_number = r.room_number 
-            AND m.checkin_date = r.checkin_date
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
           ORDER BY m.timestamp DESC 
           LIMIT 1
         ) as last_message_time,
@@ -1429,8 +1429,8 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           SELECT COUNT(*)::INTEGER
           FROM messages m 
           WHERE m.room_number = r.room_number 
-            AND m.checkin_date = r.checkin_date
-            AND m.sender_type != 'assistant'
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+            AND m.sender_type NOT IN ('assistant', 'staff')
             AND m.read_at IS NULL
         ), 0) as unread_count
       FROM rooms r
@@ -1451,7 +1451,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           SELECT m.timestamp 
           FROM messages m 
           WHERE m.room_number = r.room_number 
-            AND m.checkin_date = r.checkin_date
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
           ORDER BY m.timestamp DESC 
           LIMIT 1
         ), r.checkin_date) DESC,
@@ -1461,8 +1461,19 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
     console.log(`📋 Assistant ${assistantId} rooms for ${checkinDate}:`, result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching assistant rooms:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('❌ Error fetching assistant rooms:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      position: error.position
+    });
+    res.status(500).json({ 
+      error: 'Database error',
+      message: error.message,
+      detail: error.detail
+    });
   }
 });
 
