@@ -561,17 +561,17 @@
         const ASSISTANT_ID = 1; // Test assistant ID
         const SERVER_URL = window.location.origin;
         // Socket.IO configuration with reconnection settings
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
+        // Polling öncelikli (Render free tier için daha güvenilir)
         const socketOptions = {
-            transports: isMobile ? ['polling', 'websocket'] : ['websocket', 'polling'],
+            transports: ['polling', 'websocket'], // Polling öncelikli
             reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            reconnectionAttempts: 10,
-            timeout: 20000,
+            reconnectionDelay: 500, // Daha hızlı yeniden bağlanma
+            reconnectionDelayMax: 10000, // Maksimum delay'i artır
+            reconnectionAttempts: Infinity, // Sonsuz deneme
+            timeout: 30000, // Timeout'u artır (20s -> 30s)
             forceNew: false,
-            upgrade: true
+            upgrade: true,
+            withCredentials: true
         };
         
         console.log('🔌 Initializing Socket.IO connection...');
@@ -587,14 +587,29 @@
         
         socket.on('disconnect', (reason) => {
             console.log('❌ Socket disconnected:', reason);
+            
+            // Transport error ise, bu normal (Render free tier)
+            if (reason === 'transport error' || reason === 'transport close') {
+                console.log('ℹ️ Connection lost (likely Render free tier sleep), reconnecting...');
+            } else {
+                console.warn('⚠️ Unexpected disconnect reason:', reason);
+            }
         });
         
         socket.on('reconnect', (attemptNumber) => {
-            console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+            console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
+        });
+        
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('🔄 Reconnection attempt', attemptNumber);
         });
         
         socket.on('reconnect_error', (error) => {
             console.error('❌ Reconnection error:', error);
+        });
+        
+        socket.on('reconnect_failed', () => {
+            console.error('❌ Reconnection failed - please refresh the page');
         });
         
         socket.on('reconnect_failed', () => {
