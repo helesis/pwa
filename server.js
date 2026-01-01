@@ -440,9 +440,20 @@ io.on('connection', (socket) => {
       
       if (messageResult.rows.length > 0) {
         const { room_number, checkin_date } = messageResult.rows[0];
-        const roomId = `${room_number}_${checkin_date}`;
+        // Normalize checkin_date to YYYY-MM-DD format for roomId
+        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
+        const roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
         
-        console.log('📤 Broadcasting message_status_update to room:', roomId, { messageId, status: 'delivered' });
+        console.log('📤 Broadcasting message_status_update to room:', roomId, { 
+          messageId, 
+          status: 'delivered',
+          room_number,
+          checkin_date: checkinDateStr
+        });
+        
+        // Get all sockets in this room for debugging
+        const roomSockets = await io.in(roomId).fetchSockets();
+        console.log(`📊 Room ${roomId} has ${roomSockets.length} connected clients`);
         
         // Broadcast status update to room (sender will see delivered tick)
         io.to(roomId).emit('message_status_update', { 
@@ -450,7 +461,7 @@ io.on('connection', (socket) => {
           status: 'delivered' 
         });
         
-        console.log('✅ message_status_update broadcasted');
+        console.log('✅ message_status_update broadcasted to room:', roomId);
       } else {
         console.log('⚠️ message_delivered: Message info not found for messageId:', messageId);
       }
