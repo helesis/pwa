@@ -1760,11 +1760,19 @@
         }
 
         // Update message status
-        function updateMessageStatus(messageId, status) {
-            console.log('🔄 Updating message status:', { messageId, status });
+        function updateMessageStatus(messageId, status, retryCount = 0) {
+            console.log('🔄 Updating message status:', { messageId, status, retryCount });
             const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
             if (!messageEl) {
-                console.log('⚠️ Message element not found for ID:', messageId);
+                if (retryCount < 5) {
+                    // Retry after a short delay (message might not be in DOM yet)
+                    console.log(`⏳ Message element not found, retrying... (${retryCount + 1}/5)`);
+                    setTimeout(() => {
+                        updateMessageStatus(messageId, status, retryCount + 1);
+                    }, 200);
+                } else {
+                    console.log('⚠️ Message element not found for ID after retries:', messageId);
+                }
                 return;
             }
             
