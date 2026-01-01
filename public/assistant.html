@@ -936,7 +936,20 @@
             document.getElementById('chatRoomDetails').textContent = `Oda ${roomNumber}`;
             document.getElementById('chatRoomAvatar').textContent = roomNumber;
             document.getElementById('qrButton').style.display = 'block';
-            document.getElementById('inputContainer').style.display = 'flex';
+            
+            // Show chat view on mobile first (before showing input)
+            if (window.innerWidth <= 768) {
+                showChatView();
+            }
+            
+            // Show input container - use setTimeout to ensure chat view is rendered
+            setTimeout(() => {
+                const inputContainer = document.getElementById('inputContainer');
+                if (inputContainer) {
+                    inputContainer.style.display = 'flex';
+                    console.log('✅ Input container displayed');
+                }
+            }, 100);
             
             // Join room and load chat with checkin_date
             socket.emit('join_room', {
@@ -944,11 +957,6 @@
                 checkinDate: checkinDate
             });
             // Note: loadChatHistory is handled by socket.on('chat_history')
-            
-            // Show chat view on mobile
-            if (window.innerWidth <= 768) {
-                showChatView();
-            }
             
             // Initialize observer when room is selected
             setTimeout(() => {
