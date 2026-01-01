@@ -557,10 +557,6 @@
             </div>
             <form id="assignment-form" onsubmit="saveAssignment(event)">
                 <div class="form-group">
-                    <label class="form-label">Check-in Tarihi *</label>
-                    <input type="date" id="assignment-checkin-date" class="form-input" required>
-                </div>
-                <div class="form-group">
                     <label class="form-label">Takım *</label>
                     <select id="assignment-team" class="form-select" required>
                         <option value="">Takım Seçin</option>
@@ -1151,12 +1147,6 @@
                     // Scroll to the checkbox
                     checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-                
-                // Set the checkin date in the modal
-                const dateInput = document.getElementById('assignment-checkin-date');
-                if (dateInput) {
-                    dateInput.value = checkinDate;
-                }
             }, 800);
         }
 
@@ -1239,12 +1229,14 @@
 
         async function saveAssignment(e) {
             e.preventDefault();
-            const checkinDate = document.getElementById('assignment-checkin-date').value;
             const teamId = parseInt(document.getElementById('assignment-team').value);
             const selectedGuests = Array.from(document.querySelectorAll('#assignment-guests-checkboxes input:checked'))
                 .map(cb => {
                     const [roomNumber, date] = cb.value.split('|');
-                    return { room_number: roomNumber, checkin_date: date || checkinDate };
+                    if (!date) {
+                        throw new Error('Misafir seçiminde check-in tarihi bulunamadı');
+                    }
+                    return { room_number: roomNumber, checkin_date: date };
                 });
 
             if (selectedGuests.length === 0) {
