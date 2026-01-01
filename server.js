@@ -1395,8 +1395,9 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
     const todayStr = today.toISOString().split('T')[0];
     
     // Get rooms assigned to assistant's teams with last message info
+    // Use GROUP BY instead of DISTINCT to allow ORDER BY with expressions
     const result = await pool.query(`
-      SELECT DISTINCT
+      SELECT 
         r.id,
         r.room_number,
         r.guest_name,
@@ -1408,7 +1409,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
         r.child_count,
         r.country,
         r.agency,
-        tra.assigned_at,
+        MAX(tra.assigned_at) as assigned_at,
         (
           SELECT m.message 
           FROM messages m 
@@ -1432,7 +1433,15 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
             AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
             AND m.sender_type NOT IN ('assistant', 'staff')
             AND m.read_at IS NULL
-        ), 0) as unread_count
+        ), 0) as unread_count,
+        COALESCE((
+          SELECT m.timestamp 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          ORDER BY m.timestamp DESC 
+          LIMIT 1
+        ), r.checkin_date) as sort_timestamp
       FROM rooms r
       INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
         AND r.checkin_date = tra.checkin_date
@@ -1446,15 +1455,20 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           r.checkout_date IS NULL 
           OR (r.checkout_date + INTERVAL '1 day') >= $3::date
         )
+      GROUP BY 
+        r.id,
+        r.room_number,
+        r.guest_name,
+        r.guest_surname,
+        r.checkin_date,
+        r.checkout_date,
+        r.is_active,
+        r.adult_count,
+        r.child_count,
+        r.country,
+        r.agency
       ORDER BY 
-        COALESCE((
-          SELECT m.timestamp 
-          FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-          ORDER BY m.timestamp DESC 
-          LIMIT 1
-        ), r.checkin_date) DESC,
+        sort_timestamp DESC,
         r.room_number ASC
     `, [assistantId, checkinDate, todayStr]);
     
