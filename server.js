@@ -490,13 +490,24 @@ io.on('connection', (socket) => {
       
       if (messageResult.rows.length > 0) {
         const { room_number, checkin_date } = messageResult.rows[0];
-        const roomId = `${room_number}_${checkin_date}`;
+        // Normalize checkin_date to YYYY-MM-DD format for roomId
+        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
+        const roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
+        
+        console.log('📤 Broadcasting message_status_update (read) to room:', roomId, { 
+          messageIds, 
+          status: 'read',
+          room_number,
+          checkin_date: checkinDateStr
+        });
         
         // Broadcast status update to room (sender will see read ticks)
         io.to(roomId).emit('message_status_update', { 
           messageIds, 
           status: 'read' 
         });
+        
+        console.log('✅ message_status_update (read) broadcasted to room:', roomId);
       }
     } catch (error) {
       console.error('Error updating read status:', error);
