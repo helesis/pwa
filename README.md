@@ -1,6 +1,6 @@
 # 🏨 Voyage Sorgun Chat System
 
-Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi.
+Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi. WhatsApp benzeri kullanıcı deneyimi ve kapsamlı assistant/takım yönetimi ile profesyonel otel iletişim platformu.
 
 ## ✨ Özellikler
 
@@ -8,22 +8,71 @@ Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi.
 - Gerçek zamanlı mesaj analizi
 - Negatif/Nötr/Pozitif sentiment tespiti
 - Aciliyet seviyesi belirleme
-- Kategori sınıflandırma (teknik sorun, room service, vb.)
+- Kategori sınıflandırması (teknik sorun, room service, vb.)
 - Otomatik yönetici bildirimi
 
 ### 💬 Real-time Messaging
 - WebSocket (Socket.IO) ile anlık iletişim
 - Yazma göstergesi (typing indicator)
-- Mesaj okundu/iletildi durumu
+- WhatsApp benzeri mesaj durumu takibi:
+  - ✅ Gönderildi (gri tek tik)
+  - ✅✅ İletildi (gri çift tik)
+  - ✅✅ Okundu (mavi çift tik)
+- Optimistic UI updates (anında mesaj görüntüleme)
 - Mesaj geçmişi
 - Çoklu kullanıcı desteği
+- Son mesaj önizlemesi ve zaman damgası
+- Okunmamış mesaj sayısı
+
+### 👥 Assistant & Takım Yönetimi
+- **Assistant Yönetimi:**
+  - Assistant oluşturma, düzenleme, silme
+  - Avatar desteği (fotoğraf yükleme)
+  - Email kaydı
+  - Takım ataması
+  
+- **Takım Yönetimi:**
+  - Takım oluşturma, düzenleme, silme
+  - Avatar desteği (fotoğraf yükleme)
+  - Assistant'ları takıma atama
+  - QR kod ile takıma katılım
+  - Aktif oda sayısı takibi
+
+- **Oda-Takım Eşleştirme:**
+  - Misafir odalarını takımlara atama
+  - Check-in tarihine göre filtreleme
+  - Eşleşmemiş odalar listesi
+  - Otomatik oda atama bildirimleri
+
+### 📱 WhatsApp Benzeri Mobil UI
+- **Assistant Dashboard:**
+  - Liste görünümü (misafir listesi)
+  - Chat görünümü (yazışma ekranı)
+  - iOS benzeri geri butonu
+  - Responsive tasarım (mobil/desktop)
+  - Son mesaj önizlemesi
+  - Göreceli zaman gösterimi (Şimdi, 5 dk, 2 sa, vb.)
+  
+- **Misafir Chat:**
+  - WhatsApp benzeri arayüz
+  - Optimistic mesaj gönderimi
+  - Mesaj durumu göstergeleri
+  - Fotoğraf gönderme desteği
+
+### 🔐 Güvenli Erişim Sistemi
+- Token bazlı QR kod sistemi
+- Misafir odalarına token ile erişim
+- Süresi dolmuş token kontrolü
+- Geçersiz token kontrolü
+- Landing page (ana sayfa koruması)
 
 ### 📊 Database
 - PostgreSQL (production-ready)
-- Mesaj kayıtları
-- Oda yönetimi
-- Tone alert geçmişi
-- İstatistikler
+- Mesaj kayıtları (delivered_at, read_at)
+- Oda yönetimi (check-in/check-out tarihleri)
+- Assistant ve takım yönetimi
+- Oda-takım eşleştirmeleri
+- QR kod ve davet sistemi
 - Connection pooling
 
 ### 📱 PWA (Progressive Web App)
@@ -36,8 +85,36 @@ Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi.
 ### 🔔 Bildirimler
 - Gerçek push notification
 - Yönetici alert sistemi
-- Slack entegrasyonu (opsiyonel)
-- Email alert (opsiyonel)
+- Takım bazlı bildirimler
+- Oda atama bildirimleri
+
+## 🌐 Arayüzler
+
+### 1. Landing Page (`/`)
+- Ana sayfa
+- QR kod veya davet linki gerektiğini belirtir
+- Token olmadan chat'e erişim yok
+
+### 2. Misafir Chat (`/join?token=TOKEN`)
+- Misafirlerin chat yaptığı sayfa
+- Token ile erişim zorunlu
+- WhatsApp benzeri arayüz
+- Fotoğraf gönderme
+
+### 3. Assistant Dashboard (`/assistant`)
+- Assistant'ların takımlarına atanmış odaları görüp chat yaptığı sayfa
+- WhatsApp benzeri mobil UI
+- Liste/chat görünümü toggle
+- Takımda olan assistant'lar için optimize edilmiş
+- Assistant avatar'ı ve takım bilgisi gösterimi
+
+### 4. Settings (`/settings`)
+- **Admin Only** - Şifre korumalı (ileride eklenecek)
+- Assistant yönetimi (CRUD)
+- Takım yönetimi (CRUD)
+- Oda-takım eşleştirmesi
+- Eşleşmemiş odalar listesi
+- QR kod oluşturma
 
 ## 🚀 Kurulum
 
@@ -46,14 +123,13 @@ Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi.
 - Node.js 18+ 
 - npm veya yarn
 - PostgreSQL (local veya Render'da)
-- Claude API Key ([console.anthropic.com](https://console.anthropic.com/))
+- Claude API Key ([console.anthropic.com](https://console.anthropic.com/)) - Opsiyonel
 
 ### Adım 1: Projeyi İndir
 
 ```bash
-# Bu dosyaları bir klasöre kaydedin
-mkdir voyage-chat
-cd voyage-chat
+git clone https://github.com/helesis/pwa.git
+cd pwa
 ```
 
 ### Adım 2: Dependencies Yükle
@@ -67,7 +143,7 @@ npm install
 `.env` dosyası oluşturun:
 
 ```bash
-cp .env.example .env
+cp env.example .env
 ```
 
 `.env` dosyasını düzenleyin:
@@ -76,7 +152,7 @@ cp .env.example .env
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgresql://user:password@localhost:5432/voyage_chat
-CLAUDE_API_KEY=your_actual_api_key_here
+CLAUDE_API_KEY=your_actual_api_key_here  # Opsiyonel
 FRONTEND_URL=http://localhost:3000
 ```
 
@@ -90,7 +166,7 @@ Database oluşturun:
 createdb voyage_chat
 ```
 
-Claude API Key almak için:
+Claude API Key almak için (Opsiyonel):
 1. https://console.anthropic.com/ adresine gidin
 2. API Keys bölümünden yeni key oluşturun
 3. Key'i `.env` dosyasına yapıştırın
@@ -106,6 +182,8 @@ Ya da development modunda (auto-restart):
 ```bash
 npm run dev
 ```
+
+Database tabloları otomatik olarak oluşturulacaktır. İlk çalıştırmada test verileri oluşturulur (önümüzdeki 10 gün için random check-in'ler).
 
 ### Adım 5: Tarayıcıda Aç
 
@@ -128,89 +206,144 @@ http://localhost:3000
 2. Menü > "Ana ekrana ekle"
 3. Uygulama gibi kullanın!
 
-## 🧪 Test
+## 🎮 Kullanım Senaryoları
 
-### Tone Analizi Test
+### Senaryo 1: Misafir Chat'e Katılma
 
-**Negatif Mesajlar:**
-```
-"Klima çalışmıyor, çok kötü bir durum!"
-"3 saattir bekliyorum, rezalet!"
-"Oda servisi hiç gelmiyor"
-```
+1. Assistant Settings'ten bir misafir odası için QR kod oluşturur
+2. Misafir QR kodu okutur veya link'e tıklar
+3. `/join?token=TOKEN` sayfasına yönlendirilir
+4. Chat'e başlar
 
-**Pozitif Mesajlar:**
-```
-"Harika bir tatil geçiriyoruz, teşekkürler!"
-"Çok memnun kaldık, mükemmel hizmet"
-"Her şey için teşekkür ederiz"
-```
+### Senaryo 2: Assistant Takıma Katılma
 
-**Nötr Mesajlar:**
-```
-"Oda servisi menüsü var mı?"
-"Check-out saati kaçta?"
-"Havuz sıcaklığı kaç derece?"
-```
+1. Settings'ten bir takım oluşturulur
+2. Takım QR kodu oluşturulur
+3. Assistant QR kodu okutur veya link'e tıklar
+4. Assistant ID girilir (ilk seferde)
+5. Assistant otomatik olarak takıma katılır
+6. Takıma atanmış odalar görünür
 
-### API Test
+### Senaryo 3: Oda-Takım Eşleştirme
 
-```bash
-# Tone analizi testi
-curl -X POST http://localhost:3000/api/test/tone \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Klima çalışmıyor, çok kötü!"}'
-
-# İstatistikler
-curl http://localhost:3000/api/stats
-
-# Aktif odalar
-curl http://localhost:3000/api/rooms
-
-# Alert listesi
-curl http://localhost:3000/api/alerts
-```
+1. Settings > Eşleştirmeler sekmesine gidilir
+2. Tarih filtrelenir
+3. Eşleşmemiş odalar görüntülenir
+4. Odaya tıklanır, takım seçilir
+5. Oda takıma atanır
+6. Takım üyeleri otomatik olarak odaya erişir
 
 ## 📊 API Endpoints
 
 ### REST API
 
+#### Odalar
 ```
-GET  /api/rooms              - Tüm aktif odalar
-GET  /api/rooms/:number      - Oda detayları
-GET  /api/messages/:number   - Oda mesajları
-GET  /api/alerts             - Tone alert'ler
-GET  /api/stats              - İstatistikler
-POST /api/rooms              - Yeni oda ekle
-POST /api/test/tone          - Tone analizi test
-POST /api/alerts/:id/sent    - Alert'i okundu işaretle
+GET  /api/rooms                    - Tüm aktif odalar
+GET  /api/rooms?start_date=X&end_date=Y  - Tarihe göre filtrelenmiş odalar
+GET  /api/rooms/:number            - Oda detayları
+POST /api/rooms                    - Yeni oda ekle
+```
+
+#### Mesajlar
+```
+GET  /api/messages/:number         - Oda mesajları
+POST /api/messages                 - Yeni mesaj gönder
+```
+
+#### Assistant Yönetimi
+```
+GET    /api/assistants             - Tüm assistant'lar (takım bilgisi ile)
+GET    /api/assistants/:id         - Assistant detayları
+POST   /api/assistants             - Yeni assistant oluştur
+PUT    /api/assistants/:id         - Assistant güncelle
+DELETE /api/assistants/:id         - Assistant sil
+GET    /api/assistant/:id/teams    - Assistant'ın takımları
+GET    /api/assistant/:id/rooms?date=X  - Assistant'ın odaları
+```
+
+#### Takım Yönetimi
+```
+GET    /api/teams                  - Tüm takımlar (aktif oda sayısı ile)
+GET    /api/teams/:id              - Takım detayları
+GET    /api/teams/:id/assistants   - Takım assistant'ları
+POST   /api/teams                  - Yeni takım oluştur
+PUT    /api/teams/:id              - Takım güncelle
+DELETE /api/teams/:id              - Takım sil
+POST   /api/teams/:id/invite       - Takım QR kodu oluştur
+POST   /api/teams/join             - Takıma katıl (token ile)
+```
+
+#### Eşleştirmeler
+```
+GET    /api/team-assignments       - Tüm eşleştirmeler
+GET    /api/team-assignments?checkin_date=X  - Tarihe göre filtrelenmiş
+POST   /api/team-assignments       - Yeni eşleştirme
+DELETE /api/team-assignments/:id   - Eşleştirme sil
+```
+
+#### QR Kod ve Davetler
+```
+GET    /api/invite/:token          - Davet token doğrulama
+POST   /api/assistant/:id/rooms/:roomNumber/invite  - Oda QR kodu oluştur
+```
+
+#### İstatistikler
+```
+GET  /api/stats                    - Genel istatistikler
+GET  /api/alerts                   - Tone alert'ler
+POST /api/alerts/:id/sent          - Alert'i okundu işaretle
 ```
 
 ### WebSocket Events
 
 **Client → Server:**
 ```javascript
-socket.emit('join_room', roomNumber);
-socket.emit('send_message', { roomNumber, senderType, senderName, message });
-socket.emit('typing', { roomNumber, senderName });
-socket.emit('stop_typing', { roomNumber });
+socket.emit('join_room', { roomNumber, checkinDate });
+socket.emit('send_message', { roomNumber, checkinDate, senderType, senderName, message });
+socket.emit('typing', { roomNumber, checkinDate, senderName });
+socket.emit('stop_typing', { roomNumber, checkinDate });
+socket.emit('message_delivered', { messageId, roomNumber, checkinDate });
+socket.emit('message_read', { messageId, roomNumber, checkinDate });
 ```
 
 **Server → Client:**
 ```javascript
 socket.on('chat_history', messages);
 socket.on('new_message', messageData);
+socket.on('message_sent', { messageId, status });
+socket.on('message_status_update', { messageId, status, deliveredAt, readAt });
 socket.on('tone_analysis', analysis);
 socket.on('tone_alert', alert);
 socket.on('user_typing', data);
 socket.on('user_stopped_typing');
+socket.on('auto_join_room', { roomNumber, checkinDate, teamId });
 ```
+
+## 🗄️ Database Schema
+
+### Tablolar
+
+- **messages**: Mesaj kayıtları (delivered_at, read_at ile)
+- **rooms**: Oda bilgileri (guest_name, checkin_date, checkout_date)
+- **assistants**: Assistant bilgileri (avatar ile)
+- **teams**: Takım bilgileri (avatar ile)
+- **assistant_teams**: Assistant-takım eşleştirmeleri
+- **team_room_assignments**: Takım-oda eşleştirmeleri
+- **room_invites**: Misafir davet token'ları
+- **team_invites**: Takım davet token'ları
+
+### Önemli İlişkiler
+
+- `rooms(room_number, checkin_date)` - Unique constraint
+- `assistant_teams(assistant_id, team_id)` - Unique constraint
+- `team_room_assignments(team_id, room_number, checkin_date)` - Unique constraint
 
 ## 🎨 Customization
 
 ### Renk Teması Değiştirme
 
-`public/index.html` içinde CSS değişkenlerini düzenleyin:
+`public/index.html` ve `public/assistant.html` içinde CSS değişkenlerini düzenleyin:
 
 ```css
 :root {
@@ -221,21 +354,19 @@ socket.on('user_stopped_typing');
 }
 ```
 
-### Oda Numarası Dinamik Yapma
+### Assistant ID Ayarlama
 
-`public/index.html` içinde:
+`public/assistant.html` içinde:
 
 ```javascript
-// URL'den oda numarası al
-const urlParams = new URLSearchParams(window.location.search);
-const ROOM_NUMBER = urlParams.get('room') || '301';
+const ASSISTANT_ID = 1; // Assistant ID'yi değiştirin
 ```
 
-Kullanım: `http://localhost:3000?room=405`
+Veya local storage'dan otomatik alınır (QR kod ile takıma katılımda).
 
 ## 📈 Production Deployment
 
-### Option 1: Render.com (Önerilen) ⭐
+### Render.com (Önerilen) ⭐
 
 Detaylı deployment rehberi için [DEPLOY.md](./DEPLOY.md) dosyasına bakın.
 
@@ -244,60 +375,30 @@ Detaylı deployment rehberi için [DEPLOY.md](./DEPLOY.md) dosyasına bakın.
 2. Render Dashboard → New → Blueprint
 3. Repository'nizi seçin (render.yaml otomatik algılanır)
 4. PostgreSQL database oluşturun
-5. Environment variables ekleyin
+5. Environment variables ekleyin:
+   - `DATABASE_URL` (otomatik oluşturulur)
+   - `FRONTEND_URL` (örn: https://voyage-chat-backend.onrender.com)
+   - `CLAUDE_API_KEY` (opsiyonel)
 6. Deploy!
 
 **Maliyet:** Ücretsiz (Starter plan) veya $7/ay (Standard plan)
 
-### Option 2: Railway.app
+### Diğer Platformlar
 
-1. GitHub'a push edin
-2. Railway.app'te "New Project"
-3. Repo'yu seçin
-4. PostgreSQL database ekleyin
-5. Environment variables ekleyin
-6. Deploy!
-
-**Maliyet:** ~$5/ay
-
-### Option 3: DigitalOcean
-
-```bash
-# VPS'e bağlanın
-ssh root@your-server-ip
-
-# Node.js yükleyin
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Projeyi klonlayın
-git clone your-repo
-cd voyage-chat
-
-# Dependencies
-npm install
-
-# PM2 ile servis olarak çalıştırın
-npm install -g pm2
-pm2 start server.js --name voyage-chat
-pm2 startup
-pm2 save
-```
-
-### Option 3: Vercel (Frontend) + Railway (Backend)
-
-Frontend ve backend'i ayrı deploy edin.
+- **Railway.app**: Similar to Render
+- **DigitalOcean**: VPS kullanımı
+- **Vercel + Railway**: Frontend/Backend ayrı deploy
 
 ## 🔐 Güvenlik
 
 ### Production için:
 
-1. **HTTPS kullanın** (Let's Encrypt)
+1. **HTTPS kullanın** (Let's Encrypt veya Render otomatik sağlar)
 2. **CORS ayarlayın:**
    ```javascript
    cors: {
-     origin: "https://yourdomain.com",
-     methods: ["GET", "POST"]
+     origin: process.env.FRONTEND_URL || "https://yourdomain.com",
+     credentials: true
    }
    ```
 3. **Rate limiting ekleyin:**
@@ -305,7 +406,7 @@ Frontend ve backend'i ayrı deploy edin.
    npm install express-rate-limit
    ```
 4. **Environment variables'ı güvenli tutun**
-5. **Database şifresi ekleyin** (production'da PostgreSQL kullanın)
+5. **Settings sayfasına şifre koruması ekleyin** (ileride)
 
 ## 💰 Maliyet
 
@@ -313,12 +414,13 @@ Frontend ve backend'i ayrı deploy edin.
 
 | Kalem | Tutar |
 |-------|-------|
-| Hosting (Railway) | $5-20 |
-| Claude API (15K mesaj/ay) | $7-15 |
-| Domain | $1 |
-| **TOPLAM** | **$13-36/ay** |
+| Hosting (Render - Free) | $0 |
+| PostgreSQL (Render - Free) | $0 |
+| Claude API (15K mesaj/ay) | $7-15 (Opsiyonel) |
+| Domain | $1 (Opsiyonel) |
+| **TOPLAM** | **$0-16/ay** |
 
-**~400-1,100 TL/ay** (WhatsApp API'den 7x daha ucuz!)
+**Ücretsiz tier'de çalışabilir!**
 
 ## 🐛 Troubleshooting
 
@@ -329,24 +431,13 @@ Frontend ve backend'i ayrı deploy edin.
 PORT=3001 npm start
 ```
 
-### Claude API çalışmıyor
-
-```bash
-# API key'i kontrol edin
-echo $CLAUDE_API_KEY
-
-# Fallback analiz kullanılıyor mu?
-# Log'larda "⚠️ Claude API key not found" yazıyorsa
-```
-
 ### WebSocket bağlanamıyor
 
-```bash
-# CORS hatası varsa server.js'de:
-cors: {
-  origin: "*",  // Geçici olarak
-  credentials: true
-}
+Render free tier'de WebSocket bağlantıları geçici olarak kesilebilir. Socket.IO otomatik olarak yeniden bağlanır (polling fallback ile).
+
+```javascript
+// assistant.html'de polling öncelikli
+transports: ['polling', 'websocket']
 ```
 
 ### Database hatası
@@ -355,12 +446,15 @@ cors: {
 # PostgreSQL bağlantısını kontrol edin
 psql $DATABASE_URL -c "SELECT 1"
 
-# Database tablolarını manuel oluşturun (gerekirse)
-psql $DATABASE_URL < schema.sql
-
 # Connection string formatı:
 # postgresql://user:password@host:port/database
 ```
+
+### Avatar görünmüyor
+
+- Base64 formatında kaydedildiğinden emin olun
+- Database'de `avatar` kolonu olduğunu kontrol edin
+- Browser console'da hata var mı kontrol edin
 
 ## 📚 İleri Seviye
 
@@ -412,28 +506,30 @@ async function sendEmailAlert(alert) {
 }
 ```
 
-### PostgreSQL Kullanımı
+## 🧪 Test
 
-✅ **Zaten entegre edildi!** Proje artık PostgreSQL kullanıyor.
+### Test Verileri
 
-Database connection otomatik olarak `DATABASE_URL` environment variable'ından alınır.
+İlk çalıştırmada otomatik olarak test verileri oluşturulur:
+- 1 test assistant (ID: 1)
+- Önümüzdeki 10 gün için random check-in'ler
+- Random misafir isimleri, ülkeler, acenteler
 
-**Local Development:**
-```bash
-# PostgreSQL başlat
-brew services start postgresql@14  # macOS
-sudo systemctl start postgresql    # Linux
+### Tone Analizi Test
 
-# Database oluştur
-createdb voyage_chat
-
-# .env dosyasında:
-DATABASE_URL=postgresql://$(whoami)@localhost:5432/voyage_chat
+**Negatif Mesajlar:**
+```
+"Klima çalışmıyor, çok kötü bir durum!"
+"3 saattir bekliyorum, rezalet!"
+"Oda servisi hiç gelmiyor"
 ```
 
-**Production (Render):**
-- Render otomatik olarak `DATABASE_URL` sağlar
-- `render.yaml` dosyasında database bağlantısı otomatik yapılandırılır
+**Pozitif Mesajlar:**
+```
+"Harika bir tatil geçiriyoruz, teşekkürler!"
+"Çok memnun kaldık, mükemmel hizmet"
+"Her şey için teşekkür ederiz"
+```
 
 ## 🤝 Katkı
 
