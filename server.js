@@ -1854,43 +1854,45 @@ app.get('/join-team', (req, res) => {
         <p>Lütfen bekleyin...</p>
       </div>
       <script>
-        // Get assistant ID from localStorage or prompt
-        let assistantId = localStorage.getItem('assistant_id');
-        if (!assistantId) {
-          assistantId = prompt("Assistant ID'nizi girin:");
-          if (assistantId) {
-            localStorage.setItem('assistant_id', assistantId);
-          } else {
-            alert('Assistant ID gereklidir!');
-            window.location.href = '/assistant';
-            return;
+        (function() {
+          // Get assistant ID from localStorage or prompt
+          let assistantId = localStorage.getItem('assistant_id');
+          if (!assistantId) {
+            assistantId = prompt("Assistant ID'nizi girin:");
+            if (assistantId) {
+              localStorage.setItem('assistant_id', assistantId);
+            } else {
+              alert('Assistant ID gereklidir!');
+              window.location.href = '/assistant';
+              return;
+            }
           }
-        }
-        
-        // Join team
-        fetch('/api/teams/join', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token: '${token}',
-            assistant_id: parseInt(assistantId)
+          
+          // Join team
+          fetch('/api/teams/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: '${token}',
+              assistant_id: parseInt(assistantId)
+            })
           })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            alert(data.message || 'Takıma başarıyla katıldınız!');
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              alert(data.message || 'Takıma başarıyla katıldınız!');
+              window.location.href = '/assistant';
+            } else {
+              alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+              window.location.href = '/assistant';
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu. Lütfen tekrar deneyin.');
             window.location.href = '/assistant';
-          } else {
-            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
-            window.location.href = '/assistant';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('Bir hata oluştu. Lütfen tekrar deneyin.');
-          window.location.href = '/assistant';
-        });
+          });
+        })();
       </script>
     </body>
     </html>
