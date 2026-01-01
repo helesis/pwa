@@ -92,12 +92,13 @@ async function initializeDatabase() {
 
       CREATE TABLE IF NOT EXISTS rooms (
         id SERIAL PRIMARY KEY,
-        room_number VARCHAR(50) UNIQUE NOT NULL,
+        room_number VARCHAR(50) NOT NULL,
         guest_name VARCHAR(100),
         checkin_date DATE,
         checkout_date DATE,
         is_active BOOLEAN DEFAULT true,
-        profile_photo TEXT
+        profile_photo TEXT,
+        UNIQUE(room_number, checkin_date)
       );
 
       -- Add checkin_date column to messages if it doesn't exist
@@ -160,6 +161,12 @@ async function initializeDatabase() {
 
       -- Rooms tablosuna guest_surname ekle
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS guest_surname VARCHAR(100);
+      
+      -- Rooms tablosuna yeni kolonlar ekle (PMS entegrasyonu için)
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS adult_count INTEGER DEFAULT 1;
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS child_count INTEGER DEFAULT 0;
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS agency VARCHAR(100);
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS country VARCHAR(100);
 
       -- Teams (Takımlar) tablosu
       CREATE TABLE IF NOT EXISTS teams (
@@ -562,14 +569,46 @@ io.on('connection', (socket) => {
 
 // REST API Endpoints
 
-// Get all active rooms
+// Get all active rooms (with optional date range filter)
 app.get('/api/rooms', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM rooms WHERE is_active = true');
+    const { start_date, end_date } = req.query;
+    console.log('🏨 GET /api/rooms - start_date:', start_date, 'end_date:', end_date);
+    
+    let query = 'SELECT * FROM rooms WHERE is_active = true';
+    const params = [];
+    
+    if (start_date && end_date) {
+      query += ' AND checkin_date >= $1 AND checkin_date <= $2 ORDER BY checkin_date ASC, room_number ASC';
+      params.push(start_date, end_date);
+      console.log('🔍 Filtering rooms by date range:', start_date, 'to', end_date);
+    } else if (start_date) {
+      query += ' AND checkin_date >= $1 ORDER BY checkin_date ASC, room_number ASC';
+      params.push(start_date);
+      console.log('🔍 Filtering rooms from date:', start_date);
+    } else {
+      query += ' ORDER BY checkin_date DESC, room_number ASC';
+      console.log('🔍 No date filter, returning all active rooms');
+    }
+    
+    console.log('📊 Executing query:', query);
+    console.log('📊 Query params:', params);
+    
+    const result = await pool.query(query, params);
+    console.log('✅ Found', result.rows.length, 'rooms');
+    if (result.rows.length > 0) {
+      console.log('📋 Sample rooms:', result.rows.slice(0, 3).map(r => ({
+        room_number: r.room_number,
+        checkin_date: r.checkin_date,
+        guest_name: r.guest_name
+      })));
+    }
+    
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching rooms:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('❌ Error fetching rooms:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Database error', message: error.message });
   }
 });
 
@@ -946,6 +985,8 @@ app.delete('/api/teams/:id', async (req, res) => {
 app.get('/api/team-assignments', async (req, res) => {
   try {
     const { checkin_date } = req.query;
+    console.log('📋 GET /api/team-assignments - checkin_date:', checkin_date);
+    
     let query = `
       SELECT 
         tra.id,
@@ -962,17 +1003,25 @@ app.get('/api/team-assignments', async (req, res) => {
     const params = [];
     
     if (checkin_date) {
+      console.log('🔍 Filtering by checkin_date:', checkin_date);
       query += ' AND tra.checkin_date = $1';
       params.push(checkin_date);
     }
     
     query += ' ORDER BY tra.checkin_date DESC, tra.room_number';
     
+    console.log('📊 Executing query:', query);
+    console.log('📊 Query params:', params);
+    
     const result = await pool.query(query, params);
+    console.log('✅ Found', result.rows.length, 'assignments');
+    console.log('📋 Assignments:', result.rows);
+    
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching team assignments:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('❌ Error fetching team assignments:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Database error', message: error.message });
   }
 });
 
@@ -1285,10 +1334,39 @@ app.post('/api/invite/:token/use', async (req, res) => {
   }
 });
 
-// Initialize test data (rooms with today's check-in date)
+// Initialize test data (rooms with random check-ins for next 10 days)
 async function initializeTestData() {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Random data pools
+    const firstNames = [
+      'Ali', 'Ayşe', 'Mehmet', 'Zeynep', 'Can', 'Lena', 'John', 'Maria', 'David', 'Anna',
+      'Michael', 'Sarah', 'James', 'Emma', 'Robert', 'Olivia', 'William', 'Sophia', 'Richard', 'Isabella',
+      'Thomas', 'Charlotte', 'Charles', 'Amelia', 'Joseph', 'Mia', 'Daniel', 'Harper', 'Matthew', 'Evelyn',
+      'Mark', 'Abigail', 'Donald', 'Emily', 'Steven', 'Elizabeth', 'Paul', 'Sofia', 'Andrew', 'Avery',
+      'Joshua', 'Ella', 'Kenneth', 'Madison', 'Kevin', 'Scarlett', 'Brian', 'Victoria', 'George', 'Aria'
+    ];
+    
+    const lastNames = [
+      'Yılmaz', 'Demir', 'Kaya', 'Şahin', 'Özkan', 'Podorozhna', 'Smith', 'Johnson', 'Williams', 'Brown',
+      'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson',
+      'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Thompson', 'White', 'Harris', 'Sanchez',
+      'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott',
+      'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera'
+    ];
+    
+    const countries = [
+      'Türkiye', 'Almanya', 'İngiltere', 'Fransa', 'İtalya', 'İspanya', 'Rusya', 'Ukrayna', 'Polonya', 'Hollanda',
+      'Belçika', 'İsviçre', 'Avusturya', 'İsveç', 'Norveç', 'Danimarka', 'Finlandiya', 'Yunanistan', 'Bulgaristan', 'Romanya',
+      'ABD', 'Kanada', 'Brezilya', 'Arjantin', 'Meksika', 'Japonya', 'Güney Kore', 'Çin', 'Hindistan', 'Avustralya'
+    ];
+    
+    const agencies = [
+      'Booking.com', 'Expedia', 'Agoda', 'Hotels.com', 'Trivago', 'Pegasus', 'Turkish Airlines', 'TUI', 'Thomas Cook', 'Jet2',
+      'Onur Air', 'SunExpress', 'Corendon', 'Freebird', 'Atlasjet', 'Direct Booking', 'Travel Agency', 'Tour Operator', 'Corporate', 'Group Booking'
+    ];
+    
+    // Room numbers (301-400)
+    const roomNumbers = Array.from({ length: 100 }, (_, i) => String(301 + i));
     
     // Create test assistant if not exists
     const assistantResult = await pool.query(`
@@ -1306,46 +1384,98 @@ async function initializeTestData() {
       assistantId = existing.rows[0].id;
     }
     
-    // Create test rooms with today's check-in date
-    const testRooms = [
-      { number: '301', name: 'Ali', surname: 'Yılmaz' },
-      { number: '302', name: 'Ayşe', surname: 'Demir' },
-      { number: '303', name: 'Mehmet', surname: 'Kaya' },
-      { number: '304', name: 'Zeynep', surname: 'Şahin' },
-      { number: '305', name: 'Can', surname: 'Özkan' },
-      { number: '306', name: 'Lena', surname: 'Podorozhna' }
-    ];
+    // Generate random check-ins for next 10 days
+    const today = new Date();
+    const roomsCreated = [];
     
-    for (const room of testRooms) {
-      // Create or update room
-      await pool.query(`
-        INSERT INTO rooms (room_number, guest_name, guest_surname, checkin_date, checkout_date, is_active)
-        VALUES ($1, $2, $3, $4, $5, true)
-        ON CONFLICT (room_number) 
-        DO UPDATE SET 
-          guest_name = EXCLUDED.guest_name,
-          guest_surname = EXCLUDED.guest_surname,
-          checkin_date = EXCLUDED.checkin_date,
-          checkout_date = EXCLUDED.checkout_date,
-          is_active = true
-      `, [
-        room.number,
-        room.name,
-        room.surname,
-        today,
-        new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 3 days later
-      ]);
+    for (let day = 0; day < 10; day++) {
+      const checkinDate = new Date(today);
+      checkinDate.setDate(today.getDate() + day);
+      const checkinDateStr = checkinDate.toISOString().split('T')[0];
       
-      // Assign to assistant
-      await pool.query(`
-        INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
-        VALUES ($1, $2, true)
-        ON CONFLICT (assistant_id, room_number) 
-        DO UPDATE SET is_active = true
-      `, [assistantId, room.number]);
+      // Random number of check-ins per day (3-8)
+      const checkinsPerDay = Math.floor(Math.random() * 6) + 3;
+      
+      for (let i = 0; i < checkinsPerDay; i++) {
+        // Random room number
+        const roomNumber = roomNumbers[Math.floor(Math.random() * roomNumbers.length)];
+        
+        // Check if room already has a check-in on this date
+        const existingCheck = await pool.query(
+          'SELECT id FROM rooms WHERE room_number = $1 AND checkin_date = $2',
+          [roomNumber, checkinDateStr]
+        );
+        
+        if (existingCheck.rows.length > 0) {
+          continue; // Skip if room already has check-in on this date
+        }
+        
+        // Random guest data
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        const adultCount = Math.floor(Math.random() * 3) + 1; // 1-3 adults
+        const childCount = Math.random() > 0.6 ? Math.floor(Math.random() * 3) : 0; // 40% chance of children
+        const country = countries[Math.floor(Math.random() * countries.length)];
+        const agency = agencies[Math.floor(Math.random() * agencies.length)];
+        
+        // Checkout date (1-7 days after checkin)
+        const checkoutDate = new Date(checkinDate);
+        checkoutDate.setDate(checkinDate.getDate() + Math.floor(Math.random() * 7) + 1);
+        const checkoutDateStr = checkoutDate.toISOString().split('T')[0];
+        
+        // Create room with unique constraint on (room_number, checkin_date)
+        // Since room_number is UNIQUE, we need to handle this differently
+        // We'll use a composite key approach or allow multiple rooms with same number but different dates
+        try {
+          await pool.query(`
+            INSERT INTO rooms (
+              room_number, 
+              guest_name, 
+              guest_surname, 
+              checkin_date, 
+              checkout_date, 
+              adult_count,
+              child_count,
+              agency,
+              country,
+              is_active
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
+            ON CONFLICT (room_number, checkin_date) 
+            DO UPDATE SET 
+              guest_name = EXCLUDED.guest_name,
+              guest_surname = EXCLUDED.guest_surname,
+              checkout_date = EXCLUDED.checkout_date,
+              adult_count = EXCLUDED.adult_count,
+              child_count = EXCLUDED.child_count,
+              agency = EXCLUDED.agency,
+              country = EXCLUDED.country,
+              is_active = true
+          `, [
+            roomNumber,
+            firstName,
+            lastName,
+            checkinDateStr,
+            checkoutDateStr,
+            adultCount,
+            childCount,
+            agency,
+            country
+          ]);
+          
+          roomsCreated.push({ roomNumber, checkinDate: checkinDateStr, guest: `${firstName} ${lastName}` });
+        } catch (error) {
+          // If room_number conflict, try with different room number
+          console.log(`⚠️ Room ${roomNumber} conflict for ${checkinDateStr}, skipping...`);
+        }
+      }
     }
     
-    console.log('✅ Test data initialized');
+    console.log(`✅ Test data initialized: ${roomsCreated.length} check-ins created for next 10 days`);
+    console.log(`📊 Check-ins per day:`, roomsCreated.reduce((acc, r) => {
+      acc[r.checkinDate] = (acc[r.checkinDate] || 0) + 1;
+      return acc;
+    }, {}));
   } catch (error) {
     console.error('❌ Error initializing test data:', error);
   }

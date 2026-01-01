@@ -455,6 +455,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Takım-Misafir Eşleştirmeleri</h2>
+                    <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
                 </div>
                 <div class="date-filter">
                     <div class="form-group">
@@ -462,6 +463,7 @@
                         <input type="date" id="checkin-date-filter" class="form-input" onchange="loadAssignments()">
                     </div>
                     <button class="btn btn-primary" onclick="loadAssignments()">Filtrele</button>
+                    <button class="btn btn-secondary" onclick="loadAllRoomsForDate()">O Tarihte Tüm Odaları Göster</button>
                 </div>
                 <div id="assignments-list">
                     <div class="loading">Yükleniyor...</div>
@@ -698,19 +700,202 @@
         async function loadAssignments() {
             try {
                 const dateFilter = document.getElementById('checkin-date-filter').value;
-                const url = dateFilter 
-                    ? `/api/team-assignments?checkin_date=${dateFilter}`
-                    : '/api/team-assignments';
-                
-                const response = await fetch(url);
-                const assignments = await response.json();
+                console.log('📅 Loading assignments with filter:', dateFilter);
                 
                 const listEl = document.getElementById('assignments-list');
+                
+                // If date filter is set, show both assigned and unassigned rooms
+                if (dateFilter) {
+                    console.log('🔍 Date filter active, loading both assignments and rooms');
+                    
+                    // Load assignments for this date
+                    const assignmentsUrl = `/api/team-assignments?checkin_date=${dateFilter}`;
+                    console.log('🔗 Fetching assignments from:', assignmentsUrl);
+                    
+                    const assignmentsResponse = await fetch(assignmentsUrl);
+                    if (!assignmentsResponse.ok) {
+                        throw new Error(`Failed to load assignments: ${assignmentsResponse.status}`);
+                    }
+                    const assignments = await assignmentsResponse.json();
+                    console.log('✅ Assignments received:', assignments.length, assignments);
+                    
+                    // Load all rooms for this date
+                    const roomsUrl = `/api/rooms?start_date=${dateFilter}&end_date=${dateFilter}`;
+                    console.log('🏨 Fetching rooms from:', roomsUrl);
+                    
+                    const roomsResponse = await fetch(roomsUrl);
+                    if (!roomsResponse.ok) {
+                        throw new Error(`Failed to load rooms: ${roomsResponse.status}`);
+                    }
+                    const rooms = await roomsResponse.json();
+                    console.log('🏨 Rooms found:', rooms.length, rooms);
+                    
+                    if (rooms.length === 0) {
+                        listEl.innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔗</div>
+                                <p>${dateFilter} tarihi için check-in bulunamadı</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Create a set of assigned room keys (room_number + checkin_date)
+                    const assignedKeys = new Set(
+                        assignments.map(a => `${a.room_number}_${a.checkin_date}`)
+                    );
+                    console.log('🔑 Assigned room keys:', Array.from(assignedKeys));
+                    
+                    // Separate assigned and unassigned rooms
+                    const assignedRooms = rooms.filter(r => 
+                        assignedKeys.has(`${r.room_number}_${r.checkin_date}`)
+                    );
+                    const unassignedRooms = rooms.filter(r => 
+                        !assignedKeys.has(`${r.room_number}_${r.checkin_date}`)
+                    );
+                    
+                    console.log('✅ Assigned rooms:', assignedRooms.length);
+                    console.log('❌ Unassigned rooms:', unassignedRooms.length);
+                    
+                    // Create assignment map for quick lookup
+                    const assignmentMap = new Map();
+                    assignments.forEach(a => {
+                        const key = `${a.room_number}_${a.checkin_date}`;
+                        if (!assignmentMap.has(key)) {
+                            assignmentMap.set(key, []);
+                        }
+                        assignmentMap.get(key).push(a);
+                    });
+                    
+                    let html = `
+                        <div style="margin-bottom: 16px;">
+                            <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
+                        </div>
+                    `;
+                    
+                    // Show assigned rooms section
+                    if (assignedRooms.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 24px;">
+                                <h3 style="margin-bottom: 12px; color: #25D366; font-size: 16px;">
+                                    ✅ Eşleştirilmiş Odalar (${assignedRooms.length})
+                                </h3>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Takım</th>
+                                            <th>Oda No</th>
+                                            <th>Misafir</th>
+                                            <th>Check-in Tarihi</th>
+                                            <th>Yetişkin</th>
+                                            <th>Çocuk</th>
+                                            <th>Ülke</th>
+                                            <th>Acente</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${assignedRooms.map(r => {
+                                            const key = `${r.room_number}_${r.checkin_date}`;
+                                            const roomAssignments = assignmentMap.get(key) || [];
+                                            return roomAssignments.map(a => `
+                                                <tr style="background: #f0f9f4;">
+                                                    <td>${a.team_name}</td>
+                                                    <td>${r.room_number}</td>
+                                                    <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
+                                                    <td>${r.checkin_date || '-'}</td>
+                                                    <td>${r.adult_count || '-'}</td>
+                                                    <td>${r.child_count || '-'}</td>
+                                                    <td>${r.country || '-'}</td>
+                                                    <td>${r.agency || '-'}</td>
+                                                    <td>
+                                                        <button class="btn btn-danger" onclick="deleteAssignment(${a.id})" style="padding: 6px 12px; font-size: 12px;">Kaldır</button>
+                                                    </td>
+                                                </tr>
+                                            `).join('');
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    
+                    // Show unassigned rooms section
+                    if (unassignedRooms.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 24px;">
+                                <h3 style="margin-bottom: 12px; color: #ff9800; font-size: 16px;">
+                                    ⚠️ Eşleştirilmemiş Odalar (${unassignedRooms.length})
+                                </h3>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Oda No</th>
+                                            <th>Misafir</th>
+                                            <th>Check-in Tarihi</th>
+                                            <th>Yetişkin</th>
+                                            <th>Çocuk</th>
+                                            <th>Ülke</th>
+                                            <th>Acente</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${unassignedRooms.map(r => `
+                                            <tr style="background: #fff3cd;">
+                                                <td>${r.room_number}</td>
+                                                <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
+                                                <td>${r.checkin_date || '-'}</td>
+                                                <td>${r.adult_count || '-'}</td>
+                                                <td>${r.child_count || '-'}</td>
+                                                <td>${r.country || '-'}</td>
+                                                <td>${r.agency || '-'}</td>
+                                                <td>
+                                                    <button class="btn btn-primary" onclick="openAssignmentModalForRoom('${r.room_number}', '${r.checkin_date}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    
+                    if (assignedRooms.length === 0 && unassignedRooms.length === 0) {
+                        html = `
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔗</div>
+                                <p>${dateFilter} tarihi için check-in bulunamadı</p>
+                            </div>
+                        `;
+                    }
+                    
+                    listEl.innerHTML = html;
+                    return;
+                }
+                
+                // No date filter - show all assignments
+                const url = '/api/team-assignments';
+                console.log('🔗 Fetching from URL:', url);
+                
+                const response = await fetch(url);
+                console.log('📡 Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ API Error:', errorText);
+                    throw new Error(`API Error: ${response.status} - ${errorText}`);
+                }
+                
+                const assignments = await response.json();
+                console.log('✅ Assignments received:', assignments.length, assignments);
+                
                 if (assignments.length === 0) {
+                    console.log('ℹ️ No assignments found');
                     listEl.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-state-icon">🔗</div>
-                            <p>Henüz eşleştirme yapılmamış</p>
+                            <p>Henüz eşleştirme yapılmamış. Lütfen bir tarih seçip filtreleyin.</p>
                         </div>
                     `;
                     return;
@@ -719,6 +904,9 @@
                 listEl.innerHTML = `
                     <div style="margin-bottom: 16px;">
                         <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
+                    </div>
+                    <div style="margin-bottom: 16px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">
+                        <strong>ℹ️ Bilgi:</strong> Tüm eşleştirmeler gösteriliyor. Belirli bir tarih için filtrelemek için tarih seçin.
                     </div>
                     <table class="table">
                         <thead>
@@ -735,7 +923,7 @@
                                 <tr>
                                     <td>${a.team_name}</td>
                                     <td>${a.room_number}</td>
-                                    <td>${a.guest_name || '-'}</td>
+                                    <td>${a.guest_name || '-'} ${a.guest_surname || ''}</td>
                                     <td>${a.checkin_date}</td>
                                     <td>
                                         <button class="btn btn-danger" onclick="deleteAssignment(${a.id})" style="padding: 6px 12px; font-size: 12px;">Kaldır</button>
@@ -748,7 +936,7 @@
             } catch (error) {
                 console.error('Error loading assignments:', error);
                 document.getElementById('assignments-list').innerHTML = `
-                    <div class="alert alert-error">Eşleştirmeler yüklenirken hata oluştu</div>
+                    <div class="alert alert-error">Eşleştirmeler yüklenirken hata oluştu: ${error.message}</div>
                 `;
             }
         }
@@ -920,31 +1108,105 @@
             openTeamModal(id);
         }
 
+        // Open assignment modal for specific room
+        async function openAssignmentModalForRoom(roomNumber, checkinDate) {
+            console.log('📂 Opening assignment modal for room:', roomNumber, checkinDate);
+            
+            // Set the checkin date filter first
+            const dateFilter = document.getElementById('checkin-date-filter');
+            if (dateFilter) {
+                dateFilter.value = checkinDate;
+            }
+            
+            await openAssignmentModal();
+            
+            // Pre-select the room in the modal
+            setTimeout(() => {
+                const checkbox = document.getElementById(`guest-${roomNumber}-${checkinDate}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                    // Scroll to the checkbox
+                    checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                // Set the checkin date in the modal
+                const dateInput = document.getElementById('assignment-checkin-date');
+                if (dateInput) {
+                    dateInput.value = checkinDate;
+                }
+            }, 800);
+        }
+
         // Assignment modal functions
         async function openAssignmentModal() {
+            console.log('📂 Opening assignment modal');
             document.getElementById('assignment-modal').classList.add('active');
             
             // Load teams
+            console.log('👥 Loading teams...');
             const teamsRes = await fetch('/api/teams');
+            console.log('👥 Teams response status:', teamsRes.status);
             const teams = await teamsRes.json();
+            console.log('👥 Teams loaded:', teams.length, teams);
+            
             const teamSelect = document.getElementById('assignment-team');
             teamSelect.innerHTML = '<option value="">Takım Seçin</option>' + 
                 teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
 
-            // Load guests (rooms)
-            const roomsRes = await fetch('/api/rooms');
+            // Load guests (rooms) - next 10 days
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(today.getDate() + 10);
+            const startDateStr = today.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+            
+            console.log('🏨 Loading rooms from', startDateStr, 'to', endDateStr);
+            const roomsUrl = `/api/rooms?start_date=${startDateStr}&end_date=${endDateStr}`;
+            console.log('🔗 Rooms URL:', roomsUrl);
+            
+            const roomsRes = await fetch(roomsUrl);
+            console.log('🏨 Rooms response status:', roomsRes.status);
+            
+            if (!roomsRes.ok) {
+                const errorText = await roomsRes.text();
+                console.error('❌ Error loading rooms:', errorText);
+                document.getElementById('assignment-guests-checkboxes').innerHTML = 
+                    `<div class="alert alert-error">Odalar yüklenirken hata: ${errorText}</div>`;
+                return;
+            }
+            
             const rooms = await roomsRes.json();
+            console.log('🏨 Rooms loaded:', rooms.length, rooms);
+            
             const guestsEl = document.getElementById('assignment-guests-checkboxes');
-            guestsEl.innerHTML = rooms.map(r => `
-                <div class="checkbox-item">
-                    <input type="checkbox" id="guest-${r.room_number}-${r.checkin_date}" 
-                        value="${r.room_number}|${r.checkin_date}">
-                    <label for="guest-${r.room_number}-${r.checkin_date}">
-                        ${r.room_number} - ${r.guest_name || 'Misafir'} ${r.guest_surname || ''} 
-                        (${r.checkin_date || 'Tarih yok'})
-                    </label>
-                </div>
-            `).join('');
+            
+            if (rooms.length === 0) {
+                console.log('ℹ️ No rooms found for next 10 days');
+                guestsEl.innerHTML = '<div class="empty-state">Önümüzdeki 10 gün için check-in bulunamadı</div>';
+                return;
+            }
+            
+            guestsEl.innerHTML = rooms.map(r => {
+                const guestInfo = `${r.guest_name || 'Misafir'} ${r.guest_surname || ''}`.trim();
+                const guestDetails = [
+                    guestInfo || 'İsimsiz',
+                    r.adult_count ? `${r.adult_count} Yetişkin` : '',
+                    r.child_count ? `${r.child_count} Çocuk` : '',
+                    r.country || '',
+                    r.agency || ''
+                ].filter(Boolean).join(' • ');
+                
+                return `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="guest-${r.room_number}-${r.checkin_date}" 
+                            value="${r.room_number}|${r.checkin_date}">
+                        <label for="guest-${r.room_number}-${r.checkin_date}" style="flex: 1;">
+                            <strong>Oda ${r.room_number}</strong> - ${guestDetails}
+                            <br><small style="color: #667781;">Check-in: ${r.checkin_date || 'Tarih yok'}</small>
+                        </label>
+                    </div>
+                `;
+            }).join('');
         }
 
         function closeAssignmentModal() {
@@ -1002,6 +1264,82 @@
                 }
             } catch (error) {
                 showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        // Load all rooms for selected date (not just assignments)
+        async function loadAllRoomsForDate() {
+            try {
+                const dateFilter = document.getElementById('checkin-date-filter').value;
+                if (!dateFilter) {
+                    showAlert('Lütfen bir tarih seçin', 'error');
+                    return;
+                }
+                
+                console.log('🏨 Loading all rooms for date:', dateFilter);
+                const url = `/api/rooms?start_date=${dateFilter}&end_date=${dateFilter}`;
+                console.log('🔗 Fetching from URL:', url);
+                
+                const response = await fetch(url);
+                console.log('📡 Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ API Error:', errorText);
+                    throw new Error(`API Error: ${response.status} - ${errorText}`);
+                }
+                
+                const rooms = await response.json();
+                console.log('✅ Rooms received:', rooms.length, rooms);
+                
+                const listEl = document.getElementById('assignments-list');
+                if (rooms.length === 0) {
+                    console.log('ℹ️ No rooms found for date:', dateFilter);
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏨</div>
+                            <p>${dateFilter} tarihi için check-in bulunamadı</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listEl.innerHTML = `
+                    <div style="margin-bottom: 16px;">
+                        <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Oda No</th>
+                                <th>Misafir</th>
+                                <th>Check-in Tarihi</th>
+                                <th>Yetişkin</th>
+                                <th>Çocuk</th>
+                                <th>Ülke</th>
+                                <th>Acente</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rooms.map(r => `
+                                <tr>
+                                    <td>${r.room_number}</td>
+                                    <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
+                                    <td>${r.checkin_date || '-'}</td>
+                                    <td>${r.adult_count || '-'}</td>
+                                    <td>${r.child_count || '-'}</td>
+                                    <td>${r.country || '-'}</td>
+                                    <td>${r.agency || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading rooms:', error);
+                document.getElementById('assignments-list').innerHTML = `
+                    <div class="alert alert-error">Odalar yüklenirken hata oluştu: ${error.message}</div>
+                `;
             }
         }
 
