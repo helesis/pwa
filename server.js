@@ -161,11 +161,45 @@ async function initializeDatabase() {
       -- Rooms tablosuna guest_surname ekle
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS guest_surname VARCHAR(100);
 
+      -- Teams (Takımlar) tablosu
+      CREATE TABLE IF NOT EXISTS teams (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Assistant-Team eşleştirmesi
+      CREATE TABLE IF NOT EXISTS assistant_teams (
+        id SERIAL PRIMARY KEY,
+        assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,
+        team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT true,
+        UNIQUE(assistant_id, team_id)
+      );
+
+      -- Team-Room eşleştirmesi (check-in date'e göre)
+      CREATE TABLE IF NOT EXISTS team_room_assignments (
+        id SERIAL PRIMARY KEY,
+        team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+        room_number VARCHAR(50) NOT NULL,
+        checkin_date DATE NOT NULL,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT true,
+        UNIQUE(team_id, room_number, checkin_date)
+      );
+
       -- Index'ler
       CREATE INDEX IF NOT EXISTS idx_assistant_assignments_assistant ON assistant_assignments(assistant_id);
       CREATE INDEX IF NOT EXISTS idx_assistant_assignments_room ON assistant_assignments(room_number);
       CREATE INDEX IF NOT EXISTS idx_room_invites_token ON room_invites(invite_token);
       CREATE INDEX IF NOT EXISTS idx_room_invites_room ON room_invites(room_number);
+      CREATE INDEX IF NOT EXISTS idx_assistant_teams_assistant ON assistant_teams(assistant_id);
+      CREATE INDEX IF NOT EXISTS idx_assistant_teams_team ON assistant_teams(team_id);
+      CREATE INDEX IF NOT EXISTS idx_team_room_assignments_team ON team_room_assignments(team_id);
+      CREATE INDEX IF NOT EXISTS idx_team_room_assignments_room_checkin ON team_room_assignments(room_number, checkin_date);
     `);
     
     console.log('✅ Database tables initialized');
@@ -707,6 +741,325 @@ app.get('/api/stats', async (req, res) => {
 
 // Assistant API Endpoints
 
+// Get all assistants
+app.get('/api/assistants', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM assistants ORDER BY name');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching assistants:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get single assistant
+app.get('/api/assistants/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM assistants WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Assistant not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching assistant:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Create assistant
+app.post('/api/assistants', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const result = await pool.query(
+      'INSERT INTO assistants (name, email) VALUES ($1, $2) RETURNING *',
+      [name, email || null]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating assistant:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update assistant
+app.put('/api/assistants/:id', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const result = await pool.query(
+      'UPDATE assistants SET name = $1, email = $2 WHERE id = $3 RETURNING *',
+      [name, email || null, req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Assistant not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating assistant:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Delete assistant
+app.delete('/api/assistants/:id', async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM assistants WHERE id = $1 RETURNING *', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Assistant not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting assistant:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Teams API Endpoints
+
+// Get all teams
+app.get('/api/teams', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM teams ORDER BY name');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get single team
+app.get('/api/teams/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM teams WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get team assistants
+app.get('/api/teams/:id/assistants', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT a.* FROM assistants a
+      INNER JOIN assistant_teams at ON a.id = at.assistant_id
+      WHERE at.team_id = $1 AND at.is_active = true
+      ORDER BY a.name
+    `, [req.params.id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching team assistants:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Create team
+app.post('/api/teams', async (req, res) => {
+  try {
+    const { name, description, assistant_ids } = req.body;
+    
+    // Create team
+    const teamResult = await pool.query(
+      'INSERT INTO teams (name, description) VALUES ($1, $2) RETURNING *',
+      [name, description || null]
+    );
+    const team = teamResult.rows[0];
+    
+    // Assign assistants to team
+    if (assistant_ids && assistant_ids.length > 0) {
+      for (const assistantId of assistant_ids) {
+        await pool.query(
+          'INSERT INTO assistant_teams (assistant_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [assistantId, team.id]
+        );
+      }
+    }
+    
+    res.json(team);
+  } catch (error) {
+    console.error('Error creating team:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update team
+app.put('/api/teams/:id', async (req, res) => {
+  try {
+    const { name, description, assistant_ids } = req.body;
+    
+    // Update team
+    const teamResult = await pool.query(
+      'UPDATE teams SET name = $1, description = $2 WHERE id = $3 RETURNING *',
+      [name, description || null, req.params.id]
+    );
+    
+    if (teamResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    
+    // Update assistant assignments
+    if (assistant_ids !== undefined) {
+      // Remove all current assignments
+      await pool.query('UPDATE assistant_teams SET is_active = false WHERE team_id = $1', [req.params.id]);
+      
+      // Add new assignments
+      if (assistant_ids.length > 0) {
+        for (const assistantId of assistant_ids) {
+          await pool.query(
+            `INSERT INTO assistant_teams (assistant_id, team_id, is_active) 
+             VALUES ($1, $2, true) 
+             ON CONFLICT (assistant_id, team_id) 
+             DO UPDATE SET is_active = true`,
+            [assistantId, req.params.id]
+          );
+        }
+      }
+    }
+    
+    res.json(teamResult.rows[0]);
+  } catch (error) {
+    console.error('Error updating team:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Delete team
+app.delete('/api/teams/:id', async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM teams WHERE id = $1 RETURNING *', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Team Assignments API Endpoints
+
+// Get team assignments (with optional checkin_date filter)
+app.get('/api/team-assignments', async (req, res) => {
+  try {
+    const { checkin_date } = req.query;
+    let query = `
+      SELECT 
+        tra.id,
+        tra.room_number,
+        tra.checkin_date,
+        t.name as team_name,
+        r.guest_name,
+        r.guest_surname
+      FROM team_room_assignments tra
+      INNER JOIN teams t ON tra.team_id = t.id
+      LEFT JOIN rooms r ON tra.room_number = r.room_number AND tra.checkin_date = r.checkin_date
+      WHERE tra.is_active = true
+    `;
+    const params = [];
+    
+    if (checkin_date) {
+      query += ' AND tra.checkin_date = $1';
+      params.push(checkin_date);
+    }
+    
+    query += ' ORDER BY tra.checkin_date DESC, tra.room_number';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching team assignments:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Create team assignments
+app.post('/api/team-assignments', async (req, res) => {
+  try {
+    const { team_id, assignments } = req.body;
+    
+    if (!team_id || !assignments || assignments.length === 0) {
+      return res.status(400).json({ error: 'team_id and assignments are required' });
+    }
+    
+    // Get team assistants
+    const assistantsResult = await pool.query(`
+      SELECT assistant_id FROM assistant_teams 
+      WHERE team_id = $1 AND is_active = true
+    `, [team_id]);
+    
+    const assistantIds = assistantsResult.rows.map(r => r.assistant_id);
+    
+    if (assistantIds.length === 0) {
+      return res.status(400).json({ error: 'Team has no assistants' });
+    }
+    
+    const createdAssignments = [];
+    
+    for (const assignment of assignments) {
+      const { room_number, checkin_date } = assignment;
+      
+      // Create team-room assignment
+      const assignmentResult = await pool.query(
+        `INSERT INTO team_room_assignments (team_id, room_number, checkin_date)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (team_id, room_number, checkin_date) 
+         DO UPDATE SET is_active = true
+         RETURNING *`,
+        [team_id, room_number, checkin_date]
+      );
+      
+      createdAssignments.push(assignmentResult.rows[0]);
+      
+      // Auto-assign all team assistants to the room
+      for (const assistantId of assistantIds) {
+        await pool.query(
+          `INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
+           VALUES ($1, $2, true)
+           ON CONFLICT (assistant_id, room_number) 
+           DO UPDATE SET is_active = true`,
+          [assistantId, room_number]
+        );
+      }
+      
+      // Notify all team assistants to join the room via Socket.IO
+      const roomId = `${room_number}_${checkin_date}`;
+      io.to(`assistant_${assistantIds.join('_')}`).emit('auto_join_room', {
+        roomNumber: room_number,
+        checkinDate: checkin_date,
+        teamId: team_id
+      });
+    }
+    
+    res.json({ success: true, assignments: createdAssignments });
+  } catch (error) {
+    console.error('Error creating team assignments:', error);
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
+// Delete team assignment
+app.delete('/api/team-assignments/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'UPDATE team_room_assignments SET is_active = false WHERE id = $1 RETURNING *',
+      [req.params.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting team assignment:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Update yesterday's checkin dates to today (for testing/demo purposes)
 app.post('/api/admin/update-checkin-dates', async (req, res) => {
   try {
@@ -1081,6 +1434,10 @@ app.get('/join', (req, res) => {
 
 app.get('/assistant', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'assistant.html'));
+});
+
+app.get('/settings', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'settings.html'));
 });
 
 app.get('/assistant.html', (req, res) => {

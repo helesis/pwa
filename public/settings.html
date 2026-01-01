@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1A4D6D">
+    <title>Ayarlar - Voyage Assistant</title>
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --voyage-navy: #1A4D6D;
+            --voyage-blue: #2C6E8F;
+            --voyage-light-blue: #E8F1F5;
+            --voyage-gold: #C9A961;
+            --text-dark: #2C3E50;
+            --text-light: #6C757D;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --border: #dee2e6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: var(--voyage-navy);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .nav-link {
+            color: var(--voyage-navy);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--voyage-light-blue);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .tab.active {
+            background: var(--voyage-navy);
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background: var(--voyage-light-blue);
+            color: var(--voyage-navy);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--voyage-light-blue);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--voyage-navy);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--voyage-navy);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--voyage-blue);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--text-light);
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--voyage-navy);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--voyage-navy);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table th {
+            background: var(--voyage-light-blue);
+            font-weight: 600;
+            color: var(--voyage-navy);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--voyage-light-blue);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--voyage-navy);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-light);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: var(--voyage-light-blue);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .checkbox-item:hover {
+            background: var(--voyage-light-blue);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .assignment-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 2px solid var(--voyage-light-blue);
+        }
+
+        .date-filter {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+
+        .date-filter .form-group {
+            margin-bottom: 0;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Ayarlar</h1>
+            <a href="/assistant" class="nav-link">← Dashboard'a Dön</a>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('assistants')">👥 Assistant'lar</button>
+            <button class="tab" onclick="switchTab('teams')">👨‍👩‍👧‍👦 Takımlar</button>
+            <button class="tab" onclick="switchTab('assignments')">🔗 Eşleştirmeler</button>
+        </div>
+
+        <!-- Assistants Tab -->
+        <div id="assistants-tab" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Assistant Yönetimi</h2>
+                    <button class="btn btn-primary" onclick="openAssistantModal()">+ Yeni Assistant</button>
+                </div>
+                <div id="assistants-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teams Tab -->
+        <div id="teams-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Takım Yönetimi</h2>
+                    <button class="btn btn-primary" onclick="openTeamModal()">+ Yeni Takım</button>
+                </div>
+                <div id="teams-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignments Tab -->
+        <div id="assignments-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Takım-Misafir Eşleştirmeleri</h2>
+                </div>
+                <div class="date-filter">
+                    <div class="form-group">
+                        <label class="form-label">Check-in Tarihi</label>
+                        <input type="date" id="checkin-date-filter" class="form-input" onchange="loadAssignments()">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadAssignments()">Filtrele</button>
+                </div>
+                <div id="assignments-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assistant Modal -->
+    <div id="assistant-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="assistant-modal-title">Yeni Assistant</h3>
+                <button class="close-btn" onclick="closeAssistantModal()">&times;</button>
+            </div>
+            <form id="assistant-form" onsubmit="saveAssistant(event)">
+                <div class="form-group">
+                    <label class="form-label">Assistant Adı *</label>
+                    <input type="text" id="assistant-name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email (Opsiyonel)</label>
+                    <input type="email" id="assistant-email" class="form-input">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAssistantModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Team Modal -->
+    <div id="team-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="team-modal-title">Yeni Takım</h3>
+                <button class="close-btn" onclick="closeTeamModal()">&times;</button>
+            </div>
+            <form id="team-form" onsubmit="saveTeam(event)">
+                <div class="form-group">
+                    <label class="form-label">Takım Adı *</label>
+                    <input type="text" id="team-name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <textarea id="team-description" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Assistant'lar</label>
+                    <div id="team-assistants-checkboxes" class="checkbox-group">
+                        <div class="loading">Yükleniyor...</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTeamModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assignment Modal -->
+    <div id="assignment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Takım-Misafir Eşleştirmesi</h3>
+                <button class="close-btn" onclick="closeAssignmentModal()">&times;</button>
+            </div>
+            <form id="assignment-form" onsubmit="saveAssignment(event)">
+                <div class="form-group">
+                    <label class="form-label">Check-in Tarihi *</label>
+                    <input type="date" id="assignment-checkin-date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Takım *</label>
+                    <select id="assignment-team" class="form-select" required>
+                        <option value="">Takım Seçin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Misafirler (Room Number - Guest Name)</label>
+                    <div id="assignment-guests-checkboxes" class="checkbox-group">
+                        <div class="loading">Yükleniyor...</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAssignmentModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Eşleştir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentAssistantId = null;
+        let currentTeamId = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            if (tabName === 'assistants') loadAssistants();
+            if (tabName === 'teams') loadTeams();
+            if (tabName === 'assignments') loadAssignments();
+        }
+
+        // Load assistants
+        async function loadAssistants() {
+            try {
+                const response = await fetch('/api/assistants');
+                const assistants = await response.json();
+                
+                const listEl = document.getElementById('assistants-list');
+                if (assistants.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👥</div>
+                            <p>Henüz assistant eklenmemiş</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listEl.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Ad</th>
+                                <th>Email</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${assistants.map(a => `
+                                <tr>
+                                    <td>${a.id}</td>
+                                    <td>${a.name}</td>
+                                    <td>${a.email || '-'}</td>
+                                    <td>
+                                        <span class="badge ${a.is_active ? 'badge-success' : 'badge-danger'}">
+                                            ${a.is_active ? 'Aktif' : 'Pasif'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-primary" onclick="editAssistant(${a.id})" style="padding: 6px 12px; font-size: 12px;">Düzenle</button>
+                                        <button class="btn btn-danger" onclick="deleteAssistant(${a.id})" style="padding: 6px 12px; font-size: 12px;">Sil</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading assistants:', error);
+                document.getElementById('assistants-list').innerHTML = `
+                    <div class="alert alert-error">Assistant'lar yüklenirken hata oluştu</div>
+                `;
+            }
+        }
+
+        // Load teams
+        async function loadTeams() {
+            try {
+                const response = await fetch('/api/teams');
+                const teams = await response.json();
+                
+                const listEl = document.getElementById('teams-list');
+                if (teams.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👨‍👩‍👧‍👦</div>
+                            <p>Henüz takım oluşturulmamış</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Load assistants for each team
+                const teamsWithAssistants = await Promise.all(teams.map(async (team) => {
+                    const assistantsRes = await fetch(`/api/teams/${team.id}/assistants`);
+                    const assistants = await assistantsRes.json();
+                    return { ...team, assistants };
+                }));
+
+                listEl.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Takım Adı</th>
+                                <th>Açıklama</th>
+                                <th>Assistant'lar</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${teamsWithAssistants.map(t => `
+                                <tr>
+                                    <td>${t.id}</td>
+                                    <td>${t.name}</td>
+                                    <td>${t.description || '-'}</td>
+                                    <td>${t.assistants.map(a => a.name).join(', ') || '-'}</td>
+                                    <td>
+                                        <span class="badge ${t.is_active ? 'badge-success' : 'badge-danger'}">
+                                            ${t.is_active ? 'Aktif' : 'Pasif'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-primary" onclick="editTeam(${t.id})" style="padding: 6px 12px; font-size: 12px;">Düzenle</button>
+                                        <button class="btn btn-danger" onclick="deleteTeam(${t.id})" style="padding: 6px 12px; font-size: 12px;">Sil</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading teams:', error);
+                document.getElementById('teams-list').innerHTML = `
+                    <div class="alert alert-error">Takımlar yüklenirken hata oluştu</div>
+                `;
+            }
+        }
+
+        // Load assignments
+        async function loadAssignments() {
+            try {
+                const dateFilter = document.getElementById('checkin-date-filter').value;
+                const url = dateFilter 
+                    ? `/api/team-assignments?checkin_date=${dateFilter}`
+                    : '/api/team-assignments';
+                
+                const response = await fetch(url);
+                const assignments = await response.json();
+                
+                const listEl = document.getElementById('assignments-list');
+                if (assignments.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔗</div>
+                            <p>Henüz eşleştirme yapılmamış</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listEl.innerHTML = `
+                    <div style="margin-bottom: 16px;">
+                        <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Takım</th>
+                                <th>Oda No</th>
+                                <th>Misafir</th>
+                                <th>Check-in Tarihi</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${assignments.map(a => `
+                                <tr>
+                                    <td>${a.team_name}</td>
+                                    <td>${a.room_number}</td>
+                                    <td>${a.guest_name || '-'}</td>
+                                    <td>${a.checkin_date}</td>
+                                    <td>
+                                        <button class="btn btn-danger" onclick="deleteAssignment(${a.id})" style="padding: 6px 12px; font-size: 12px;">Kaldır</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading assignments:', error);
+                document.getElementById('assignments-list').innerHTML = `
+                    <div class="alert alert-error">Eşleştirmeler yüklenirken hata oluştu</div>
+                `;
+            }
+        }
+
+        // Assistant modal functions
+        function openAssistantModal(id = null) {
+            currentAssistantId = id;
+            document.getElementById('assistant-modal-title').textContent = id ? 'Assistant Düzenle' : 'Yeni Assistant';
+            document.getElementById('assistant-modal').classList.add('active');
+            
+            if (id) {
+                fetch(`/api/assistants/${id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('assistant-name').value = data.name;
+                        document.getElementById('assistant-email').value = data.email || '';
+                    });
+            } else {
+                document.getElementById('assistant-form').reset();
+            }
+        }
+
+        function closeAssistantModal() {
+            document.getElementById('assistant-modal').classList.remove('active');
+            currentAssistantId = null;
+        }
+
+        async function saveAssistant(e) {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('assistant-name').value,
+                email: document.getElementById('assistant-email').value || null
+            };
+
+            try {
+                const url = currentAssistantId 
+                    ? `/api/assistants/${currentAssistantId}`
+                    : '/api/assistants';
+                const method = currentAssistantId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    closeAssistantModal();
+                    loadAssistants();
+                    showAlert('Assistant başarıyla kaydedildi', 'success');
+                } else {
+                    showAlert('Hata: ' + (await response.text()), 'error');
+                }
+            } catch (error) {
+                showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteAssistant(id) {
+            if (!confirm('Bu assistant\'ı silmek istediğinize emin misiniz?')) return;
+
+            try {
+                const response = await fetch(`/api/assistants/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadAssistants();
+                    showAlert('Assistant silindi', 'success');
+                } else {
+                    showAlert('Hata: ' + (await response.text()), 'error');
+                }
+            } catch (error) {
+                showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        async function editAssistant(id) {
+            openAssistantModal(id);
+        }
+
+        // Team modal functions
+        async function openTeamModal(id = null) {
+            currentTeamId = id;
+            document.getElementById('team-modal-title').textContent = id ? 'Takım Düzenle' : 'Yeni Takım';
+            document.getElementById('team-modal').classList.add('active');
+            
+            // Load assistants for checkboxes
+            const assistantsRes = await fetch('/api/assistants');
+            const assistants = await assistantsRes.json();
+            
+            let selectedAssistants = [];
+            if (id) {
+                const teamRes = await fetch(`/api/teams/${id}`);
+                const team = await teamRes.json();
+                document.getElementById('team-name').value = team.name;
+                document.getElementById('team-description').value = team.description || '';
+                
+                const teamAssistantsRes = await fetch(`/api/teams/${id}/assistants`);
+                selectedAssistants = await teamAssistantsRes.json();
+            } else {
+                document.getElementById('team-form').reset();
+            }
+
+            const checkboxesEl = document.getElementById('team-assistants-checkboxes');
+            checkboxesEl.innerHTML = assistants.map(a => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="assistant-${a.id}" value="${a.id}" 
+                        ${selectedAssistants.some(sa => sa.id === a.id) ? 'checked' : ''}>
+                    <label for="assistant-${a.id}">${a.name}</label>
+                </div>
+            `).join('');
+        }
+
+        function closeTeamModal() {
+            document.getElementById('team-modal').classList.remove('active');
+            currentTeamId = null;
+        }
+
+        async function saveTeam(e) {
+            e.preventDefault();
+            const selectedAssistants = Array.from(document.querySelectorAll('#team-assistants-checkboxes input:checked'))
+                .map(cb => parseInt(cb.value));
+
+            const data = {
+                name: document.getElementById('team-name').value,
+                description: document.getElementById('team-description').value || null,
+                assistant_ids: selectedAssistants
+            };
+
+            try {
+                const url = currentTeamId 
+                    ? `/api/teams/${currentTeamId}`
+                    : '/api/teams';
+                const method = currentTeamId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    closeTeamModal();
+                    loadTeams();
+                    showAlert('Takım başarıyla kaydedildi', 'success');
+                } else {
+                    showAlert('Hata: ' + (await response.text()), 'error');
+                }
+            } catch (error) {
+                showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteTeam(id) {
+            if (!confirm('Bu takımı silmek istediğinize emin misiniz?')) return;
+
+            try {
+                const response = await fetch(`/api/teams/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadTeams();
+                    showAlert('Takım silindi', 'success');
+                } else {
+                    showAlert('Hata: ' + (await response.text()), 'error');
+                }
+            } catch (error) {
+                showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        async function editTeam(id) {
+            openTeamModal(id);
+        }
+
+        // Assignment modal functions
+        async function openAssignmentModal() {
+            document.getElementById('assignment-modal').classList.add('active');
+            
+            // Load teams
+            const teamsRes = await fetch('/api/teams');
+            const teams = await teamsRes.json();
+            const teamSelect = document.getElementById('assignment-team');
+            teamSelect.innerHTML = '<option value="">Takım Seçin</option>' + 
+                teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+            // Load guests (rooms)
+            const roomsRes = await fetch('/api/rooms');
+            const rooms = await roomsRes.json();
+            const guestsEl = document.getElementById('assignment-guests-checkboxes');
+            guestsEl.innerHTML = rooms.map(r => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="guest-${r.room_number}-${r.checkin_date}" 
+                        value="${r.room_number}|${r.checkin_date}">
+                    <label for="guest-${r.room_number}-${r.checkin_date}">
+                        ${r.room_number} - ${r.guest_name || 'Misafir'} ${r.guest_surname || ''} 
+                        (${r.checkin_date || 'Tarih yok'})
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        function closeAssignmentModal() {
+            document.getElementById('assignment-modal').classList.remove('active');
+            document.getElementById('assignment-form').reset();
+        }
+
+        async function saveAssignment(e) {
+            e.preventDefault();
+            const checkinDate = document.getElementById('assignment-checkin-date').value;
+            const teamId = parseInt(document.getElementById('assignment-team').value);
+            const selectedGuests = Array.from(document.querySelectorAll('#assignment-guests-checkboxes input:checked'))
+                .map(cb => {
+                    const [roomNumber, date] = cb.value.split('|');
+                    return { room_number: roomNumber, checkin_date: date || checkinDate };
+                });
+
+            if (selectedGuests.length === 0) {
+                showAlert('Lütfen en az bir misafir seçin', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/team-assignments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        team_id: teamId,
+                        assignments: selectedGuests
+                    })
+                });
+
+                if (response.ok) {
+                    closeAssignmentModal();
+                    loadAssignments();
+                    showAlert('Eşleştirme başarıyla yapıldı', 'success');
+                } else {
+                    showAlert('Hata: ' + (await response.text()), 'error');
+                }
+            } catch (error) {
+                showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteAssignment(id) {
+            if (!confirm('Bu eşleştirmeyi kaldırmak istediğinize emin misiniz?')) return;
+
+            try {
+                const response = await fetch(`/api/team-assignments/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadAssignments();
+                    showAlert('Eşleştirme kaldırıldı', 'success');
+                } else {
+                    showAlert('Hata: ' + (await response.text()), 'error');
+                }
+            } catch (error) {
+                showAlert('Hata: ' + error.message, 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type === 'success' ? 'success' : 'error'}`;
+            alert.textContent = message;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.tabs'));
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAssistants();
+        });
+    </script>
+</body>
+</html>
+
