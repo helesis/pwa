@@ -1450,13 +1450,13 @@
                         // Update the temp message with real ID
                         tempMessageEl.setAttribute('data-message-id', data.id);
                         
-                        // Update status
-                        if (data.status) {
-                            const statusEl = tempMessageEl.querySelector('.message-status');
-                            if (statusEl) {
-                                statusEl.classList.remove('sent', 'delivered', 'read');
-                                statusEl.classList.add(data.status);
-                            }
+                        // Update status - use data.status if available, otherwise default to 'sent'
+                        const status = data.status || 'sent';
+                        const statusEl = tempMessageEl.querySelector('.message-status');
+                        if (statusEl) {
+                            statusEl.classList.remove('sent', 'delivered', 'read');
+                            statusEl.classList.add(status);
+                            console.log('✅ Updated temp message status to:', status);
                         }
                         
                         // Don't mark as delivered here - this is our own message
