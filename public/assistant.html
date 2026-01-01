@@ -633,9 +633,31 @@
         socket.on('reconnect_failed', () => {
             console.error('❌ Reconnection failed - please refresh the page');
         });
-        
-        socket.on('reconnect_failed', () => {
-            console.error('❌ Reconnection failed - please refresh the page');
+
+        // Auto-join room when team is assigned
+        socket.on('auto_join_room', (data) => {
+            console.log('🔔 Auto-join room notification:', data);
+            const { roomNumber, checkinDate, teamId } = data;
+            
+            // Check if this room is already selected
+            if (currentRoomNumber === roomNumber && currentCheckinDate === checkinDate) {
+                console.log('✅ Already in this room');
+                return;
+            }
+            
+            // Find room in the list and select it
+            const roomElements = document.querySelectorAll('.room-item');
+            for (const roomEl of roomElements) {
+                const roomNum = roomEl.getAttribute('data-room-number');
+                const checkin = roomEl.getAttribute('data-checkin-date');
+                
+                if (roomNum === roomNumber && checkin === checkinDate) {
+                    // Simulate click to select the room
+                    roomEl.click();
+                    console.log('✅ Auto-joined room:', roomNumber, checkinDate);
+                    break;
+                }
+            }
         });
         
         let currentRoom = null;
