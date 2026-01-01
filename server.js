@@ -168,6 +168,10 @@ async function initializeDatabase() {
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS agency VARCHAR(100);
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS country VARCHAR(100);
 
+      -- Assistants ve Teams tablolarına avatar kolonu ekle
+      ALTER TABLE assistants ADD COLUMN IF NOT EXISTS avatar TEXT;
+      ALTER TABLE teams ADD COLUMN IF NOT EXISTS avatar TEXT;
+
       -- Teams (Takımlar) tablosu
       CREATE TABLE IF NOT EXISTS teams (
         id SERIAL PRIMARY KEY,
@@ -838,10 +842,10 @@ app.get('/api/assistants/:id', async (req, res) => {
 // Create assistant
 app.post('/api/assistants', async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, avatar } = req.body;
     const result = await pool.query(
-      'INSERT INTO assistants (name, email) VALUES ($1, $2) RETURNING *',
-      [name, email || null]
+      'INSERT INTO assistants (name, email, avatar) VALUES ($1, $2, $3) RETURNING *',
+      [name, email || null, avatar || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -853,10 +857,10 @@ app.post('/api/assistants', async (req, res) => {
 // Update assistant
 app.put('/api/assistants/:id', async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, avatar } = req.body;
     const result = await pool.query(
-      'UPDATE assistants SET name = $1, email = $2 WHERE id = $3 RETURNING *',
-      [name, email || null, req.params.id]
+      'UPDATE assistants SET name = $1, email = $2, avatar = COALESCE($3, avatar) WHERE id = $4 RETURNING *',
+      [name, email || null, avatar || null, req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Assistant not found' });
@@ -951,12 +955,12 @@ app.get('/api/teams/:id/assistants', async (req, res) => {
 // Create team
 app.post('/api/teams', async (req, res) => {
   try {
-    const { name, description, assistant_ids } = req.body;
+    const { name, description, assistant_ids, avatar } = req.body;
     
     // Create team
     const teamResult = await pool.query(
-      'INSERT INTO teams (name, description) VALUES ($1, $2) RETURNING *',
-      [name, description || null]
+      'INSERT INTO teams (name, description, avatar) VALUES ($1, $2, $3) RETURNING *',
+      [name, description || null, avatar || null]
     );
     const team = teamResult.rows[0];
     
@@ -1011,12 +1015,12 @@ app.post('/api/teams', async (req, res) => {
 // Update team
 app.put('/api/teams/:id', async (req, res) => {
   try {
-    const { name, description, assistant_ids } = req.body;
+    const { name, description, assistant_ids, avatar } = req.body;
     
     // Update team
     const teamResult = await pool.query(
-      'UPDATE teams SET name = $1, description = $2 WHERE id = $3 RETURNING *',
-      [name, description || null, req.params.id]
+      'UPDATE teams SET name = $1, description = $2, avatar = COALESCE($3, avatar) WHERE id = $4 RETURNING *',
+      [name, description || null, avatar || null, req.params.id]
     );
     
     if (teamResult.rows.length === 0) {

@@ -325,6 +325,53 @@
             margin-top: 24px;
         }
 
+        .avatar-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--voyage-navy);
+            background: var(--voyage-light-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: var(--voyage-navy);
+            overflow: hidden;
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-upload input[type="file"] {
+            display: none;
+        }
+
+        .avatar-upload-btn {
+            padding: 8px 16px;
+            background: var(--voyage-navy);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .avatar-upload-btn:hover {
+            background: var(--voyage-blue);
+        }
+
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
@@ -543,6 +590,19 @@
             </div>
             <form id="assistant-form" onsubmit="saveAssistant(event)">
                 <div class="form-group">
+                    <label class="form-label">Avatar</label>
+                    <div class="avatar-upload">
+                        <div class="avatar-preview" id="assistant-avatar-preview">
+                            <span>👤</span>
+                        </div>
+                        <input type="file" id="assistant-avatar-input" accept="image/*" onchange="handleAssistantAvatarChange(event)">
+                        <button type="button" class="avatar-upload-btn" onclick="document.getElementById('assistant-avatar-input').click()">
+                            Fotoğraf Seç
+                        </button>
+                        <input type="hidden" id="assistant-avatar-data">
+                    </div>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Assistant Adı *</label>
                     <input type="text" id="assistant-name" class="form-input" required>
                 </div>
@@ -566,6 +626,19 @@
                 <button class="close-btn" onclick="closeTeamModal()">&times;</button>
             </div>
             <form id="team-form" onsubmit="saveTeam(event)">
+                <div class="form-group">
+                    <label class="form-label">Avatar</label>
+                    <div class="avatar-upload">
+                        <div class="avatar-preview" id="team-avatar-preview">
+                            <span>👥</span>
+                        </div>
+                        <input type="file" id="team-avatar-input" accept="image/*" onchange="handleTeamAvatarChange(event)">
+                        <button type="button" class="avatar-upload-btn" onclick="document.getElementById('team-avatar-input').click()">
+                            Fotoğraf Seç
+                        </button>
+                        <input type="hidden" id="team-avatar-data">
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Takım Adı *</label>
                     <input type="text" id="team-name" class="form-input" required>
@@ -1074,6 +1147,33 @@
             }
         }
 
+        // Avatar handling functions
+        function handleAssistantAvatarChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('assistant-avatar-preview');
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
+                    document.getElementById('assistant-avatar-data').value = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleTeamAvatarChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('team-avatar-preview');
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
+                    document.getElementById('team-avatar-data').value = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         // Assistant modal functions
         function openAssistantModal(id = null) {
             currentAssistantId = id;
@@ -1086,9 +1186,19 @@
                     .then(data => {
                         document.getElementById('assistant-name').value = data.name;
                         document.getElementById('assistant-email').value = data.email || '';
+                        const preview = document.getElementById('assistant-avatar-preview');
+                        if (data.avatar) {
+                            preview.innerHTML = `<img src="${data.avatar}" alt="Avatar">`;
+                            document.getElementById('assistant-avatar-data').value = data.avatar;
+                        } else {
+                            preview.innerHTML = '<span>👤</span>';
+                            document.getElementById('assistant-avatar-data').value = '';
+                        }
                     });
             } else {
                 document.getElementById('assistant-form').reset();
+                document.getElementById('assistant-avatar-preview').innerHTML = '<span>👤</span>';
+                document.getElementById('assistant-avatar-data').value = '';
             }
         }
 
@@ -1101,7 +1211,8 @@
             e.preventDefault();
             const data = {
                 name: document.getElementById('assistant-name').value,
-                email: document.getElementById('assistant-email').value || null
+                email: document.getElementById('assistant-email').value || null,
+                avatar: document.getElementById('assistant-avatar-data').value || null
             };
 
             try {
@@ -1164,11 +1275,21 @@
                 const team = await teamRes.json();
                 document.getElementById('team-name').value = team.name;
                 document.getElementById('team-description').value = team.description || '';
+                const preview = document.getElementById('team-avatar-preview');
+                if (team.avatar) {
+                    preview.innerHTML = `<img src="${team.avatar}" alt="Avatar">`;
+                    document.getElementById('team-avatar-data').value = team.avatar;
+                } else {
+                    preview.innerHTML = '<span>👥</span>';
+                    document.getElementById('team-avatar-data').value = '';
+                }
                 
                 const teamAssistantsRes = await fetch(`/api/teams/${id}/assistants`);
                 selectedAssistants = await teamAssistantsRes.json();
             } else {
                 document.getElementById('team-form').reset();
+                document.getElementById('team-avatar-preview').innerHTML = '<span>👥</span>';
+                document.getElementById('team-avatar-data').value = '';
             }
 
             const checkboxesEl = document.getElementById('team-assistants-checkboxes');
@@ -1194,7 +1315,8 @@
             const data = {
                 name: document.getElementById('team-name').value,
                 description: document.getElementById('team-description').value || null,
-                assistant_ids: selectedAssistants
+                assistant_ids: selectedAssistants,
+                avatar: document.getElementById('team-avatar-data').value || null
             };
 
             try {
