@@ -118,7 +118,7 @@ async function initializeDatabase() {
         LIMIT 1
       )
       WHERE m.checkin_date IS NULL;
-      
+
       CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
       CREATE INDEX IF NOT EXISTS idx_messages_room_checkin ON messages(room_number, checkin_date);
@@ -287,11 +287,11 @@ io.on('connection', (socket) => {
       } else {
         // Fallback: if no checkin_date, use only room_number (for backward compatibility)
         result = await pool.query(`
-          SELECT * FROM messages 
-          WHERE room_number = $1 
-          ORDER BY timestamp DESC 
-          LIMIT 50
-        `, [roomNumber]);
+        SELECT * FROM messages 
+        WHERE room_number = $1 
+        ORDER BY timestamp DESC 
+        LIMIT 50
+      `, [roomNumber]);
       }
       
       console.log('📊 Messages found:', result.rows.length);
@@ -348,12 +348,12 @@ io.on('connection', (socket) => {
       } else {
         // Fallback for backward compatibility
         result = await pool.query(`
-          SELECT * FROM messages 
-          WHERE room_number = $1 
-          AND timestamp < $2
-          ORDER BY timestamp DESC 
-          LIMIT $3
-        `, [roomNumber, beforeTimestamp, limit]);
+        SELECT * FROM messages 
+        WHERE room_number = $1 
+        AND timestamp < $2
+        ORDER BY timestamp DESC 
+        LIMIT $3
+      `, [roomNumber, beforeTimestamp, limit]);
       }
       
       // Map database column names (snake_case) to frontend format (camelCase)
@@ -746,10 +746,10 @@ app.post('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
     
     if (roomCheck.rows.length === 0) {
       // Room doesn't exist, create it with minimal data
-      await pool.query(`
+    await pool.query(`
         INSERT INTO rooms (room_number, profile_photo, is_active)
         VALUES ($1, $2, true)
-      `, [roomNumber, profilePhoto]);
+    `, [roomNumber, profilePhoto]);
     } else {
       // Room exists, update profile photo
       await pool.query(`
@@ -1364,6 +1364,26 @@ app.post('/api/admin/update-checkin-dates', async (req, res) => {
 });
 
 // Get assistant's assigned rooms (filtered by check-in date)
+// Get assistant's teams
+app.get('/api/assistant/:assistantId/teams', async (req, res) => {
+  try {
+    const { assistantId } = req.params;
+    const result = await pool.query(`
+      SELECT t.id, t.name, t.description
+      FROM teams t
+      INNER JOIN assistant_teams at ON t.id = at.team_id
+      WHERE at.assistant_id = $1 
+        AND at.is_active = true 
+        AND t.is_active = true
+      ORDER BY t.name
+    `, [assistantId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching assistant teams:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
   try {
     const { assistantId } = req.params;
@@ -1374,8 +1394,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
     
-    // Get rooms assigned to assistant's teams
-    // Filter: checkout_date + 1 day must be >= today (hide rooms that checked out more than 1 day ago)
+    // Get rooms assigned to assistant's teams with last message info
     const result = await pool.query(`
       SELECT DISTINCT
         r.id,
@@ -1389,7 +1408,31 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
         r.child_count,
         r.country,
         r.agency,
-        tra.assigned_at
+        tra.assigned_at,
+        (
+          SELECT m.message 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND m.checkin_date = r.checkin_date
+          ORDER BY m.timestamp DESC 
+          LIMIT 1
+        ) as last_message,
+        (
+          SELECT m.timestamp 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND m.checkin_date = r.checkin_date
+          ORDER BY m.timestamp DESC 
+          LIMIT 1
+        ) as last_message_time,
+        (
+          SELECT COUNT(*) 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND m.checkin_date = r.checkin_date
+            AND m.sender_type != 'assistant'
+            AND m.read_at IS NULL
+        ) as unread_count
       FROM rooms r
       INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
         AND r.checkin_date = tra.checkin_date
@@ -1403,7 +1446,16 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           r.checkout_date IS NULL 
           OR (r.checkout_date + INTERVAL '1 day') >= $3::date
         )
-      ORDER BY r.room_number ASC
+      ORDER BY 
+        COALESCE((
+          SELECT m.timestamp 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND m.checkin_date = r.checkin_date
+          ORDER BY m.timestamp DESC 
+          LIMIT 1
+        ), r.checkin_date) DESC,
+        r.room_number ASC
     `, [assistantId, checkinDate, todayStr]);
     
     console.log(`📋 Assistant ${assistantId} rooms for ${checkinDate}:`, result.rows.length);
