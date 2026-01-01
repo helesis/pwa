@@ -1468,6 +1468,7 @@
                 if (!existingMessage) {
                     // If this is a message we RECEIVED (not sent), mark it as delivered
                     if (!isSent) {
+                        console.log('📬 Guest received message, emitting message_delivered:', data.id);
                         socket.emit('message_delivered', { messageId: data.id });
                     }
                     

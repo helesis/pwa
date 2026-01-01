@@ -413,13 +413,24 @@ io.on('connection', (socket) => {
   socket.on('message_delivered', async (data) => {
     try {
       const { messageId } = data;
-      if (!messageId) return;
+      console.log('📬 message_delivered event received:', { messageId, socketId: socket.id });
+      if (!messageId) {
+        console.log('⚠️ message_delivered: No messageId provided');
+        return;
+      }
       
       // Update message delivered_at timestamp
-      await pool.query(
-        'UPDATE messages SET delivered_at = CURRENT_TIMESTAMP WHERE id = $1 AND delivered_at IS NULL',
+      const updateResult = await pool.query(
+        'UPDATE messages SET delivered_at = CURRENT_TIMESTAMP WHERE id = $1 AND delivered_at IS NULL RETURNING id',
         [messageId]
       );
+      
+      if (updateResult.rows.length === 0) {
+        console.log('⚠️ message_delivered: Message not found or already delivered:', messageId);
+        return;
+      }
+      
+      console.log('✅ Message marked as delivered:', messageId);
       
       // Get message info to broadcast status update
       const messageResult = await pool.query(
@@ -431,14 +442,20 @@ io.on('connection', (socket) => {
         const { room_number, checkin_date } = messageResult.rows[0];
         const roomId = `${room_number}_${checkin_date}`;
         
+        console.log('📤 Broadcasting message_status_update to room:', roomId, { messageId, status: 'delivered' });
+        
         // Broadcast status update to room (sender will see delivered tick)
         io.to(roomId).emit('message_status_update', { 
           messageId, 
           status: 'delivered' 
         });
+        
+        console.log('✅ message_status_update broadcasted');
+      } else {
+        console.log('⚠️ message_delivered: Message info not found for messageId:', messageId);
       }
     } catch (error) {
-      console.error('Error updating delivered status:', error);
+      console.error('❌ Error updating delivered status:', error);
     }
   });
 
