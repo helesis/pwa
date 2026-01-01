@@ -1249,11 +1249,14 @@
 
         async function saveAssistant(e) {
             e.preventDefault();
+            const avatarData = document.getElementById('assistant-avatar-data').value;
             const data = {
                 name: document.getElementById('assistant-name').value,
                 email: document.getElementById('assistant-email').value || null,
-                avatar: document.getElementById('assistant-avatar-data').value || null
+                avatar: avatarData || null  // Send empty string as null
             };
+
+            console.log('💾 Saving assistant:', { ...data, avatar: avatarData ? 'base64 data (hidden)' : 'null' });
 
             try {
                 const url = currentAssistantId 

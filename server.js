@@ -858,9 +858,11 @@ app.post('/api/assistants', async (req, res) => {
 app.put('/api/assistants/:id', async (req, res) => {
   try {
     const { name, email, avatar } = req.body;
+    // Always update avatar - if empty string or null, set to null
+    const avatarValue = avatar || null;
     const result = await pool.query(
-      'UPDATE assistants SET name = $1, email = $2, avatar = COALESCE($3, avatar) WHERE id = $4 RETURNING *',
-      [name, email || null, avatar || null, req.params.id]
+      'UPDATE assistants SET name = $1, email = $2, avatar = $3 WHERE id = $4 RETURNING *',
+      [name, email || null, avatarValue, req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Assistant not found' });
