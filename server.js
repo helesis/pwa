@@ -579,15 +579,43 @@ io.on('connection', (socket) => {
   });
 
   // Typing indicator
-  socket.on('typing', (data) => {
-    socket.to(data.roomNumber).emit('user_typing', {
+  socket.on('typing', async (data) => {
+    const { roomNumber, guestUniqueId, checkinDate } = data;
+    
+    // Determine room ID
+    let roomId;
+    if (guestUniqueId) {
+      roomId = `guest_${guestUniqueId}`;
+    } else if (roomNumber && checkinDate) {
+      roomId = `${roomNumber}_${checkinDate}`;
+    } else if (roomNumber) {
+      roomId = roomNumber;
+    } else {
+      return; // Cannot determine room
+    }
+    
+    socket.to(roomId).emit('user_typing', {
       senderName: data.senderName,
       senderType: data.senderType
     });
   });
 
-  socket.on('stop_typing', (data) => {
-    socket.to(data.roomNumber).emit('user_stopped_typing');
+  socket.on('stop_typing', async (data) => {
+    const { roomNumber, guestUniqueId, checkinDate } = data;
+    
+    // Determine room ID
+    let roomId;
+    if (guestUniqueId) {
+      roomId = `guest_${guestUniqueId}`;
+    } else if (roomNumber && checkinDate) {
+      roomId = `${roomNumber}_${checkinDate}`;
+    } else if (roomNumber) {
+      roomId = roomNumber;
+    } else {
+      return; // Cannot determine room
+    }
+    
+    socket.to(roomId).emit('user_stopped_typing');
   });
 
   // Message delivered status
