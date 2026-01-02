@@ -269,12 +269,12 @@ function logInfo(...args) {
 
 // Generate guest unique ID from name, surname and checkin_date
 function generateGuestUniqueId(guestName, guestSurname, checkinDate) {
-  if (!guestName || !checkinDate) {
+  if (!checkinDate) {
     return null;
   }
   
-  // Normalize inputs
-  const name = (guestName || '').trim().toLowerCase().replace(/\s+/g, '_');
+  // Normalize inputs - use 'Guest' if name is not provided
+  const name = (guestName || guestSurname || 'Guest').trim().toLowerCase().replace(/\s+/g, '_');
   const surname = (guestSurname || '').trim().toLowerCase().replace(/\s+/g, '_');
   const date = checkinDate instanceof Date 
     ? checkinDate.toISOString().split('T')[0] 
