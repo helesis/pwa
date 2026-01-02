@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Voyage Assistant">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.json">
     <title>Voyage Assistant Dashboard</title>
     
@@ -37,12 +38,19 @@
             background: #f0f2f5;
             color: #111b21;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile browsers */
             overflow: hidden;
+            /* Safe area support for notched devices */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
 
         .dashboard-container {
             display: flex;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile browsers */
             max-width: 1400px;
             margin: 0 auto;
             background: white;
@@ -828,8 +836,61 @@
             loadRooms(e.target.value);
         });
 
+        // iOS detection
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        // Check if running as PWA (standalone mode)
+        function isStandalone() {
+            return window.navigator.standalone === true || 
+                   window.matchMedia('(display-mode: standalone)').matches ||
+                   window.matchMedia('(display-mode: fullscreen)').matches;
+        }
+
+        // PWA Fullscreen Support - Hide Safari UI
+        function setupPWAFullscreen() {
+            // Set body height to viewport height (handles Safari address bar)
+            const setHeight = () => {
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+                
+                // For iOS standalone mode
+                if (isStandalone() || isIOS()) {
+                    document.body.style.height = `${window.innerHeight}px`;
+                    const dashboardContainer = document.querySelector('.dashboard-container');
+                    if (dashboardContainer) {
+                        dashboardContainer.style.height = `${window.innerHeight}px`;
+                    }
+                }
+            };
+            
+            // Set initial height
+            setHeight();
+            
+            // Update on resize (handles Safari address bar show/hide)
+            window.addEventListener('resize', setHeight);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(setHeight, 100);
+            });
+            
+            // Prevent zoom on double tap (iOS)
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+        }
+
         // Load rooms on page load
         window.addEventListener('load', async () => {
+            // Setup PWA fullscreen support
+            setupPWAFullscreen();
+            
             await checkAssistantTeams();
             loadRooms(new Date().toISOString().split('T')[0]);
         });
