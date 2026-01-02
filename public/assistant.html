@@ -1801,19 +1801,6 @@
             }, 10);
         }
 
-                if (modalTitle && currentRoom) {
-                    modalTitle.textContent = `${currentRoom.guestName} ${currentRoom.guestSurname} - Oda ${currentRoomNumber}`;
-                }
-                
-                document.getElementById('qrModal').classList.add('active');
-            } catch (error) {
-                console.error('Error creating invite:', error);
-                alert('QR kod oluşturulurken bir hata oluştu');
-            }
-        }
-
-        // Close QR modal
-
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
