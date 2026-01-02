@@ -1226,6 +1226,48 @@
             }
         }
 
+        // Load team avatar from backend
+        async function loadTeamAvatar() {
+            if (!TEAM_ID) {
+                console.warn('⚠️ Cannot load team avatar: TEAM_ID not set');
+                return;
+            }
+            
+            try {
+                console.log('📸 Loading team avatar for team:', TEAM_ID);
+                const response = await fetch(`${SERVER_URL}/api/teams/${TEAM_ID}`);
+                
+                if (!response.ok) {
+                    console.warn('⚠️ Failed to load team avatar:', response.status);
+                    return;
+                }
+                
+                const team = await response.json();
+                if (team.avatar) {
+                    teamAvatar = team.avatar;
+                    console.log('✅ Team avatar loaded:', teamAvatar);
+                    
+                    // Update all received message avatars
+                    updateTeamAvatarDisplay();
+                } else {
+                    console.log('ℹ️ Team has no avatar');
+                }
+            } catch (error) {
+                console.error('❌ Error loading team avatar:', error);
+            }
+        }
+        
+        // Update team avatar display in messages
+        function updateTeamAvatarDisplay() {
+            if (!teamAvatar) return;
+            
+            // Update all received message avatars (not sent messages)
+            const receivedMessages = document.querySelectorAll('.message:not(.sent) .message-avatar');
+            receivedMessages.forEach(avatar => {
+                avatar.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width:100%;height:100%;object-fit:cover;">`;
+            });
+        }
+        
         // Update profile photo display in header and messages
         function updateProfilePhotoDisplay() {
             const headerPhoto = document.getElementById('headerProfilePhoto');
@@ -1874,18 +1916,22 @@
                     avatarHTML = '<div class="message-avatar">👤</div>';
                 }
             } else {
-                // Not sent - it's from hotel/staff - use VOYAGE HOTELS logo
-                avatarHTML = `<div class="message-avatar">
-                    <div class="voyage-logo">
-                        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
-                            <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
-                            <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
-                            <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
-                            <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
-                        </svg>
-                    </div>
-                </div>`;
+                // Not sent - it's from hotel/staff - use team avatar if available, otherwise VOYAGE HOTELS logo
+                if (teamAvatar) {
+                    avatarHTML = `<div class="message-avatar"><img src="${teamAvatar}" alt="Takım" style="width:100%;height:100%;object-fit:cover;"></div>`;
+                } else {
+                    avatarHTML = `<div class="message-avatar">
+                        <div class="voyage-logo">
+                            <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                                <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                                <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                                <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                                <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                            </svg>
+                        </div>
+                    </div>`;
+                }
             }
             
             // Ensure 'sent' class is applied correctly
