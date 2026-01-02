@@ -1350,7 +1350,6 @@
             document.getElementById('chatRoomName').textContent = `${guestName} ${guestSurname}`;
             document.getElementById('chatRoomDetails').textContent = `Oda ${roomNumber}`;
             document.getElementById('chatRoomAvatar').textContent = roomNumber;
-            document.getElementById('qrButton').style.display = 'block';
             
             // Show chat view on mobile first (before showing input)
             if (window.innerWidth <= 768) {
@@ -1416,7 +1415,6 @@
             document.getElementById('chatContainer').innerHTML = '<div class="empty-state">Bir oda seçerek chat\'e başlayın</div>';
             document.getElementById('chatRoomName').textContent = 'Bir oda seçin';
             document.getElementById('chatRoomDetails').textContent = '';
-            document.getElementById('qrButton').style.display = 'none';
             document.getElementById('inputContainer').style.display = 'none';
         }
 
