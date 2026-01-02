@@ -1254,6 +1254,14 @@
                     if (guestUniqueId) {
                         GUEST_UNIQUE_ID = guestUniqueId;
                         console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', guestUniqueId);
+                    } else if (GUEST_NAME && CHECKIN_DATE) {
+                        // Generate unique ID if we have the required info
+                        guestUniqueId = generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                        if (guestUniqueId) {
+                            GUEST_UNIQUE_ID = guestUniqueId;
+                            localStorage.setItem('guest_unique_id', guestUniqueId);
+                            console.log('✅ Generated GUEST_UNIQUE_ID for profile photo:', guestUniqueId);
+                        }
                     }
                 }
                 
