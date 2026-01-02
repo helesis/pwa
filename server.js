@@ -975,10 +975,24 @@ app.post('/api/guest/login', async (req, res) => {
     
     const guest = result.rows[0];
     
+    // If guest_unique_id is null, generate it
+    let guest_unique_id = guest.guest_unique_id;
+    if (!guest_unique_id && guest.guest_name && guest.checkin_date) {
+      guest_unique_id = generateGuestUniqueId(guest.guest_name, guest.guest_surname, guest.checkin_date);
+      
+      // Update the room with the generated guest_unique_id
+      await pool.query(
+        'UPDATE rooms SET guest_unique_id = $1 WHERE id = $2',
+        [guest_unique_id, guest.id]
+      );
+      
+      console.log(`✅ Generated and saved guest_unique_id for guest: ${guest_unique_id}`);
+    }
+    
     // Return guest info
     res.json({
       success: true,
-      guest_unique_id: guest.guest_unique_id,
+      guest_unique_id: guest_unique_id,
       guest_name: guest.guest_name,
       guest_surname: guest.guest_surname,
       checkin_date: guest.checkin_date,
