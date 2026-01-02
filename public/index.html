@@ -691,30 +691,6 @@
             align-items: center;
         }
 
-        .receive-btn {
-            width: 42px;
-            height: 42px;
-            background: #25d366;
-            border: none;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .receive-btn:hover {
-            background: #20ba5a;
-            transform: scale(1.05);
-        }
-
-        .receive-btn:active {
-            transform: scale(0.95);
-            background: #1da851;
-        }
 
         .send-btn {
             width: 42px;
@@ -941,12 +917,6 @@
                 ></textarea>
             </div>
             <div class="action-buttons">
-                <button class="receive-btn" id="receiveBtn" onclick="sendTestMessage()" title="Test Mesajı Al">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                        <line x1="9" y1="10" x2="15" y2="10"/>
-                    </svg>
-                </button>
                 <button class="send-btn" id="sendBtn" onclick="sendMessage()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -1136,6 +1106,11 @@
                     await loadProfilePhoto();
                 }
                 
+                // Load team avatar if team ID exists
+                if (TEAM_ID) {
+                    await loadTeamAvatar();
+                }
+                
                 guestInfoLoaded = true;
                 return true;
             } catch (error) {
@@ -1167,6 +1142,7 @@
 
         // Profile Photo Management
         let guestProfilePhoto = null;
+        let teamAvatar = null;
 
         // Load profile photo from backend
         async function loadProfilePhoto() {
@@ -2249,53 +2225,6 @@
             }
         }
 
-        // Send test message (simulate hotel/staff response)
-        function sendTestMessage() {
-            const testMessages = [
-                'Merhaba! Size nasıl yardımcı olabilirim? 😊',
-                'Tabii ki, hemen ilgileniyorum.',
-                'Anladım, en kısa sürede çözüm bulacağız.',
-                'Oda servisi menüsü için size yardımcı olabilirim. Ne istersiniz?',
-                'Klima ile ilgili sorununuzu teknik ekibimize ilettim. Yakında çözülecek.',
-                'Check-out saati 12:00\'dır. Daha fazla bilgi ister misiniz?',
-                'Havuz saatleri 08:00 - 20:00 arasındadır.',
-                'WiFi şifresi odanızın içindeki bilgi kartında yer almaktadır.',
-                'Restoranımız sabah 07:00\'dan akşam 23:00\'a kadar açıktır.',
-                'Spa rezervasyonu için resepsiyonu arayabilirsiniz.',
-                'Size yardımcı olmaktan mutluluk duyarız! 🌟',
-                'Sorununuz çözüldü mü? Başka bir şeye ihtiyacınız var mı?',
-                'Odanızın temizliği tamamlandı. İyi günler dileriz!',
-                'Kahvaltı servisi 07:00 - 11:00 arasındadır.',
-                'Otopark ücretsizdir ve 24 saat açıktır.',
-                'Size özel bir indirim sunabiliriz. Detaylar için resepsiyona uğrayabilir misiniz?',
-                'Teşekkür ederiz! Memnun kaldığınızı duymak bizi mutlu ediyor. 🙏',
-                'Herhangi bir sorunuz olursa çekinmeden bize ulaşabilirsiniz.',
-                'Yarın hava durumu güneşli görünüyor. Havuz keyfi için mükemmel! ☀️',
-                'Size özel bir aktivite önerisi var mı? Bölgede gezilecek çok güzel yerler var.'
-            ];
-
-            // Rastgele bir mesaj seç
-            const randomMessage = testMessages[Math.floor(Math.random() * testMessages.length)];
-            
-            // Otel/staff adı
-            const staffNames = ['Voyage Sorgun', 'Resepsiyon', 'Oda Servisi', 'Misafir İlişkileri'];
-            const randomStaffName = staffNames[Math.floor(Math.random() * staffNames.length)];
-
-            // Mesajı gönder (senderType: 'staff' veya 'hotel')
-            if (!socket) {
-                console.error('Socket not initialized');
-                return;
-            }
-            socket.emit('send_message', {
-                roomNumber: ROOM_NUMBER,
-                checkinDate: CHECKIN_DATE,
-                senderType: 'staff',
-                senderName: randomStaffName,
-                message: randomMessage
-            });
-
-            console.log('🧪 Test mesajı gönderildi:', randomMessage);
-        }
 
         // iOS detection
         function isIOS() {
