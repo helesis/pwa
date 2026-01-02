@@ -69,12 +69,15 @@
             background: #008069;
             color: white;
             padding: 10px 16px;
+            padding-top: calc(10px + env(safe-area-inset-top));
             display: flex;
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            position: relative;
-            z-index: 100;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
         }
 
         .header-left {
@@ -219,6 +222,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 16px 8px;
+            padding-top: calc(16px + env(safe-area-inset-top) + 60px); /* Header height + safe area */
             background: #efeae2;
             scroll-behavior: smooth;
             display: flex;
@@ -538,6 +542,106 @@
             }
         }
 
+        /* Guest Login Page Styles */
+        .guest-login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: linear-gradient(135deg, #008069 0%, #1A4D6D 100%);
+            padding: 20px;
+        }
+
+        .guest-login-box {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .guest-login-box h1 {
+            color: #1A4D6D;
+            font-size: 28px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .guest-login-box p {
+            color: #667781;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .guest-login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .guest-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .guest-form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #111b21;
+        }
+
+        .guest-form-group input {
+            padding: 12px 16px;
+            border: 1px solid #e4e6e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .guest-form-group input:focus {
+            outline: none;
+            border-color: #008069;
+        }
+
+        .guest-login-btn {
+            background: #008069;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .guest-login-btn:hover {
+            background: #006b56;
+        }
+
+        .guest-login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .guest-login-error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .guest-login-error.show {
+            display: block;
+        }
+
         .input-container {
             padding: 10px 16px;
             background: #f0f2f5;
@@ -756,7 +860,32 @@
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <!-- Guest Login Page -->
+    <div class="guest-login-container" id="guestLoginContainer">
+        <div class="guest-login-box">
+            <h1>👋 Misafir Girişi</h1>
+            <p>Lütfen giriş bilgilerinizi girin</p>
+            <div class="guest-login-error" id="guestLoginError"></div>
+            <form class="guest-login-form" id="guestLoginForm" onsubmit="handleGuestLogin(event)">
+                <div class="guest-form-group">
+                    <label for="guestSurname">Soyad</label>
+                    <input type="text" id="guestSurname" name="guestSurname" placeholder="Soyadınız" required>
+                </div>
+                <div class="guest-form-group">
+                    <label for="checkinDate">Giriş Tarihi</label>
+                    <input type="date" id="checkinDate" name="checkinDate" required>
+                </div>
+                <div class="guest-form-group">
+                    <label for="checkoutDate">Çıkış Tarihi</label>
+                    <input type="date" id="checkoutDate" name="checkoutDate" required>
+                </div>
+                <button type="submit" class="guest-login-btn" id="guestLoginBtn">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chat App (hidden until login) -->
+    <div class="app-container" id="appContainer" style="display: none;">
         <div class="header">
             <div class="header-left">
                 <div class="hotel-icon">🏨</div>
@@ -852,80 +981,173 @@
 
     <script>
         // Configuration
-        // Get room number and token from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        let ROOM_NUMBER = urlParams.get('room') || null;
-        const INVITE_TOKEN = urlParams.get('token');
+        let ROOM_NUMBER = null;
         let GUEST_NAME = 'Misafir';
-        let CHECKIN_DATE = null; // Will be loaded from token or room
+        let GUEST_SURNAME = null;
+        let GUEST_UNIQUE_ID = null;
+        let CHECKIN_DATE = null;
+        let CHECKOUT_DATE = null;
+        let TEAM_ID = null;
         const SERVER_URL = window.location.origin;
 
-        // Load guest info from token if available (must complete before socket connection)
+        // Check if guest is already logged in
+        async function checkGuestAuth() {
+            try {
+                const guestUniqueId = localStorage.getItem('guest_unique_id');
+                const guestName = localStorage.getItem('guest_name');
+                const guestSurname = localStorage.getItem('guest_surname');
+                const checkinDate = localStorage.getItem('checkin_date');
+                const checkoutDate = localStorage.getItem('checkout_date');
+                const teamId = localStorage.getItem('team_id');
+                
+                if (guestUniqueId && guestName && checkinDate) {
+                    // Guest is logged in
+                    GUEST_UNIQUE_ID = guestUniqueId;
+                    GUEST_NAME = guestName;
+                    GUEST_SURNAME = guestSurname;
+                    CHECKIN_DATE = checkinDate;
+                    CHECKOUT_DATE = checkoutDate;
+                    TEAM_ID = teamId;
+                    
+                    // Hide login, show app
+                    document.getElementById('guestLoginContainer').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'flex';
+                    
+                    // Load guest info and initialize
+                    await loadGuestInfo();
+                    return true;
+                }
+                
+                // Not logged in
+                document.getElementById('guestLoginContainer').style.display = 'flex';
+                document.getElementById('appContainer').style.display = 'none';
+                return false;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                document.getElementById('guestLoginContainer').style.display = 'flex';
+                document.getElementById('appContainer').style.display = 'none';
+                return false;
+            }
+        }
+
+        // Handle guest login
+        async function handleGuestLogin(event) {
+            event.preventDefault();
+            
+            const surname = document.getElementById('guestSurname').value.trim();
+            const checkinDate = document.getElementById('checkinDate').value;
+            const checkoutDate = document.getElementById('checkoutDate').value;
+            const loginBtn = document.getElementById('guestLoginBtn');
+            const loginError = document.getElementById('guestLoginError');
+            
+            // Clear previous error
+            loginError.classList.remove('show');
+            loginError.textContent = '';
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Giriş yapılıyor...';
+            
+            try {
+                const response = await fetch('/api/guest/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        surname: surname,
+                        checkin_date: checkinDate,
+                        checkout_date: checkoutDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Login successful
+                    GUEST_UNIQUE_ID = data.guest_unique_id;
+                    GUEST_NAME = data.guest_name || 'Misafir';
+                    GUEST_SURNAME = data.guest_surname || surname;
+                    CHECKIN_DATE = data.checkin_date || checkinDate;
+                    CHECKOUT_DATE = data.checkout_date || checkoutDate;
+                    ROOM_NUMBER = data.room_number || null;
+                    TEAM_ID = data.team_id || null;
+                    
+                    // Save to localStorage
+                    localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
+                    localStorage.setItem('guest_name', GUEST_NAME);
+                    localStorage.setItem('guest_surname', GUEST_SURNAME);
+                    localStorage.setItem('checkin_date', CHECKIN_DATE);
+                    localStorage.setItem('checkout_date', CHECKOUT_DATE);
+                    if (ROOM_NUMBER) localStorage.setItem('room_number', ROOM_NUMBER);
+                    if (TEAM_ID) localStorage.setItem('team_id', TEAM_ID);
+                    
+                    // Hide login, show app
+                    document.getElementById('guestLoginContainer').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'flex';
+                    
+                    // Load guest info and initialize
+                    await loadGuestInfo();
+                } else {
+                    // Login failed
+                    loginError.textContent = data.error || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.';
+                    loginError.classList.add('show');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Giriş Yap';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginError.textContent = 'Bir hata oluştu. Lütfen tekrar deneyin.';
+                loginError.classList.add('show');
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Giriş Yap';
+            }
+        }
+
+        // Load guest info after login
         let guestInfoLoaded = false;
         
         async function loadGuestInfo() {
-            console.log('🔍 Loading guest info...', { ROOM_NUMBER, INVITE_TOKEN });
+            console.log('🔍 Loading guest info...', { GUEST_UNIQUE_ID, GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE });
             
-            // Token yoksa assistant sayfasına yönlendir (asistan login olmuş olabilir)
-            if (!INVITE_TOKEN) {
-                console.log('ℹ️ No invite token, redirecting to assistant page');
-                window.location.href = '/assistant.html';
+            if (!GUEST_UNIQUE_ID || !CHECKIN_DATE) {
+                console.error('❌ Missing guest info');
                 return false;
             }
             
-            // Token'dan bilgi yükle
             try {
-                const response = await fetch(`/api/invite/${INVITE_TOKEN}`);
-                if (!response.ok) {
-                    console.error('❌ Invalid or expired token:', response.status);
-                    let errorMessage = 'Bu davet linki geçersiz veya süresi dolmuş.';
-                    if (response.status === 410) {
-                        errorMessage = 'Bu davet linkinin süresi dolmuş.';
-                    }
-                    document.body.innerHTML = `
-                        <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; flex-direction: column; padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                            <div style="font-size: 64px; margin-bottom: 20px;">${response.status === 410 ? '⏰' : '❌'}</div>
-                            <h1 style="font-size: 24px; margin-bottom: 15px; color: #1A4D6D; font-weight: 600;">${response.status === 410 ? 'Süresi Dolmuş Davet Linki' : 'Geçersiz Davet Linki'}</h1>
-                            <p style="font-size: 16px; color: #666; margin-bottom: 30px; line-height: 1.6;">${errorMessage} Lütfen otel personelimizden yeni bir link isteyin.</p>
-                            <a href="/" style="background: #1A4D6D; color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; display: inline-block; transition: all 0.3s;">Ana Sayfaya Dön</a>
-                        </div>
-                    `;
-                    return false;
-                }
+                // Update header with guest info
+                updateGuestHeader();
                 
-                const data = await response.json();
-                ROOM_NUMBER = data.roomNumber;
-                GUEST_NAME = data.guestName || 'Misafir';
-                CHECKIN_DATE = data.checkinDate || null;
-                console.log('✅ Guest info loaded from token:', { ROOM_NUMBER, GUEST_NAME, CHECKIN_DATE });
-                
-                // If checkin_date not loaded, try to get from room
-                if (!CHECKIN_DATE && ROOM_NUMBER) {
-                    try {
-                        const roomResponse = await fetch(`/api/rooms/${ROOM_NUMBER}`);
-                        if (roomResponse.ok) {
-                            const roomData = await roomResponse.json();
-                            CHECKIN_DATE = roomData.checkin_date || null;
-                            console.log('✅ Check-in date loaded from room:', CHECKIN_DATE);
-                        }
-                    } catch (error) {
-                        console.warn('Could not load check-in date from room:', error);
-                    }
+                // Load profile photo if room number exists
+                if (ROOM_NUMBER) {
+                    await loadProfilePhoto();
                 }
                 
                 guestInfoLoaded = true;
                 return true;
             } catch (error) {
                 console.error('❌ Error loading guest info:', error);
-                document.body.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; flex-direction: column; padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                        <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
-                        <h1 style="font-size: 24px; margin-bottom: 15px; color: #1A4D6D; font-weight: 600;">Bağlantı Hatası</h1>
-                        <p style="font-size: 16px; color: #666; margin-bottom: 30px; line-height: 1.6;">Bilgiler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.</p>
-                        <a href="/" style="background: #1A4D6D; color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; display: inline-block; transition: all 0.3s;">Ana Sayfaya Dön</a>
-                    </div>
-                `;
                 return false;
+            }
+        }
+
+        // Update guest header with info
+        function updateGuestHeader() {
+            const hotelName = document.querySelector('.hotel-name');
+            const statusText = document.getElementById('statusText');
+            const profilePhoto = document.getElementById('headerProfilePhoto');
+            
+            if (hotelName) {
+                hotelName.textContent = `${GUEST_NAME} ${GUEST_SURNAME || ''}`.trim() || 'Misafir';
+            }
+            
+            if (statusText) {
+                statusText.textContent = GUEST_UNIQUE_ID ? `ID: ${GUEST_UNIQUE_ID.substring(0, 16)}...` : 'Bağlanıyor...';
+            }
+            
+            // Update profile photo if available
+            if (guestProfilePhoto && profilePhoto) {
+                profilePhoto.innerHTML = `<img src="${guestProfilePhoto}" alt="${GUEST_NAME}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                profilePhoto.classList.add('has-photo');
             }
         }
 
@@ -1187,23 +1409,24 @@
         // Initialize socket after guest info is loaded
         async function initializeSocket() {
             console.log('🚀 ========== SOCKET INITIALIZATION START ==========');
-            console.log('📋 Step 1: Loading guest info...');
-            console.log('📋 Current URL:', window.location.href);
-            console.log('📋 URL Params:', { room: ROOM_NUMBER, token: INVITE_TOKEN });
+            console.log('📋 Step 1: Checking guest authentication...');
             
-            // Wait for guest info to load
-            const loaded = await loadGuestInfo();
+            // Check if guest is logged in
+            const isAuthenticated = await checkGuestAuth();
+            if (!isAuthenticated) {
+                console.log('ℹ️ Guest not authenticated, waiting for login...');
+                return;
+            }
             
-            console.log('📋 Step 2: Guest info loaded:', loaded);
+            console.log('📋 Step 2: Guest info loaded');
+            console.log('📋 Guest Unique ID:', GUEST_UNIQUE_ID);
             console.log('📋 Room Number:', ROOM_NUMBER);
             console.log('📋 Guest Name:', GUEST_NAME);
+            console.log('📋 Team ID:', TEAM_ID);
             
-            if (!ROOM_NUMBER) {
-                console.error('❌ Room number not available after loading guest info');
-                console.log('Current state:', { ROOM_NUMBER, INVITE_TOKEN, loaded });
-                // Fallback to default
-                ROOM_NUMBER = '301';
-                console.warn('⚠️ Using fallback room number:', ROOM_NUMBER);
+            if (!GUEST_UNIQUE_ID || !CHECKIN_DATE) {
+                console.error('❌ Guest unique ID or check-in date not available');
+                return;
             }
             
             console.log('🔌 Step 3: Initializing socket');
@@ -1255,11 +1478,13 @@
                 }, 500);
                 
                 console.log('📤 Step 6: Emitting join_room');
+                console.log('📤 Guest Unique ID:', GUEST_UNIQUE_ID);
                 console.log('📤 Room Number:', ROOM_NUMBER);
                 console.log('📤 Check-in Date:', CHECKIN_DATE);
                 socket.emit('join_room', {
                     roomNumber: ROOM_NUMBER,
-                    checkinDate: CHECKIN_DATE
+                    checkinDate: CHECKIN_DATE,
+                    guestUniqueId: GUEST_UNIQUE_ID
                 });
                 console.log('📤 join_room event emitted');
             });
@@ -1316,7 +1541,8 @@
                 }
                 socket.emit('join_room', {
                     roomNumber: ROOM_NUMBER,
-                    checkinDate: CHECKIN_DATE
+                    checkinDate: CHECKIN_DATE,
+                    guestUniqueId: GUEST_UNIQUE_ID
                 });
             });
 

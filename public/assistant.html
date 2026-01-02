@@ -864,9 +864,6 @@
                         </div>
                     </div>
                 </div>
-                <button class="qr-button" id="qrButton" style="display: none;" onclick="showQRModal()">
-                    📱 QR Kod Oluştur
-                </button>
             </div>
             
             <div class="chat-container" id="chatContainer">
@@ -886,15 +883,6 @@
         </div>
     </div>
 
-    <!-- QR Code Modal -->
-    <div class="qr-modal" id="qrModal" onclick="closeQRModal(event)">
-        <div class="qr-modal-content" onclick="event.stopPropagation()">
-            <h3 id="qrModalTitle">QR Kod</h3>
-            <img id="qrCodeImage" class="qr-code-image" src="" alt="QR Code">
-            <div class="qr-link" id="qrLink"></div>
-            <button class="close-btn" onclick="closeQRModal()">Kapat</button>
-        </div>
-    </div>
 
     <script>
         let ASSISTANT_ID = null; // Will be set after login
@@ -1795,11 +1783,7 @@
             const contextMenu = document.createElement('div');
             contextMenu.id = 'contextMenu';
             contextMenu.className = 'context-menu';
-            contextMenu.innerHTML = `
-                <div class="context-menu-item" onclick="inviteGuest('${roomNumber}', '${guestName}', '${guestSurname}', '${checkinDate || ''}')">
-                    👤 Misafir Davet Et
-                </div>
-            `;
+            contextMenu.innerHTML = ``;
             
             document.body.appendChild(contextMenu);
             
@@ -1817,86 +1801,6 @@
             }, 10);
         }
 
-        // Misafir davet et (QR kod oluştur)
-        async function inviteGuest(roomNumber, guestName, guestSurname, checkinDate) {
-            // Context menu'yu kapat
-            const contextMenu = document.getElementById('contextMenu');
-            if (contextMenu) {
-                contextMenu.remove();
-            }
-            
-            // Get checkin_date from parameter or room data
-            let actualCheckinDate = checkinDate;
-            if (!actualCheckinDate) {
-                const roomElement = document.querySelector(`[data-room-number="${roomNumber}"]`);
-                actualCheckinDate = roomElement ? roomElement.getAttribute('data-checkin-date') : null;
-            }
-            
-            if (!actualCheckinDate) {
-                alert('Oda bilgisi bulunamadı');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms/${roomNumber}/invite`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        checkin_date: actualCheckinDate
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('QR kod oluşturulamadı');
-                }
-                
-                const inviteData = await response.json();
-                
-                // QR kod modal'ını göster
-                document.getElementById('qrCodeImage').src = inviteData.qrCodeUrl;
-                document.getElementById('qrLink').textContent = inviteData.inviteLink;
-                
-                // Modal başlığını güncelle
-                const modalTitle = document.getElementById('qrModalTitle');
-                if (modalTitle) {
-                    modalTitle.textContent = `${guestName} ${guestSurname} - Oda ${roomNumber}`;
-                }
-                
-                document.getElementById('qrModal').classList.add('active');
-            } catch (error) {
-                console.error('Error creating invite:', error);
-                alert('QR kod oluşturulurken bir hata oluştu');
-            }
-        }
-
-        // Show QR modal (mevcut buton için)
-        async function showQRModal() {
-            if (!currentRoomNumber || !currentCheckinDate) return;
-            
-            try {
-                const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms/${currentRoomNumber}/invite`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        checkin_date: currentCheckinDate
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('QR kod oluşturulamadı');
-                }
-                
-                inviteData = await response.json();
-                
-                document.getElementById('qrCodeImage').src = inviteData.qrCodeUrl;
-                document.getElementById('qrLink').textContent = inviteData.inviteLink;
-                
-                // Modal başlığını güncelle
-                const modalTitle = document.getElementById('qrModalTitle');
                 if (modalTitle && currentRoom) {
                     modalTitle.textContent = `${currentRoom.guestName} ${currentRoom.guestSurname} - Oda ${currentRoomNumber}`;
                 }
@@ -1909,11 +1813,6 @@
         }
 
         // Close QR modal
-        function closeQRModal(event) {
-            if (!event || event.target.id === 'qrModal') {
-                document.getElementById('qrModal').classList.remove('active');
-            }
-        }
 
         function escapeHtml(text) {
             const div = document.createElement('div');

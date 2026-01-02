@@ -944,6 +944,56 @@ app.post('/api/assistant/logout', async (req, res) => {
   res.json({ success: true });
 });
 
+// Guest Login Endpoint
+app.post('/api/guest/login', async (req, res) => {
+  try {
+    const { surname, checkin_date, checkout_date } = req.body;
+    
+    if (!surname || !checkin_date || !checkout_date) {
+      return res.status(400).json({ error: 'Soyad, giriş tarihi ve çıkış tarihi gereklidir' });
+    }
+    
+    // Find guest by surname, checkin_date and checkout_date
+    const result = await pool.query(`
+      SELECT 
+        r.*,
+        tra.team_id,
+        t.name as team_name
+      FROM rooms r
+      LEFT JOIN team_room_assignments tra ON r.guest_unique_id = tra.guest_unique_id AND tra.is_active = true
+      LEFT JOIN teams t ON tra.team_id = t.id AND t.is_active = true
+      WHERE LOWER(TRIM(r.guest_surname)) = LOWER(TRIM($1))
+        AND r.checkin_date = $2::date
+        AND r.checkout_date = $3::date
+        AND r.is_active = true
+      ORDER BY r.checkin_date DESC
+      LIMIT 1
+    `, [surname, checkin_date, checkout_date]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Misafir bulunamadı. Lütfen bilgilerinizi kontrol edin.' });
+    }
+    
+    const guest = result.rows[0];
+    
+    // Return guest info
+    res.json({
+      success: true,
+      guest_unique_id: guest.guest_unique_id,
+      guest_name: guest.guest_name,
+      guest_surname: guest.guest_surname,
+      checkin_date: guest.checkin_date,
+      checkout_date: guest.checkout_date,
+      room_number: guest.room_number,
+      team_id: guest.team_id || null,
+      team_name: guest.team_name || null
+    });
+  } catch (error) {
+    console.error('Error during guest login:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Get all assistants
 app.get('/api/assistants', async (req, res) => {
   try {
