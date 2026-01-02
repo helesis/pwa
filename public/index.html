@@ -2639,17 +2639,6 @@
             }, false);
         }
 
-        // Initialize on load
-        window.addEventListener('load', async () => {
-            console.log('🚀 Voyage Sorgun Chat initialized');
-            
-            // Setup PWA fullscreen support
-            setupPWAFullscreen();
-            
-            // Initialize socket connection (will load guest info first)
-            await initializeSocket();
-        }
-
         // Handle guest logout
         async function handleGuestLogout() {
             if (!confirm('Çıkış yapmak istediğinize emin misiniz?')) {
@@ -2702,6 +2691,17 @@
             document.getElementById('guestLoginForm').reset();
             
             console.log('✅ Guest logged out');
+        }
+
+        // Initialize on load
+        window.addEventListener('load', async () => {
+            console.log('🚀 Voyage Sorgun Chat initialized');
+            
+            // Setup PWA fullscreen support
+            setupPWAFullscreen();
+            
+            // Initialize socket connection (will load guest info first)
+            await initializeSocket();
             
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
