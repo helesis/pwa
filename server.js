@@ -239,14 +239,28 @@ async function initializeDatabase() {
 
 // Initialize on startup (test data will be initialized after DB setup)
 
+// Log helper - Production'da sadece önemli loglar
+const isProduction = process.env.NODE_ENV === 'production';
+const LOG_DEBUG = process.env.LOG_DEBUG === 'true';
+
+function logDebug(...args) {
+  if (!isProduction || LOG_DEBUG) {
+    console.log(...args);
+  }
+}
+
+function logInfo(...args) {
+  console.log(...args);
+}
+
 // Socket.IO Connection
 io.on('connection', (socket) => {
-  console.log('🟢 ========== NEW CLIENT CONNECTION ==========');
-  console.log('🟢 Socket ID:', socket.id);
-  console.log('🟢 Time:', new Date().toISOString());
-  console.log('🟢 Client IP:', socket.handshake.address);
-  console.log('🟢 User Agent:', socket.handshake.headers['user-agent']);
-  console.log('🟢 Transport:', socket.conn.transport.name);
+  logDebug('🟢 ========== NEW CLIENT CONNECTION ==========');
+  logDebug('🟢 Socket ID:', socket.id);
+  logDebug('🟢 Time:', new Date().toISOString());
+  logDebug('🟢 Client IP:', socket.handshake.address);
+  logDebug('🟢 User Agent:', socket.handshake.headers['user-agent']);
+  logDebug('🟢 Transport:', socket.conn.transport.name);
 
   // Join room
   socket.on('join_room', async (data) => {
@@ -254,13 +268,13 @@ io.on('connection', (socket) => {
     const roomNumber = typeof data === 'string' ? data : data.roomNumber;
     const checkinDate = typeof data === 'object' && data.checkinDate ? data.checkinDate : null;
     
-    console.log('🔵 ========== SERVER: JOIN ROOM ==========');
-    console.log('🔵 Socket ID:', socket.id);
-    console.log('🔵 Room Number:', roomNumber);
-    console.log('🔵 Check-in Date:', checkinDate);
-    console.log('🔵 Time:', new Date().toISOString());
-    console.log('🔵 Client IP:', socket.handshake.address);
-    console.log('🔵 User Agent:', socket.handshake.headers['user-agent']);
+    logDebug('🔵 ========== SERVER: JOIN ROOM ==========');
+    logDebug('🔵 Socket ID:', socket.id);
+    logDebug('🔵 Room Number:', roomNumber);
+    logDebug('🔵 Check-in Date:', checkinDate);
+    logDebug('🔵 Time:', new Date().toISOString());
+    logDebug('🔵 Client IP:', socket.handshake.address);
+    logDebug('🔵 User Agent:', socket.handshake.headers['user-agent']);
     
     // If checkinDate not provided, get it from room
     let actualCheckinDate = checkinDate;
@@ -271,17 +285,17 @@ io.on('connection', (socket) => {
       );
       if (roomResult.rows.length > 0) {
         actualCheckinDate = roomResult.rows[0].checkin_date;
-        console.log('🔵 Check-in date from room:', actualCheckinDate);
+        logDebug('🔵 Check-in date from room:', actualCheckinDate);
       }
     }
     
     // Use room_number + checkin_date as unique room identifier
     const roomId = actualCheckinDate ? `${roomNumber}_${actualCheckinDate}` : roomNumber;
     socket.join(roomId);
-    console.log(`✅ Client joined room: ${roomId}`);
+    logInfo(`✅ Client joined room: ${roomId}`);
     
     try {
-      console.log('📊 Fetching chat history for room:', roomNumber, 'check-in:', actualCheckinDate);
+      logDebug('📊 Fetching chat history for room:', roomNumber, 'check-in:', actualCheckinDate);
       // Send chat history (last 50 messages) filtered by room_number AND checkin_date
       let result;
       if (actualCheckinDate) {
@@ -301,7 +315,7 @@ io.on('connection', (socket) => {
       `, [roomNumber]);
       }
       
-      console.log('📊 Messages found:', result.rows.length);
+      logDebug('📊 Messages found:', result.rows.length);
       
       // Map database column names (snake_case) to frontend format (camelCase)
       const messages = result.rows.reverse().map(row => {
@@ -327,12 +341,12 @@ io.on('connection', (socket) => {
         };
       });
       
-      console.log('📤 Sending chat_history to client');
-      console.log('📤 Message count:', messages.length);
+      logDebug('📤 Sending chat_history to client');
+      logDebug('📤 Message count:', messages.length);
       socket.emit('chat_history', messages);
-      console.log('✅ chat_history sent successfully');
+      logDebug('✅ chat_history sent successfully');
     } catch (error) {
-      console.error('Error loading chat history:', error);
+      console.error('❌ Error loading chat history:', error);
       socket.emit('chat_history', []);
     }
   });
@@ -492,11 +506,11 @@ io.on('connection', (socket) => {
       );
       
       if (updateResult.rows.length === 0) {
-        console.log('⚠️ message_delivered: Message not found or already delivered:', messageId);
+        logDebug('⚠️ message_delivered: Message not found or already delivered:', messageId);
         return;
       }
       
-      console.log('✅ Message marked as delivered:', messageId);
+      logDebug('✅ Message marked as delivered:', messageId);
       
       // Get message info to broadcast status update
       const messageResult = await pool.query(
@@ -510,7 +524,7 @@ io.on('connection', (socket) => {
         const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
         const roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
         
-        console.log('📤 Broadcasting message_status_update to room:', roomId, { 
+        logDebug('📤 Broadcasting message_status_update to room:', roomId, { 
           messageId, 
           status: 'delivered',
           room_number,
@@ -519,7 +533,7 @@ io.on('connection', (socket) => {
         
         // Get all sockets in this room for debugging
         const roomSockets = await io.in(roomId).fetchSockets();
-        console.log(`📊 Room ${roomId} has ${roomSockets.length} connected clients`);
+        logDebug(`📊 Room ${roomId} has ${roomSockets.length} connected clients`);
         
         // Broadcast status update to room (sender will see delivered tick)
         io.to(roomId).emit('message_status_update', { 
@@ -527,9 +541,9 @@ io.on('connection', (socket) => {
           status: 'delivered' 
         });
         
-        console.log('✅ message_status_update broadcasted to room:', roomId);
+        logDebug('✅ message_status_update broadcasted to room:', roomId);
       } else {
-        console.log('⚠️ message_delivered: Message info not found for messageId:', messageId);
+        logDebug('⚠️ message_delivered: Message info not found for messageId:', messageId);
       }
     } catch (error) {
       console.error('❌ Error updating delivered status:', error);
@@ -560,7 +574,7 @@ io.on('connection', (socket) => {
         const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
         const roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
         
-        console.log('📤 Broadcasting message_status_update (read) to room:', roomId, { 
+        logDebug('📤 Broadcasting message_status_update (read) to room:', roomId, { 
           messageIds, 
           status: 'read',
           room_number,
@@ -573,7 +587,7 @@ io.on('connection', (socket) => {
           status: 'read' 
         });
         
-        console.log('✅ message_status_update (read) broadcasted to room:', roomId);
+        logDebug('✅ message_status_update (read) broadcasted to room:', roomId);
       }
     } catch (error) {
       console.error('Error updating read status:', error);
@@ -581,10 +595,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('🔴 ========== CLIENT DISCONNECTED ==========');
-    console.log('🔴 Socket ID:', socket.id);
-    console.log('🔴 Reason:', reason);
-    console.log('🔴 Time:', new Date().toISOString());
+    logDebug('🔴 ========== CLIENT DISCONNECTED ==========');
+    logDebug('🔴 Socket ID:', socket.id);
+    logDebug('🔴 Reason:', reason);
+    logDebug('🔴 Time:', new Date().toISOString());
   });
 });
 
@@ -594,7 +608,7 @@ io.on('connection', (socket) => {
 app.get('/api/rooms', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
-    console.log('🏨 GET /api/rooms - start_date:', start_date, 'end_date:', end_date);
+    logDebug('🏨 GET /api/rooms - start_date:', start_date, 'end_date:', end_date);
     
     let query = 'SELECT * FROM rooms WHERE is_active = true';
     const params = [];
@@ -609,16 +623,16 @@ app.get('/api/rooms', async (req, res) => {
       console.log('🔍 Filtering rooms from date:', start_date);
     } else {
       query += ' ORDER BY checkin_date DESC, room_number ASC';
-      console.log('🔍 No date filter, returning all active rooms');
+      logDebug('🔍 No date filter, returning all active rooms');
     }
     
-    console.log('📊 Executing query:', query);
-    console.log('📊 Query params:', params);
+    logDebug('📊 Executing query:', query);
+    logDebug('📊 Query params:', params);
     
     const result = await pool.query(query, params);
-    console.log('✅ Found', result.rows.length, 'rooms');
+    logDebug('✅ Found', result.rows.length, 'rooms');
     if (result.rows.length > 0) {
-      console.log('📋 Sample rooms:', result.rows.slice(0, 3).map(r => ({
+      logDebug('📋 Sample rooms:', result.rows.slice(0, 3).map(r => ({
         room_number: r.room_number,
         checkin_date: r.checkin_date,
         guest_name: r.guest_name
@@ -701,7 +715,7 @@ app.post('/api/rooms', async (req, res) => {
 app.get('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
   try {
     const { roomNumber } = req.params;
-    console.log('📸 Fetching profile photo for room:', roomNumber);
+    logDebug('📸 Fetching profile photo for room:', roomNumber);
     
     const result = await pool.query(
       'SELECT profile_photo FROM rooms WHERE room_number = $1',
@@ -709,13 +723,13 @@ app.get('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
-      console.log('⚠️ Room not found:', roomNumber);
+      logDebug('⚠️ Room not found:', roomNumber);
       // Return null instead of 404 - room might not exist yet
       return res.json({ profilePhoto: null });
     }
     
     const profilePhoto = result.rows[0].profile_photo || null;
-    console.log('✅ Profile photo fetched:', profilePhoto ? 'exists' : 'null');
+    logDebug('✅ Profile photo fetched:', profilePhoto ? 'exists' : 'null');
     res.json({ profilePhoto });
   } catch (error) {
     console.error('❌ Error fetching profile photo:', error);
@@ -731,8 +745,8 @@ app.post('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
     const { profilePhoto } = req.body;
     const { roomNumber } = req.params;
     
-    console.log('📸 Saving profile photo for room:', roomNumber);
-    console.log('📸 Photo data length:', profilePhoto ? profilePhoto.length : 0);
+    logDebug('📸 Saving profile photo for room:', roomNumber);
+    logDebug('📸 Photo data length:', profilePhoto ? profilePhoto.length : 0);
     
     if (!profilePhoto) {
       return res.status(400).json({ error: 'Profile photo data is required' });
@@ -1104,12 +1118,12 @@ app.get('/api/team-assignments', async (req, res) => {
     
     query += ' ORDER BY tra.checkin_date DESC, tra.room_number';
     
-    console.log('📊 Executing query:', query);
-    console.log('📊 Query params:', params);
+    logDebug('📊 Executing query:', query);
+    logDebug('📊 Query params:', params);
     
     const result = await pool.query(query, params);
-    console.log('✅ Found', result.rows.length, 'assignments');
-    console.log('📋 Assignments:', result.rows);
+    logDebug('✅ Found', result.rows.length, 'assignments');
+    logDebug('📋 Assignments:', result.rows);
     
     res.json(result.rows);
   } catch (error) {
