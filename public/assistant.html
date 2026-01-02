@@ -918,12 +918,12 @@
                     }
                 }
                 
-                // Not logged in
+                // Not logged in (silently fail - this is expected on first load)
                 document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('dashboardContainer').style.display = 'none';
                 return false;
             } catch (error) {
-                console.error('Auth check error:', error);
+                // Silently fail - this is expected if not logged in
                 document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('dashboardContainer').style.display = 'none';
                 return false;
