@@ -1438,9 +1438,20 @@
             console.log('📋 Guest Name:', GUEST_NAME);
             console.log('📋 Team ID:', TEAM_ID);
             
-            if (!GUEST_UNIQUE_ID || !CHECKIN_DATE) {
-                console.error('❌ Guest unique ID or check-in date not available');
+            if (!CHECKIN_DATE) {
+                console.error('❌ Check-in date not available');
                 return;
+            }
+            
+            // If GUEST_UNIQUE_ID is null, try to get from localStorage or generate from available info
+            if (!GUEST_UNIQUE_ID) {
+                const storedId = localStorage.getItem('guest_unique_id');
+                if (storedId) {
+                    GUEST_UNIQUE_ID = storedId;
+                    console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', GUEST_UNIQUE_ID);
+                } else {
+                    console.warn('⚠️ GUEST_UNIQUE_ID is null, but continuing with socket connection');
+                }
             }
             
             console.log('🔌 Step 3: Initializing socket');
