@@ -1110,6 +1110,12 @@ app.post('/api/assistant/logout', async (req, res) => {
   res.json({ success: true });
 });
 
+// Guest Logout Endpoint
+app.post('/api/guest/logout', async (req, res) => {
+  res.clearCookie('guest_unique_id');
+  res.json({ success: true });
+});
+
 // Guest Login Endpoint
 app.post('/api/guest/login', async (req, res) => {
   try {

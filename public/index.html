@@ -881,10 +881,15 @@
                     </div>
                 </div>
             </div>
-            <button class="notification-btn" onclick="requestNotificationPermission()">
-                🔔
-                <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="notification-btn" onclick="requestNotificationPermission()">
+                    🔔
+                    <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+                </button>
+                <button class="logout-btn" onclick="handleGuestLogout()" title="Çıkış Yap">
+                    🚪
+                </button>
+            </div>
         </div>
 
         <div class="chat-container" id="chatContainer">
@@ -2619,6 +2624,60 @@
             
             // Initialize socket connection (will load guest info first)
             await initializeSocket();
+        }
+
+        // Handle guest logout
+        async function handleGuestLogout() {
+            if (!confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+                return;
+            }
+            
+            try {
+                // Call logout endpoint
+                await fetch('/api/guest/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            
+            // Clear all guest data
+            GUEST_UNIQUE_ID = null;
+            GUEST_NAME = null;
+            GUEST_SURNAME = null;
+            CHECKIN_DATE = null;
+            CHECKOUT_DATE = null;
+            ROOM_NUMBER = null;
+            TEAM_ID = null;
+            guestProfilePhoto = null;
+            
+            // Clear localStorage
+            localStorage.removeItem('guest_unique_id');
+            localStorage.removeItem('guest_name');
+            localStorage.removeItem('guest_surname');
+            localStorage.removeItem('checkin_date');
+            localStorage.removeItem('checkout_date');
+            localStorage.removeItem('room_number');
+            localStorage.removeItem('team_id');
+            localStorage.removeItem('guestProfilePhoto');
+            
+            // Disconnect socket if connected
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            
+            // Hide app, show login
+            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('guestLoginContainer').style.display = 'flex';
+            
+            // Clear form
+            document.getElementById('guestLoginForm').reset();
+            
+            console.log('✅ Guest logged out');
             
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
