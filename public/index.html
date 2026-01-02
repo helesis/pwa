@@ -1125,16 +1125,26 @@
         let guestInfoLoaded = false;
         
         async function loadGuestInfo() {
-            console.log('🔍 Loading guest info...', { GUEST_UNIQUE_ID, GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE });
+            console.log('🔍 Loading guest info...', { GUEST_UNIQUE_ID, GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE });
             
-            // If GUEST_UNIQUE_ID is null but we have other info, try to get it from backend
+            // If GUEST_UNIQUE_ID is null but we have other info, generate it
             if (!GUEST_UNIQUE_ID && GUEST_NAME && CHECKIN_DATE) {
-                console.warn('⚠️ GUEST_UNIQUE_ID is null, but we have name and date. This should not happen.');
-                // Try to reload from localStorage
+                console.log('🔧 GUEST_UNIQUE_ID is null, generating from available info...');
+                
+                // Try to get from localStorage first
                 const storedId = localStorage.getItem('guest_unique_id');
                 if (storedId) {
                     GUEST_UNIQUE_ID = storedId;
                     console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', GUEST_UNIQUE_ID);
+                } else {
+                    // Generate unique ID using the same algorithm as backend
+                    GUEST_UNIQUE_ID = generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                    if (GUEST_UNIQUE_ID) {
+                        console.log('✅ Generated GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
+                        localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
+                    } else {
+                        console.error('❌ Failed to generate GUEST_UNIQUE_ID');
+                    }
                 }
             }
             
