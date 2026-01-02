@@ -1111,8 +1111,19 @@
         async function loadGuestInfo() {
             console.log('🔍 Loading guest info...', { GUEST_UNIQUE_ID, GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE });
             
+            // If GUEST_UNIQUE_ID is null but we have other info, try to get it from backend
+            if (!GUEST_UNIQUE_ID && GUEST_NAME && CHECKIN_DATE) {
+                console.warn('⚠️ GUEST_UNIQUE_ID is null, but we have name and date. This should not happen.');
+                // Try to reload from localStorage
+                const storedId = localStorage.getItem('guest_unique_id');
+                if (storedId) {
+                    GUEST_UNIQUE_ID = storedId;
+                    console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', GUEST_UNIQUE_ID);
+                }
+            }
+            
             if (!GUEST_UNIQUE_ID || !CHECKIN_DATE) {
-                console.error('❌ Missing guest info');
+                console.error('❌ Missing guest info:', { GUEST_UNIQUE_ID, CHECKIN_DATE });
                 return false;
             }
             
