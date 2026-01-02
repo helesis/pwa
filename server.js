@@ -1025,15 +1025,23 @@ app.post('/api/guest/login', async (req, res) => {
     if (!guest_unique_id && guest.checkin_date) {
       // Use guest_name if available, otherwise use surname or 'Guest'
       const guestName = guest.guest_name || guest.guest_surname || 'Guest';
-      guest_unique_id = generateGuestUniqueId(guestName, guest.guest_surname, guest.checkin_date);
+      const guestSurname = guest.guest_surname || '';
       
-      // Update the room with the generated guest_unique_id
-      await pool.query(
-        'UPDATE rooms SET guest_unique_id = $1 WHERE id = $2',
-        [guest_unique_id, guest.id]
-      );
+      console.log('🔧 Generating guest_unique_id with:', { guestName, guestSurname, checkin_date: guest.checkin_date });
       
-      console.log(`✅ Generated and saved guest_unique_id for guest: ${guest_unique_id}`);
+      guest_unique_id = generateGuestUniqueId(guestName, guestSurname, guest.checkin_date);
+      
+      if (guest_unique_id) {
+        // Update the room with the generated guest_unique_id
+        await pool.query(
+          'UPDATE rooms SET guest_unique_id = $1 WHERE id = $2',
+          [guest_unique_id, guest.id]
+        );
+        
+        console.log(`✅ Generated and saved guest_unique_id for guest: ${guest_unique_id}`);
+      } else {
+        console.error('❌ generateGuestUniqueId returned null for:', { guestName, guestSurname, checkin_date: guest.checkin_date });
+      }
     }
     
     // If still null, return error
@@ -1041,7 +1049,8 @@ app.post('/api/guest/login', async (req, res) => {
       console.error('❌ Cannot generate guest_unique_id: missing required data', {
         guest_name: guest.guest_name,
         guest_surname: guest.guest_surname,
-        checkin_date: guest.checkin_date
+        checkin_date: guest.checkin_date,
+        guest_unique_id: guest.guest_unique_id
       });
       return res.status(500).json({ error: 'Misafir bilgileri eksik. Lütfen yönetici ile iletişime geçin.' });
     }
