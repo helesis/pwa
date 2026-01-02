@@ -1446,17 +1446,13 @@
                     return;
                 }
                 
-                const settingsLink = document.getElementById('settingsLink');
                 const dateFilterContainer = document.getElementById('dateFilterContainer');
                 const assistantInfo = document.getElementById('assistantInfo');
                 const assistantNameEl = document.getElementById('assistantName');
                 const assistantTeamEl = document.getElementById('assistantTeam');
                 
                 if (teams.length > 0) {
-                    // Assistant is in a team - hide settings, show WhatsApp mode
-                    if (settingsLink) {
-                        settingsLink.classList.add('hidden');
-                    }
+                    // Assistant is in a team - show WhatsApp mode
                     // Hide date filter in WhatsApp mode
                     if (window.innerWidth <= 768 && dateFilterContainer) {
                         dateFilterContainer.style.display = 'none';
