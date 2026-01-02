@@ -300,33 +300,65 @@ io.on('connection', (socket) => {
 
   // Join room
   socket.on('join_room', async (data) => {
-    // Support both old format (just roomNumber) and new format (object with roomNumber and checkinDate)
+    // Support both old format (just roomNumber) and new format (object with roomNumber, checkinDate, guestUniqueId)
     const roomNumber = typeof data === 'string' ? data : data.roomNumber;
     const checkinDate = typeof data === 'object' && data.checkinDate ? data.checkinDate : null;
+    const guestUniqueId = typeof data === 'object' && data.guestUniqueId ? data.guestUniqueId : null;
     
     logDebug('🔵 ========== SERVER: JOIN ROOM ==========');
     logDebug('🔵 Socket ID:', socket.id);
     logDebug('🔵 Room Number:', roomNumber);
     logDebug('🔵 Check-in Date:', checkinDate);
+    logDebug('🔵 Guest Unique ID:', guestUniqueId);
     logDebug('🔵 Time:', new Date().toISOString());
     logDebug('🔵 Client IP:', socket.handshake.address);
     logDebug('🔵 User Agent:', socket.handshake.headers['user-agent']);
     
-    // If checkinDate not provided, get it from room
+    // If checkinDate not provided, try to get it
     let actualCheckinDate = checkinDate;
+    let actualRoomNumber = roomNumber;
+    
     if (!actualCheckinDate) {
-      const roomResult = await pool.query(
-        'SELECT checkin_date FROM rooms WHERE room_number = $1',
-        [roomNumber]
-      );
-      if (roomResult.rows.length > 0) {
-        actualCheckinDate = roomResult.rows[0].checkin_date;
-        logDebug('🔵 Check-in date from room:', actualCheckinDate);
+      // Try to get from room_number if provided
+      if (roomNumber) {
+        const roomResult = await pool.query(
+          'SELECT checkin_date FROM rooms WHERE room_number = $1',
+          [roomNumber]
+        );
+        if (roomResult.rows.length > 0) {
+          actualCheckinDate = roomResult.rows[0].checkin_date;
+          logDebug('🔵 Check-in date from room:', actualCheckinDate);
+        }
+      }
+      
+      // If still no checkin_date but we have guestUniqueId, try to get from guest_unique_id
+      if (!actualCheckinDate && guestUniqueId) {
+        const guestResult = await pool.query(
+          'SELECT checkin_date, room_number FROM rooms WHERE guest_unique_id = $1',
+          [guestUniqueId]
+        );
+        if (guestResult.rows.length > 0) {
+          actualCheckinDate = guestResult.rows[0].checkin_date;
+          if (!actualRoomNumber && guestResult.rows[0].room_number) {
+            actualRoomNumber = guestResult.rows[0].room_number;
+          }
+          logDebug('🔵 Check-in date from guest_unique_id:', actualCheckinDate);
+        }
       }
     }
     
-    // Use room_number + checkin_date as unique room identifier
-    const roomId = actualCheckinDate ? `${roomNumber}_${actualCheckinDate}` : roomNumber;
+    // Use guest_unique_id if available, otherwise use room_number + checkin_date
+    let roomId;
+    if (guestUniqueId) {
+      roomId = `guest_${guestUniqueId}`;
+    } else if (actualCheckinDate && actualRoomNumber) {
+      roomId = `${actualRoomNumber}_${actualCheckinDate}`;
+    } else if (actualRoomNumber) {
+      roomId = actualRoomNumber;
+    } else {
+      logDebug('⚠️ Cannot determine room ID, using socket ID');
+      roomId = socket.id;
+    }
     socket.join(roomId);
     logInfo(`✅ Client joined room: ${roomId}`);
     
