@@ -1190,10 +1190,26 @@
         // Save profile photo to backend
         async function saveProfilePhotoToBackend(photoData) {
             try {
-                console.log('📤 Saving profile photo to backend for guest:', GUEST_UNIQUE_ID);
+                // Ensure GUEST_UNIQUE_ID is set
+                let guestUniqueId = GUEST_UNIQUE_ID;
+                if (!guestUniqueId) {
+                    // Try to restore from localStorage
+                    guestUniqueId = localStorage.getItem('guest_unique_id');
+                    if (guestUniqueId) {
+                        GUEST_UNIQUE_ID = guestUniqueId;
+                        console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', guestUniqueId);
+                    }
+                }
+                
+                if (!guestUniqueId) {
+                    console.error('❌ Cannot save profile photo: GUEST_UNIQUE_ID is not set');
+                    return false;
+                }
+                
+                console.log('📤 Saving profile photo to backend for guest:', guestUniqueId);
                 console.log('📤 Photo data size:', photoData ? photoData.length : 0, 'bytes');
                 
-                const response = await fetch(`/api/guests/${GUEST_UNIQUE_ID}/profile-photo`, {
+                const response = await fetch(`/api/guests/${guestUniqueId}/profile-photo`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
