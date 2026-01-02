@@ -1070,17 +1070,28 @@
                 
                 if (response.ok && data.success) {
                     // Login successful
-                    GUEST_UNIQUE_ID = data.guest_unique_id;
-                    console.log('✅ Guest Unique ID set:', GUEST_UNIQUE_ID);
-                    GUEST_NAME = data.guest_name || 'Misafir';
+                    GUEST_NAME = data.guest_name || name || 'Misafir';
                     GUEST_SURNAME = data.guest_surname || surname;
                     CHECKIN_DATE = data.checkin_date || checkinDate;
                     CHECKOUT_DATE = data.checkout_date || checkoutDate;
                     ROOM_NUMBER = data.room_number || null;
                     TEAM_ID = data.team_id || null;
                     
+                    // Get or generate guest_unique_id
+                    GUEST_UNIQUE_ID = data.guest_unique_id;
+                    if (!GUEST_UNIQUE_ID) {
+                        // Generate unique ID using the same algorithm as backend
+                        console.log('🔧 Backend did not return guest_unique_id, generating...');
+                        GUEST_UNIQUE_ID = generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                        console.log('✅ Generated GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
+                    } else {
+                        console.log('✅ Guest Unique ID from backend:', GUEST_UNIQUE_ID);
+                    }
+                    
                     // Save to localStorage
-                    localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
+                    if (GUEST_UNIQUE_ID) {
+                        localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
+                    }
                     localStorage.setItem('guest_name', GUEST_NAME);
                     localStorage.setItem('guest_surname', GUEST_SURNAME);
                     localStorage.setItem('checkin_date', CHECKIN_DATE);
