@@ -818,7 +818,6 @@
     </div>
 
     <!-- Dashboard (hidden until login) -->
-    <a href="/settings" id="settingsLink" class="settings-link">⚙️ Ayarlar</a>
     <div class="dashboard-container" id="dashboardContainer" style="display: none;">
         <!-- Left Panel: Room List -->
         <div class="rooms-panel">
@@ -1481,10 +1480,7 @@
                         assistantInfo.style.display = 'flex';
                     }
                 } else {
-                    // Assistant not in team - show settings
-                    if (settingsLink) {
-                        settingsLink.classList.remove('hidden');
-                    }
+                    // Assistant not in team
                     if (dateFilterContainer) {
                         dateFilterContainer.style.display = 'block';
                     }
