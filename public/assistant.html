@@ -350,6 +350,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 16px;
+            padding-bottom: 80px; /* Input container yüksekliği kadar padding */
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -514,11 +515,13 @@
             padding: 10px 16px;
             flex-shrink: 0;
             background: #f0f2f5;
-            display: flex;
-            background: #f0f2f5;
             border-top: 1px solid #e4e6e9;
             display: flex;
             gap: 8px;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            width: 100%;
         }
 
         .input-wrapper {
@@ -761,6 +764,7 @@
             .chat-panel {
                 width: 100%;
                 height: 100vh;
+                height: 100dvh; /* Dynamic viewport height */
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
@@ -770,12 +774,20 @@
                 flex: 1;
                 overflow-y: auto;
                 min-height: 0;
+                padding-bottom: calc(80px + env(safe-area-inset-bottom)); /* Input + safe area */
             }
             
             .input-container {
                 display: flex !important;
                 flex-shrink: 0;
-                position: relative;
+                position: fixed; /* Her zaman ekranın altında sabit */
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                z-index: 1000;
+                background: #f0f2f5;
+                padding-bottom: calc(10px + env(safe-area-inset-bottom)); /* Safe area desteği */
             }
 
             .date-filter {
