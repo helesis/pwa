@@ -1101,10 +1101,8 @@
                 // Update header with guest info
                 updateGuestHeader();
                 
-                // Load profile photo if room number exists
-                if (ROOM_NUMBER) {
-                    await loadProfilePhoto();
-                }
+                // Load profile photo (uses GUEST_UNIQUE_ID)
+                await loadProfilePhoto();
                 
                 // Load team avatar if team ID exists
                 if (TEAM_ID) {
