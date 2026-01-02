@@ -719,6 +719,7 @@
                 <!-- Hidden input for selected room (tek oda eşleştirmesi için) -->
                 <input type="hidden" id="assignment-selected-room-number">
                 <input type="hidden" id="assignment-selected-checkin-date">
+                <input type="hidden" id="assignment-selected-guest-unique-id">
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeAssignmentModal()">İptal</button>
@@ -1031,7 +1032,7 @@
                                             return roomAssignments.map(a => `
                                                 <tr style="background: #f0f9f4;">
                                                     <td>${a.team_name}</td>
-                                                    <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || r.room_number || '-'}</td>
+                                                    <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || '-'}</td>
                                                     <td>
                                                         ${r.profile_photo ? `
                                                             <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
@@ -1081,7 +1082,7 @@
                                     <tbody>
                                         ${unassignedRooms.map(r => `
                                             <tr style="background: #fff3cd;">
-                                                <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || r.room_number || '-'}</td>
+                                                <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || '-'}</td>
                                                 <td>
                                                     ${r.profile_photo ? `
                                                         <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
@@ -1096,7 +1097,7 @@
                                                 <td>${r.country || '-'}</td>
                                                 <td>${r.agency || '-'}</td>
                                                 <td>
-                                                    <button class="btn btn-primary" onclick="openAssignmentModalForRoom('${r.room_number}', '${r.checkin_date}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                                    <button class="btn btn-primary" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
                                                 </td>
                                             </tr>
                                         `).join('')}
@@ -1559,7 +1560,79 @@
             openTeamModal(id);
         }
 
-        // Open assignment modal for specific room
+        // Open assignment modal for specific room by guest_unique_id
+        async function openAssignmentModalForRoomByGuestId(guestUniqueId) {
+            console.log('📂 Opening assignment modal for guest_unique_id:', guestUniqueId);
+            
+            if (!guestUniqueId) {
+                showAlert('Unique ID bulunamadı', 'error');
+                return;
+            }
+            
+            // Store selected guest unique id
+            const guestUniqueIdEl = document.getElementById('assignment-selected-guest-unique-id');
+            if (guestUniqueIdEl) {
+                guestUniqueIdEl.value = guestUniqueId;
+            }
+            
+            // Hide guest checkboxes, show room info
+            document.getElementById('assignment-room-info').style.display = 'block';
+            document.getElementById('assignment-guests-group').style.display = 'none';
+            
+            // Load room details by guest_unique_id
+            let room = null;
+            try {
+                const roomsUrl = '/api/rooms';
+                const roomsRes = await fetch(roomsUrl);
+                const rooms = await roomsRes.json();
+                room = rooms.find(r => r.guest_unique_id === guestUniqueId);
+            } catch (error) {
+                console.error('Error loading room details:', error);
+            }
+            
+            if (!room) {
+                showAlert('Misafir bilgisi bulunamadı', 'error');
+                return;
+            }
+            
+            // Store room info for saveAssignment
+            document.getElementById('assignment-selected-room-number').value = room.room_number || '';
+            document.getElementById('assignment-selected-checkin-date').value = room.checkin_date || '';
+            
+            // Use room data
+            const displayRoomNumber = room.room_number || 'Henüz atanmadı';
+            const displayGuestName = room.guest_name || '';
+            const displayGuestSurname = room.guest_surname || '';
+            const displayCheckinDate = room.checkin_date || '';
+            const displayCheckoutDate = room.checkout_date || '';
+            const displayUniqueId = room.guest_unique_id || '';
+            
+            // Show room info
+            const roomDetailsEl = document.getElementById('assignment-room-details');
+            roomDetailsEl.innerHTML = `
+                <div><strong>Unique ID:</strong> ${displayUniqueId}</div>
+                <div><strong>Oda No:</strong> ${displayRoomNumber}</div>
+                <div><strong>Misafir:</strong> ${displayGuestName} ${displayGuestSurname}</div>
+                <div><strong>Check-in:</strong> ${displayCheckinDate ? formatDate(displayCheckinDate) : '-'}</div>
+                ${displayCheckoutDate ? `<div><strong>Check-out:</strong> ${formatDate(displayCheckoutDate)}</div>` : ''}
+                ${room.adult_count ? `<div><strong>Yetişkin:</strong> ${room.adult_count}</div>` : ''}
+                ${room.child_count ? `<div><strong>Çocuk:</strong> ${room.child_count}</div>` : ''}
+                ${room.country ? `<div><strong>Ülke:</strong> ${room.country}</div>` : ''}
+                ${room.agency ? `<div><strong>Acente:</strong> ${room.agency}</div>` : ''}
+            `;
+            
+            // Hide dropdown, show team cards
+            document.getElementById('assignment-team').style.display = 'none';
+            document.getElementById('assignment-teams-cards').style.display = 'grid';
+            
+            // Load teams as cards
+            await loadTeamsForAssignment();
+            
+            // Show modal
+            document.getElementById('assignmentModal').style.display = 'flex';
+        }
+
+        // Open assignment modal for specific room (legacy function, kept for backward compatibility)
         async function openAssignmentModalForRoom(roomNumber, checkinDate, guestName = null, guestSurname = null) {
             console.log('📂 Opening assignment modal for room:', roomNumber, checkinDate, guestName, guestSurname);
             
@@ -1680,6 +1753,10 @@
             
             // Clear selected room
             document.getElementById('assignment-selected-room-number').value = '';
+            const guestUniqueIdEl = document.getElementById('assignment-selected-guest-unique-id');
+            if (guestUniqueIdEl) {
+                guestUniqueIdEl.value = '';
+            }
             document.getElementById('assignment-selected-checkin-date').value = '';
             
             // Hide team cards, show dropdown
@@ -1802,11 +1879,39 @@
             // Check if single room assignment
             const selectedRoomNumber = document.getElementById('assignment-selected-room-number').value;
             const selectedCheckinDate = document.getElementById('assignment-selected-checkin-date').value;
+            const selectedGuestUniqueId = document.getElementById('assignment-selected-guest-unique-id')?.value || '';
             
             let selectedGuests = [];
             
-            if (selectedRoomNumber && selectedCheckinDate) {
-                // Single room assignment - get guest info from room details
+            if (selectedGuestUniqueId) {
+                // Single room assignment by guest_unique_id
+                console.log('🏨 Single room assignment by guest_unique_id:', selectedGuestUniqueId);
+                
+                // Load room data by guest_unique_id
+                let room = null;
+                try {
+                    const roomsUrl = '/api/rooms';
+                    const roomsRes = await fetch(roomsUrl);
+                    const rooms = await roomsRes.json();
+                    room = rooms.find(r => r.guest_unique_id === selectedGuestUniqueId);
+                } catch (error) {
+                    console.error('Error loading room by guest_unique_id:', error);
+                }
+                
+                if (room) {
+                    selectedGuests = [{ 
+                        guest_unique_id: selectedGuestUniqueId,
+                        room_number: room.room_number || null, 
+                        checkin_date: room.checkin_date || null,
+                        guest_name: room.guest_name || '',
+                        guest_surname: room.guest_surname || ''
+                    }];
+                } else {
+                    showAlert('Misafir bilgisi bulunamadı', 'error');
+                    return;
+                }
+            } else if (selectedRoomNumber && selectedCheckinDate) {
+                // Single room assignment - get guest info from room details (legacy)
                 console.log('🏨 Single room assignment:', selectedRoomNumber, selectedCheckinDate);
                 
                 // Get guest info from room details element
@@ -2125,7 +2230,7 @@
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Oda No</th>
+                                        <th>Unique ID</th>
                                         <th>Avatar</th>
                                         <th>Misafir</th>
                                         <th>Check-in Tarihi</th>
@@ -2139,8 +2244,8 @@
                                 </thead>
                                 <tbody>
                                     ${dateRooms.map(r => `
-                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoom('${r.room_number || ''}', '${r.checkin_date || ''}', '${r.guest_name || ''}', '${r.guest_surname || ''}')">
-                                            <td><strong>${r.room_number || '-'}</strong></td>
+                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}')">
+                                            <td style="font-family: monospace; font-size: 11px;"><strong>${r.guest_unique_id || '-'}</strong></td>
                                             <td>
                                                 ${r.profile_photo ? `
                                                     <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
@@ -2156,7 +2261,7 @@
                                             <td>${r.country || '-'}</td>
                                             <td>${r.agency || '-'}</td>
                                             <td>
-                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoom('${r.room_number || ''}', '${r.checkin_date || ''}', '${r.guest_name || ''}', '${r.guest_surname || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
                                             </td>
                                         </tr>
                                     `).join('')}
