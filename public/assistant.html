@@ -1820,51 +1820,10 @@
             return div.innerHTML;
         }
 
-        // Join team with token (used when token is in URL)
-        async function joinTeamWithToken(token) {
-            try {
-                const response = await fetch('/api/teams/join', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        token: token,
-                        assistant_id: ASSISTANT_ID
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    alert(data.message || 'Takıma başarıyla katıldınız!');
-                    // Reload rooms to show new team assignments
-                    const today = new Date().toISOString().split('T')[0];
-                    loadRooms(today);
-                } else {
-                    alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
-                }
-            } catch (error) {
-                console.error('Error joining team:', error);
-                alert('Takıma katılırken bir hata oluştu: ' + error.message);
-            }
-        }
-
-        // Check authentication and URL for team join token on page load
+        // Check authentication on page load
         window.addEventListener('DOMContentLoaded', async () => {
-            // First check authentication
-            const isAuthenticated = await checkAuth();
-            
-            // Only check for team token if authenticated
-            if (isAuthenticated) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const token = urlParams.get('token');
-                if (token && window.location.pathname === '/assistant') {
-                    joinTeamWithToken(token);
-                    // Clean URL
-                    window.history.replaceState({}, document.title, '/assistant');
-                }
-            }
+            // Check authentication
+            await checkAuth();
         });
     </script>
 </body>
