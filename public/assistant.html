@@ -75,9 +75,151 @@
             gap: 12px;
         }
 
+        .rooms-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .assistant-avatar-header {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .assistant-avatar-header img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .assistant-info-header {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .assistant-name-header {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .assistant-role-header {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
         .rooms-header h1 {
             font-size: 20px;
             font-weight: 600;
+        }
+
+        /* Login Page Styles */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: linear-gradient(135deg, #008069 0%, #1A4D6D 100%);
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-box h1 {
+            color: #1A4D6D;
+            font-size: 28px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .login-box p {
+            color: #667781;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #111b21;
+        }
+
+        .form-group input {
+            padding: 12px 16px;
+            border: 1px solid #e4e6e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #008069;
+        }
+
+        .login-btn {
+            background: #008069;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-btn:hover {
+            background: #006b56;
+        }
+
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
         }
 
         .date-filter {
@@ -643,14 +785,42 @@
     </style>
 </head>
 <body>
+    <!-- Login Page -->
+    <div class="login-container" id="loginContainer">
+        <div class="login-box">
+            <h1>👋 Asistan Girişi</h1>
+            <p>Lütfen giriş bilgilerinizi girin</p>
+            <div class="login-error" id="loginError"></div>
+            <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="userId">Kullanıcı ID</label>
+                    <input type="number" id="userId" name="userId" placeholder="Asistan ID" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Şifre</label>
+                    <input type="text" id="password" name="password" placeholder="Asistan Adı" required>
+                </div>
+                <button type="submit" class="login-btn" id="loginBtn">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard (hidden until login) -->
     <a href="/settings" id="settingsLink" class="settings-link">⚙️ Ayarlar</a>
-    <div class="dashboard-container">
+    <div class="dashboard-container" id="dashboardContainer" style="display: none;">
         <!-- Left Panel: Room List -->
         <div class="rooms-panel">
             <div class="rooms-header">
-                <div>🏨</div>
-                <h1>Voyage Assistant</h1>
-                <button onclick="scanTeamQR()" style="margin-left: auto; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                <div class="rooms-header-left">
+                    <div class="assistant-avatar-header" id="assistantAvatarHeader">
+                        <span id="assistantAvatarPlaceholder">👤</span>
+                    </div>
+                    <div class="assistant-info-header">
+                        <div class="assistant-name-header" id="assistantNameHeader">Asistan</div>
+                        <div class="assistant-role-header">Voyage Assistant</div>
+                    </div>
+                </div>
+                <button onclick="scanTeamQR()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
                     📷 Takım QR'ı Okut
                 </button>
             </div>
@@ -718,9 +888,157 @@
     </div>
 
     <script>
-        const ASSISTANT_ID = 1; // Test assistant ID
+        let ASSISTANT_ID = null; // Will be set after login
         let ASSISTANT_AVATAR = null; // Assistant avatar for chat messages
+        let ASSISTANT_NAME = null; // Assistant name
         const SERVER_URL = window.location.origin;
+
+        // Check authentication on page load
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/assistant/me', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.assistant) {
+                        // User is logged in
+                        ASSISTANT_ID = data.assistant.id;
+                        ASSISTANT_NAME = data.assistant.name;
+                        ASSISTANT_AVATAR = data.assistant.avatar;
+                        
+                        // Show dashboard, hide login
+                        document.getElementById('loginContainer').style.display = 'none';
+                        document.getElementById('dashboardContainer').style.display = 'flex';
+                        
+                        // Update header with assistant info
+                        updateAssistantHeader();
+                        
+                        // Initialize dashboard
+                        initializeDashboard();
+                        return true;
+                    }
+                }
+                
+                // Not logged in
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('dashboardContainer').style.display = 'none';
+                return false;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('dashboardContainer').style.display = 'none';
+                return false;
+            }
+        }
+
+        // Handle login form submission
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loginError = document.getElementById('loginError');
+            
+            // Clear previous error
+            loginError.classList.remove('show');
+            loginError.textContent = '';
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Giriş yapılıyor...';
+            
+            try {
+                const response = await fetch('/api/assistant/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        user: userId,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Login successful
+                    ASSISTANT_ID = data.assistant.id;
+                    ASSISTANT_NAME = data.assistant.name;
+                    ASSISTANT_AVATAR = data.assistant.avatar;
+                    
+                    // Hide login, show dashboard
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('dashboardContainer').style.display = 'flex';
+                    
+                    // Update header
+                    updateAssistantHeader();
+                    
+                    // Initialize dashboard
+                    initializeDashboard();
+                } else {
+                    // Login failed
+                    loginError.textContent = data.error || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.';
+                    loginError.classList.add('show');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Giriş Yap';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginError.textContent = 'Bir hata oluştu. Lütfen tekrar deneyin.';
+                loginError.classList.add('show');
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Giriş Yap';
+            }
+        }
+
+        // Update assistant header with avatar and name
+        function updateAssistantHeader() {
+            const avatarHeader = document.getElementById('assistantAvatarHeader');
+            const avatarPlaceholder = document.getElementById('assistantAvatarPlaceholder');
+            const nameHeader = document.getElementById('assistantNameHeader');
+            
+            if (ASSISTANT_AVATAR) {
+                avatarPlaceholder.style.display = 'none';
+                if (!avatarHeader.querySelector('img')) {
+                    const img = document.createElement('img');
+                    img.src = ASSISTANT_AVATAR;
+                    img.alt = ASSISTANT_NAME || 'Asistan';
+                    avatarHeader.appendChild(img);
+                } else {
+                    avatarHeader.querySelector('img').src = ASSISTANT_AVATAR;
+                }
+            } else {
+                avatarPlaceholder.style.display = 'flex';
+                const img = avatarHeader.querySelector('img');
+                if (img) img.remove();
+            }
+            
+            if (ASSISTANT_NAME) {
+                nameHeader.textContent = ASSISTANT_NAME;
+            }
+        }
+
+        // Initialize dashboard after login
+        async function initializeDashboard() {
+            if (!ASSISTANT_ID) {
+                console.error('Cannot initialize dashboard: ASSISTANT_ID is null');
+                return;
+            }
+            
+            // Setup PWA fullscreen support
+            setupPWAFullscreen();
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFilter').value = today;
+            
+            // Load assistant teams and rooms
+            await checkAssistantTeams();
+            loadRooms(today);
+        }
         // Socket.IO configuration with reconnection settings
         // Polling öncelikli (Render free tier için daha güvenilir)
         const socketOptions = {
@@ -888,11 +1206,8 @@
 
         // Load rooms on page load
         window.addEventListener('load', async () => {
-            // Setup PWA fullscreen support
-            setupPWAFullscreen();
-            
-            await checkAssistantTeams();
-            loadRooms(new Date().toISOString().split('T')[0]);
+            // Authentication check will initialize dashboard if logged in
+            // This is handled in DOMContentLoaded
         });
 
         // Handle window resize
@@ -911,6 +1226,11 @@
 
         // Load rooms for selected date
         async function loadRooms(date) {
+            if (!ASSISTANT_ID) {
+                console.error('Cannot load rooms: ASSISTANT_ID is null');
+                return;
+            }
+            
             try {
                 const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms?date=${date}`);
                 
@@ -1645,14 +1965,20 @@
             }
         }
 
-        // Check URL for team join token on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            if (token && window.location.pathname === '/assistant') {
-                joinTeamWithToken(token);
-                // Clean URL
-                window.history.replaceState({}, document.title, '/assistant');
+        // Check authentication and URL for team join token on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            // First check authentication
+            const isAuthenticated = await checkAuth();
+            
+            // Only check for team token if authenticated
+            if (isAuthenticated) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
+                if (token && window.location.pathname === '/assistant') {
+                    joinTeamWithToken(token);
+                    // Clean URL
+                    window.history.replaceState({}, document.title, '/assistant');
+                }
             }
         });
     </script>

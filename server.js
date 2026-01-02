@@ -7,7 +7,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import QRCode from 'qrcode';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use(cors({
     : "*",
   credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json());
 
 // Service worker should never be cached
@@ -170,6 +172,12 @@ async function initializeDatabase() {
       
       -- Rooms tablosuna profile_photo ekle (eğer yoksa)
       ALTER TABLE rooms ADD COLUMN IF NOT EXISTS profile_photo TEXT;
+      
+      -- Rooms tablosuna guest_unique_id ekle (ad, soyad, checkin_date'den oluşturulacak)
+      ALTER TABLE rooms ADD COLUMN IF NOT EXISTS guest_unique_id VARCHAR(255);
+      
+      -- Guest unique ID için index
+      CREATE INDEX IF NOT EXISTS idx_rooms_guest_unique_id ON rooms(guest_unique_id);
 
       -- Assistants ve Teams tablolarına avatar kolonu ekle
       ALTER TABLE assistants ADD COLUMN IF NOT EXISTS avatar TEXT;
@@ -194,16 +202,23 @@ async function initializeDatabase() {
         UNIQUE(assistant_id, team_id)
       );
 
-      -- Team-Room eşleştirmesi (check-in date'e göre)
+      -- Team-Room eşleştirmesi (check-in date'e göre veya guest_unique_id ile)
       CREATE TABLE IF NOT EXISTS team_room_assignments (
         id SERIAL PRIMARY KEY,
         team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
-        room_number VARCHAR(50) NOT NULL,
-        checkin_date DATE NOT NULL,
+        room_number VARCHAR(50),
+        checkin_date DATE,
+        guest_unique_id VARCHAR(255),
         assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_active BOOLEAN DEFAULT true,
         UNIQUE(team_id, room_number, checkin_date)
       );
+      
+      -- Team-room assignments'a guest_unique_id kolonu ekle (eğer yoksa)
+      ALTER TABLE team_room_assignments ADD COLUMN IF NOT EXISTS guest_unique_id VARCHAR(255);
+      
+      -- Guest unique ID için index
+      CREATE INDEX IF NOT EXISTS idx_team_room_assignments_guest_unique_id ON team_room_assignments(guest_unique_id);
 
       -- Team invite QR codes
       CREATE TABLE IF NOT EXISTS team_invites (
@@ -251,6 +266,28 @@ function logDebug(...args) {
 
 function logInfo(...args) {
   console.log(...args);
+}
+
+// Generate guest unique ID from name, surname and checkin_date
+function generateGuestUniqueId(guestName, guestSurname, checkinDate) {
+  if (!guestName || !checkinDate) {
+    return null;
+  }
+  
+  // Normalize inputs
+  const name = (guestName || '').trim().toLowerCase().replace(/\s+/g, '_');
+  const surname = (guestSurname || '').trim().toLowerCase().replace(/\s+/g, '_');
+  const date = checkinDate instanceof Date 
+    ? checkinDate.toISOString().split('T')[0] 
+    : String(checkinDate).split('T')[0];
+  
+  // Create unique ID: name_surname_date (hash for uniqueness)
+  const combined = `${name}_${surname}_${date}`;
+  
+  // Use crypto to create a short hash
+  const hash = createHash('sha256').update(combined).digest('hex').substring(0, 16);
+  
+  return `${name}_${surname}_${date}_${hash}`;
 }
 
 // Socket.IO Connection
@@ -691,18 +728,23 @@ app.get('/api/messages/:roomNumber', async (req, res) => {
 // Create/Update room
 app.post('/api/rooms', async (req, res) => {
   try {
-    const { roomNumber, guestName, checkinDate, checkoutDate } = req.body;
+    const { roomNumber, guestName, guestSurname, checkinDate, checkoutDate } = req.body;
+    
+    // Generate guest_unique_id if guest info is provided
+    const guest_unique_id = generateGuestUniqueId(guestName, guestSurname, checkinDate);
     
     await pool.query(`
-      INSERT INTO rooms (room_number, guest_name, checkin_date, checkout_date)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT(room_number) 
+      INSERT INTO rooms (room_number, guest_name, guest_surname, checkin_date, checkout_date, guest_unique_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT(room_number, checkin_date) 
       DO UPDATE SET 
         guest_name = EXCLUDED.guest_name, 
+        guest_surname = EXCLUDED.guest_surname,
         checkin_date = EXCLUDED.checkin_date, 
-        checkout_date = EXCLUDED.checkout_date, 
+        checkout_date = EXCLUDED.checkout_date,
+        guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, rooms.guest_unique_id),
         is_active = true
-    `, [roomNumber, guestName, checkinDate, checkoutDate]);
+    `, [roomNumber, guestName, guestSurname, checkinDate, checkoutDate, guest_unique_id]);
     
     res.json({ success: true });
   } catch (error) {
@@ -814,6 +856,93 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // Assistant API Endpoints
+
+// Assistant Login Endpoints
+app.post('/api/assistant/login', async (req, res) => {
+  try {
+    const { user, password } = req.body;
+    
+    if (!user || !password) {
+      return res.status(400).json({ error: 'User ID and password are required' });
+    }
+    
+    // user is the assistant ID, password is the assistant's name
+    const assistantId = parseInt(user);
+    if (isNaN(assistantId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    
+    // Get assistant from database
+    const result = await pool.query('SELECT * FROM assistants WHERE id = $1 AND is_active = true', [assistantId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const assistant = result.rows[0];
+    
+    // Check if password matches assistant's name (case-insensitive)
+    if (assistant.name.toLowerCase().trim() !== password.toLowerCase().trim()) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Set cookie with assistant ID (7 days expiry)
+    res.cookie('assistant_id', assistantId.toString(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+    
+    // Return assistant info (without sensitive data)
+    res.json({
+      success: true,
+      assistant: {
+        id: assistant.id,
+        name: assistant.name,
+        email: assistant.email,
+        avatar: assistant.avatar,
+        is_active: assistant.is_active
+      }
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Check if assistant is logged in
+app.get('/api/assistant/me', async (req, res) => {
+  try {
+    const assistantId = req.cookies?.assistant_id;
+    
+    if (!assistantId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const result = await pool.query('SELECT id, name, email, avatar, is_active FROM assistants WHERE id = $1 AND is_active = true', [assistantId]);
+    
+    if (result.rows.length === 0) {
+      // Clear invalid cookie
+      res.clearCookie('assistant_id');
+      return res.status(401).json({ error: 'Assistant not found or inactive' });
+    }
+    
+    res.json({
+      success: true,
+      assistant: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Logout
+app.post('/api/assistant/logout', async (req, res) => {
+  res.clearCookie('assistant_id');
+  res.json({ success: true });
+});
 
 // Get all assistants
 app.get('/api/assistants', async (req, res) => {
@@ -1099,13 +1228,15 @@ app.get('/api/team-assignments', async (req, res) => {
         tra.id,
         tra.room_number,
         tra.checkin_date,
+        tra.guest_unique_id,
         t.name as team_name,
         r.guest_name,
         r.guest_surname,
         r.profile_photo
       FROM team_room_assignments tra
       INNER JOIN teams t ON tra.team_id = t.id
-      LEFT JOIN rooms r ON tra.room_number = r.room_number AND tra.checkin_date = r.checkin_date
+      LEFT JOIN rooms r ON (tra.room_number = r.room_number AND tra.checkin_date = r.checkin_date) 
+                        OR (tra.guest_unique_id IS NOT NULL AND tra.guest_unique_id = r.guest_unique_id)
       WHERE tra.is_active = true
     `;
     const params = [];
@@ -1157,39 +1288,86 @@ app.post('/api/team-assignments', async (req, res) => {
     const createdAssignments = [];
     
     for (const assignment of assignments) {
-      const { room_number, checkin_date } = assignment;
+      const { room_number, checkin_date, guest_name, guest_surname } = assignment;
+      
+      // Generate guest_unique_id if guest info is provided
+      let guest_unique_id = null;
+      if (guest_name && checkin_date) {
+        guest_unique_id = generateGuestUniqueId(guest_name, guest_surname, checkin_date);
+      }
+      
+      // If room_number is not provided but guest_unique_id is, we can still create assignment
+      // This allows pre-assignment before room is assigned
+      if (!room_number && !guest_unique_id) {
+        return res.status(400).json({ error: 'Either room_number or guest_name+checkin_date is required' });
+      }
       
       // Create team-room assignment
-      const assignmentResult = await pool.query(
-        `INSERT INTO team_room_assignments (team_id, room_number, checkin_date)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (team_id, room_number, checkin_date) 
-         DO UPDATE SET is_active = true
-         RETURNING *`,
-        [team_id, room_number, checkin_date]
-      );
-      
-      createdAssignments.push(assignmentResult.rows[0]);
-      
-      // Auto-assign all team assistants to the room
-      for (const assistantId of assistantIds) {
-        await pool.query(
-          `INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
-           VALUES ($1, $2, true)
-           ON CONFLICT (assistant_id, room_number) 
-           DO UPDATE SET is_active = true`,
-          [assistantId, room_number]
+      // Use guest_unique_id if available, otherwise use room_number + checkin_date
+      let assignmentResult;
+      if (guest_unique_id) {
+        // Try to insert with guest_unique_id first (using partial unique index)
+        try {
+          assignmentResult = await pool.query(
+            `INSERT INTO team_room_assignments (team_id, room_number, checkin_date, guest_unique_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (team_id, room_number, checkin_date) 
+             DO UPDATE SET is_active = true, guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, team_room_assignments.guest_unique_id)
+             RETURNING *`,
+            [team_id, room_number || null, checkin_date || null, guest_unique_id]
+          );
+        } catch (conflictError) {
+          // If conflict on guest_unique_id (partial unique index), update existing
+          if (conflictError.code === '23505' && conflictError.constraint?.includes('guest_unique')) {
+            assignmentResult = await pool.query(
+              `UPDATE team_room_assignments 
+               SET is_active = true, 
+                   room_number = COALESCE($2, room_number), 
+                   checkin_date = COALESCE($3, checkin_date)
+               WHERE team_id = $1 AND guest_unique_id = $4
+               RETURNING *`,
+              [team_id, room_number || null, checkin_date || null, guest_unique_id]
+            );
+          } else {
+            throw conflictError;
+          }
+        }
+      } else {
+        // Fallback to room_number + checkin_date
+        assignmentResult = await pool.query(
+          `INSERT INTO team_room_assignments (team_id, room_number, checkin_date, guest_unique_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (team_id, room_number, checkin_date) 
+           DO UPDATE SET is_active = true, guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, team_room_assignments.guest_unique_id)
+           RETURNING *`,
+          [team_id, room_number, checkin_date, guest_unique_id]
         );
       }
       
-      // Notify all team assistants to join the room via Socket.IO
-      // Broadcast to all connected clients (assistants will filter on frontend)
-      io.emit('auto_join_room', {
-        roomNumber: room_number,
-        checkinDate: checkin_date,
-        teamId: team_id,
-        assistantIds: assistantIds
-      });
+      createdAssignments.push(assignmentResult.rows[0]);
+      
+      // Auto-assign all team assistants to the room (if room_number exists)
+      if (room_number) {
+        for (const assistantId of assistantIds) {
+          await pool.query(
+            `INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
+             VALUES ($1, $2, true)
+             ON CONFLICT (assistant_id, room_number) 
+             DO UPDATE SET is_active = true`,
+            [assistantId, room_number]
+          );
+        }
+      }
+      
+      // Notify all team assistants to join the room via Socket.IO (if room_number exists)
+      if (room_number && checkin_date) {
+        io.emit('auto_join_room', {
+          roomNumber: room_number,
+          checkinDate: checkin_date,
+          teamId: team_id,
+          assistantIds: assistantIds
+        });
+      }
     }
     
     res.json({ success: true, assignments: createdAssignments });
@@ -1392,13 +1570,32 @@ app.post('/api/admin/update-checkin-dates', async (req, res) => {
       });
     }
     
-    // Update checkin_date to today
+    // Update checkin_date to today and regenerate guest_unique_id
+    // First get all rooms that will be updated
+    const roomsToUpdate = await pool.query(
+      `SELECT room_number, guest_name, guest_surname, checkin_date 
+       FROM rooms 
+       WHERE checkin_date = $1::date`,
+      [yesterdayStr]
+    );
+    
+    // Update each room with new guest_unique_id
+    for (const room of roomsToUpdate.rows) {
+      const guest_unique_id = generateGuestUniqueId(room.guest_name, room.guest_surname, todayStr);
+      await pool.query(
+        `UPDATE rooms 
+         SET checkin_date = $1::date,
+             guest_unique_id = $2
+         WHERE room_number = $3 AND checkin_date = $4::date`,
+        [todayStr, guest_unique_id, room.room_number, yesterdayStr]
+      );
+    }
+    
     const updateResult = await pool.query(
-      `UPDATE rooms 
-       SET checkin_date = $1::date 
-       WHERE checkin_date = $2::date 
-       RETURNING room_number, guest_name, checkin_date`,
-      [todayStr, yesterdayStr]
+      `SELECT room_number, guest_name, guest_surname, checkin_date, guest_unique_id
+       FROM rooms 
+       WHERE checkin_date = $1::date`,
+      [todayStr]
     );
     
     // Also update messages' checkin_date if they reference these rooms
@@ -1807,20 +2004,23 @@ async function initializeTestData() {
       const chunk = inserts.slice(i, i + chunkSize);
       
       const values = chunk.map((_, idx) => {
-        const base = idx * 9;
-        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, true)`;
+        const base = idx * 10;
+        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, $${base+10}, true)`;
       }).join(', ');
       
-      const params = chunk.flatMap(ins => [
-        ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
-        ins.checkoutDateStr, ins.adultCount, ins.childCount, ins.agency, ins.country
-      ]);
+      const params = chunk.flatMap(ins => {
+        const guest_unique_id = generateGuestUniqueId(ins.firstName, ins.lastName, ins.checkinDateStr);
+        return [
+          ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
+          ins.checkoutDateStr, ins.adultCount, ins.childCount, ins.agency, ins.country, guest_unique_id
+        ];
+      });
       
       try {
         const result = await pool.query(`
           INSERT INTO rooms (
             room_number, guest_name, guest_surname, checkin_date, 
-            checkout_date, adult_count, child_count, agency, country, is_active
+            checkout_date, adult_count, child_count, agency, country, guest_unique_id, is_active
           )
           VALUES ${values}
           ON CONFLICT (room_number, checkin_date) DO NOTHING

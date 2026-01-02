@@ -770,14 +770,20 @@
                                 <th>ID</th>
                                 <th>Avatar</th>
                                 <th>Ad</th>
-                                <th>Email</th>
+                                <th>Soyad</th>
                                 <th>Takım</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${assistants.map(a => `
+                            ${assistants.map(a => {
+                                // Split name into first name and last name
+                                const nameParts = (a.name || '').split(' ');
+                                const firstName = nameParts[0] || '';
+                                const lastName = nameParts.slice(1).join(' ') || '';
+                                
+                                return `
                                 <tr>
                                     <td>${a.id}</td>
                                     <td>
@@ -787,8 +793,8 @@
                                             <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">👤</div>
                                         `}
                                     </td>
-                                    <td>${a.name}</td>
-                                    <td>${a.email || '-'}</td>
+                                    <td>${firstName}</td>
+                                    <td>${lastName || '-'}</td>
                                     <td>
                                         ${a.teams ? `
                                             <span class="badge badge-success">${a.teams}</span>
@@ -806,7 +812,8 @@
                                         <button class="btn btn-danger" onclick="deleteAssistant(${a.id})" style="padding: 6px 12px; font-size: 12px;">Sil</button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </tbody>
                     </table>
                 `;
@@ -1553,40 +1560,49 @@
         }
 
         // Open assignment modal for specific room
-        async function openAssignmentModalForRoom(roomNumber, checkinDate) {
-            console.log('📂 Opening assignment modal for room:', roomNumber, checkinDate);
+        async function openAssignmentModalForRoom(roomNumber, checkinDate, guestName = null, guestSurname = null) {
+            console.log('📂 Opening assignment modal for room:', roomNumber, checkinDate, guestName, guestSurname);
             
             // Store selected room info
-            document.getElementById('assignment-selected-room-number').value = roomNumber;
-            document.getElementById('assignment-selected-checkin-date').value = checkinDate;
+            document.getElementById('assignment-selected-room-number').value = roomNumber || '';
+            document.getElementById('assignment-selected-checkin-date').value = checkinDate || '';
             
             // Hide guest checkboxes, show room info
             document.getElementById('assignment-room-info').style.display = 'block';
             document.getElementById('assignment-guests-group').style.display = 'none';
             
-            // Load room details
-            try {
-                const roomsUrl = `/api/rooms?start_date=${checkinDate}&end_date=${checkinDate}`;
-                const roomsRes = await fetch(roomsUrl);
-                const rooms = await roomsRes.json();
-                const room = rooms.find(r => r.room_number === roomNumber && r.checkin_date === checkinDate);
-                
-                if (room) {
-                    // Show room info
-                    const roomDetailsEl = document.getElementById('assignment-room-details');
-                    roomDetailsEl.innerHTML = `
-                        <div><strong>Oda No:</strong> ${room.room_number}</div>
-                        <div><strong>Misafir:</strong> ${room.guest_name || ''} ${room.guest_surname || ''}</div>
-                        <div><strong>Check-in:</strong> ${new Date(room.checkin_date).toLocaleDateString('tr-TR')}</div>
-                        ${room.adult_count ? `<div><strong>Yetişkin:</strong> ${room.adult_count}</div>` : ''}
-                        ${room.child_count ? `<div><strong>Çocuk:</strong> ${room.child_count}</div>` : ''}
-                        ${room.country ? `<div><strong>Ülke:</strong> ${room.country}</div>` : ''}
-                        ${room.agency ? `<div><strong>Acente:</strong> ${room.agency}</div>` : ''}
-                    `;
+            // Load room details if room_number exists, otherwise use provided guest info
+            let room = null;
+            if (roomNumber && checkinDate) {
+                try {
+                    const roomsUrl = `/api/rooms?start_date=${checkinDate}&end_date=${checkinDate}`;
+                    const roomsRes = await fetch(roomsUrl);
+                    const rooms = await roomsRes.json();
+                    room = rooms.find(r => r.room_number === roomNumber && r.checkin_date === checkinDate);
+                } catch (error) {
+                    console.error('Error loading room details:', error);
                 }
-            } catch (error) {
-                console.error('Error loading room details:', error);
             }
+            
+            // Use room data if available, otherwise use provided guest info
+            const displayRoomNumber = room?.room_number || roomNumber || 'Henüz atanmadı';
+            const displayGuestName = room?.guest_name || guestName || '';
+            const displayGuestSurname = room?.guest_surname || guestSurname || '';
+            const displayCheckinDate = room?.checkin_date || checkinDate || '';
+            const displayCheckoutDate = room?.checkout_date || '';
+            
+            // Show room info
+            const roomDetailsEl = document.getElementById('assignment-room-details');
+            roomDetailsEl.innerHTML = `
+                <div><strong>Oda No:</strong> ${displayRoomNumber}</div>
+                <div><strong>Misafir:</strong> ${displayGuestName} ${displayGuestSurname}</div>
+                <div><strong>Check-in:</strong> ${displayCheckinDate ? formatDate(displayCheckinDate) : '-'}</div>
+                ${displayCheckoutDate ? `<div><strong>Check-out:</strong> ${formatDate(displayCheckoutDate)}</div>` : ''}
+                ${room?.adult_count ? `<div><strong>Yetişkin:</strong> ${room.adult_count}</div>` : ''}
+                ${room?.child_count ? `<div><strong>Çocuk:</strong> ${room.child_count}</div>` : ''}
+                ${room?.country ? `<div><strong>Ülke:</strong> ${room.country}</div>` : ''}
+                ${room?.agency ? `<div><strong>Acente:</strong> ${room.agency}</div>` : ''}
+            `;
             
             // Hide dropdown, show team cards
             document.getElementById('assignment-team').style.display = 'none';
@@ -1790,11 +1806,47 @@
             let selectedGuests = [];
             
             if (selectedRoomNumber && selectedCheckinDate) {
-                // Single room assignment
+                // Single room assignment - get guest info from room details
                 console.log('🏨 Single room assignment:', selectedRoomNumber, selectedCheckinDate);
+                
+                // Get guest info from room details element
+                const roomDetailsEl = document.getElementById('assignment-room-details');
+                let guestName = '';
+                let guestSurname = '';
+                
+                // Try to extract guest name from room details
+                if (roomDetailsEl) {
+                    const guestText = roomDetailsEl.textContent;
+                    const guestMatch = guestText.match(/Misafir:\s*([^\n]+)/);
+                    if (guestMatch) {
+                        const fullName = guestMatch[1].trim();
+                        const nameParts = fullName.split(' ');
+                        guestName = nameParts[0] || '';
+                        guestSurname = nameParts.slice(1).join(' ') || '';
+                    }
+                }
+                
+                // If room details not available, try to get from room data
+                if (!guestName && selectedRoomNumber) {
+                    try {
+                        const roomsUrl = `/api/rooms?start_date=${selectedCheckinDate}&end_date=${selectedCheckinDate}`;
+                        const roomsRes = await fetch(roomsUrl);
+                        const rooms = await roomsRes.json();
+                        const room = rooms.find(r => r.room_number === selectedRoomNumber && r.checkin_date === selectedCheckinDate);
+                        if (room) {
+                            guestName = room.guest_name || '';
+                            guestSurname = room.guest_surname || '';
+                        }
+                    } catch (error) {
+                        console.error('Error loading room for guest info:', error);
+                    }
+                }
+                
                 selectedGuests = [{ 
-                    room_number: selectedRoomNumber, 
-                    checkin_date: selectedCheckinDate 
+                    room_number: selectedRoomNumber || null, 
+                    checkin_date: selectedCheckinDate || null,
+                    guest_name: guestName,
+                    guest_surname: guestSurname
                 }];
             } else {
                 // Multi-room assignment (from checkboxes)
@@ -1960,6 +2012,20 @@
             setTimeout(() => alert.remove(), 3000);
         }
 
+        // Format date to DD.MM.YYYY
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}.${month}.${year}`;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
         // Load unassigned rooms
         async function loadUnassignedRooms() {
             try {
@@ -1977,11 +2043,17 @@
                 const assignments = await assignmentsResponse.json();
                 console.log('✅ Assignments loaded:', assignments.length);
                 
-                // Create a set of assigned room keys (room_number + checkin_date)
+                // Create sets of assigned room keys (room_number + checkin_date) and guest_unique_ids
                 const assignedKeys = new Set(
-                    assignments.map(a => `${a.room_number}_${a.checkin_date}`)
+                    assignments.filter(a => a.room_number && a.checkin_date)
+                        .map(a => `${a.room_number}_${a.checkin_date}`)
+                );
+                const assignedGuestIds = new Set(
+                    assignments.filter(a => a.guest_unique_id)
+                        .map(a => a.guest_unique_id)
                 );
                 console.log('🔑 Assigned room keys:', Array.from(assignedKeys).slice(0, 10), '...');
+                console.log('🔑 Assigned guest IDs:', Array.from(assignedGuestIds).slice(0, 10), '...');
                 
                 // Load all rooms (next 30 days or filtered date)
                 let roomsUrl = '/api/rooms';
@@ -2005,10 +2077,12 @@
                 const rooms = await roomsResponse.json();
                 console.log('🏨 Total rooms found:', rooms.length);
                 
-                // Filter unassigned rooms
+                // Filter unassigned rooms (by room_number+checkin_date OR guest_unique_id)
                 const unassignedRooms = rooms.filter(r => {
-                    const key = `${r.room_number}_${r.checkin_date}`;
-                    return !assignedKeys.has(key);
+                    const roomKey = r.room_number && r.checkin_date ? `${r.room_number}_${r.checkin_date}` : null;
+                    const isAssignedByRoom = roomKey && assignedKeys.has(roomKey);
+                    const isAssignedByGuest = r.guest_unique_id && assignedGuestIds.has(r.guest_unique_id);
+                    return !isAssignedByRoom && !isAssignedByGuest;
                 });
                 
                 console.log('⚠️ Unassigned rooms:', unassignedRooms.length);
@@ -2046,7 +2120,7 @@
                     html += `
                         <div style="margin-bottom: 24px;">
                             <h3 style="margin-bottom: 12px; color: #ff9800; font-size: 16px; padding: 8px; background: #fff3cd; border-radius: 6px;">
-                                📅 ${date} - ${dateRooms.length} Oda
+                                📅 ${formatDate(date)} - ${dateRooms.length} Oda
                             </h3>
                             <table class="table">
                                 <thead>
@@ -2055,6 +2129,7 @@
                                         <th>Avatar</th>
                                         <th>Misafir</th>
                                         <th>Check-in Tarihi</th>
+                                        <th>Check-out Tarihi</th>
                                         <th>Yetişkin</th>
                                         <th>Çocuk</th>
                                         <th>Ülke</th>
@@ -2064,8 +2139,8 @@
                                 </thead>
                                 <tbody>
                                     ${dateRooms.map(r => `
-                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoom('${r.room_number}', '${r.checkin_date}')">
-                                            <td><strong>${r.room_number}</strong></td>
+                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoom('${r.room_number || ''}', '${r.checkin_date || ''}', '${r.guest_name || ''}', '${r.guest_surname || ''}')">
+                                            <td><strong>${r.room_number || '-'}</strong></td>
                                             <td>
                                                 ${r.profile_photo ? `
                                                     <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
@@ -2074,13 +2149,14 @@
                                                 `}
                                             </td>
                                             <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
-                                            <td>${r.checkin_date || '-'}</td>
+                                            <td>${formatDate(r.checkin_date)}</td>
+                                            <td>${formatDate(r.checkout_date)}</td>
                                             <td>${r.adult_count || '-'}</td>
                                             <td>${r.child_count || '-'}</td>
                                             <td>${r.country || '-'}</td>
                                             <td>${r.agency || '-'}</td>
                                             <td>
-                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoom('${r.room_number}', '${r.checkin_date}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoom('${r.room_number || ''}', '${r.checkin_date || ''}', '${r.guest_name || ''}', '${r.guest_surname || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
                                             </td>
                                         </tr>
                                     `).join('')}
