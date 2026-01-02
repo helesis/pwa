@@ -1267,6 +1267,12 @@
                 
                 roomsList.innerHTML = '';
                 rooms.forEach(room => {
+                    console.log('🏨 Room loaded:', { 
+                        room_number: room.room_number, 
+                        guest_name: room.guest_name, 
+                        guest_unique_id: room.guest_unique_id 
+                    });
+                    
                     const roomElement = document.createElement('div');
                     roomElement.className = 'room-item';
                     roomElement.setAttribute('data-room-number', room.room_number);
@@ -1338,6 +1344,14 @@
 
         // Select room and load chat
         function selectRoom(roomNumber, guestName, guestSurname, checkinDate, guestUniqueId, element) {
+            console.log('📂 selectRoom called:', { 
+                roomNumber, 
+                guestName, 
+                guestSurname, 
+                checkinDate, 
+                guestUniqueId 
+            });
+            
             currentRoomNumber = roomNumber;
             currentCheckinDate = checkinDate;
             currentGuestUniqueId = guestUniqueId;
@@ -1370,11 +1384,13 @@
             }
             
             // Join room and load chat with guest_unique_id if available, otherwise use room_number + checkin_date
-            socket.emit('join_room', {
+            const joinRoomData = {
                 roomNumber: roomNumber,
                 checkinDate: checkinDate,
                 guestUniqueId: guestUniqueId || null
-            });
+            };
+            console.log('🔵 Joining room with data:', joinRoomData);
+            socket.emit('join_room', joinRoomData);
             // Note: loadChatHistory is handled by socket.on('chat_history')
             
             // Initialize observer when room is selected
@@ -1736,14 +1752,16 @@
             input.value = '';
             
             // Send to server
-            socket.emit('send_message', {
+            const sendMessageData = {
                 roomNumber: currentRoomNumber,
                 checkinDate: currentCheckinDate,
                 guestUniqueId: currentGuestUniqueId || null,
                 senderType: 'assistant',
                 senderName: 'Assistant',
                 message: message
-            });
+            };
+            console.log('📤 Sending message with data:', sendMessageData);
+            socket.emit('send_message', sendMessageData);
             
             // When real message arrives, replace the temporary one
             socket.once('new_message', (realMessage) => {
