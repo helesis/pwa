@@ -1113,13 +1113,13 @@ app.post('/api/assistant/logout', async (req, res) => {
 // Guest Login Endpoint
 app.post('/api/guest/login', async (req, res) => {
   try {
-    const { surname, checkin_date, checkout_date } = req.body;
+    const { name, surname, checkin_date, checkout_date } = req.body;
     
-    if (!surname || !checkin_date || !checkout_date) {
-      return res.status(400).json({ error: 'Soyad, giriş tarihi ve çıkış tarihi gereklidir' });
+    if (!name || !surname || !checkin_date || !checkout_date) {
+      return res.status(400).json({ error: 'Ad, soyad, giriş tarihi ve çıkış tarihi gereklidir' });
     }
     
-    // Find guest by surname, checkin_date and checkout_date
+    // Find guest by name, surname, checkin_date and checkout_date
     const result = await pool.query(`
       SELECT 
         r.*,
@@ -1128,13 +1128,14 @@ app.post('/api/guest/login', async (req, res) => {
       FROM rooms r
       LEFT JOIN team_room_assignments tra ON r.guest_unique_id = tra.guest_unique_id AND tra.is_active = true
       LEFT JOIN teams t ON tra.team_id = t.id AND t.is_active = true
-      WHERE LOWER(TRIM(r.guest_surname)) = LOWER(TRIM($1))
-        AND r.checkin_date = $2::date
-        AND r.checkout_date = $3::date
+      WHERE LOWER(TRIM(r.guest_name)) = LOWER(TRIM($1))
+        AND LOWER(TRIM(r.guest_surname)) = LOWER(TRIM($2))
+        AND r.checkin_date = $3::date
+        AND r.checkout_date = $4::date
         AND r.is_active = true
       ORDER BY r.checkin_date DESC
       LIMIT 1
-    `, [surname, checkin_date, checkout_date]);
+    `, [name, surname, checkin_date, checkout_date]);
     
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Misafir bulunamadı. Lütfen bilgilerinizi kontrol edin.' });

@@ -844,6 +844,10 @@
             <div class="guest-login-error" id="guestLoginError"></div>
             <form class="guest-login-form" id="guestLoginForm" onsubmit="handleGuestLogin(event)">
                 <div class="guest-form-group">
+                    <label for="guestName">Ad</label>
+                    <input type="text" id="guestName" name="guestName" placeholder="Adınız" required>
+                </div>
+                <div class="guest-form-group">
                     <label for="guestSurname">Soyad</label>
                     <input type="text" id="guestSurname" name="guestSurname" placeholder="Soyadınız" required>
                 </div>
@@ -1004,6 +1008,7 @@
         async function handleGuestLogin(event) {
             event.preventDefault();
             
+            const name = document.getElementById('guestName').value.trim();
             const surname = document.getElementById('guestSurname').value.trim();
             const checkinDate = document.getElementById('checkinDate').value;
             const checkoutDate = document.getElementById('checkoutDate').value;
@@ -1023,6 +1028,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        name: name,
                         surname: surname,
                         checkin_date: checkinDate,
                         checkout_date: checkoutDate
