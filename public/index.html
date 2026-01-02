@@ -2236,10 +2236,10 @@
             input.style.height = Math.min(input.scrollHeight, 100) + 'px';
             
             // Typing indicator
-            if (input.value.trim() && !isTyping && socket) {
+            if (input.value.trim() && !isTyping && socket && GUEST_UNIQUE_ID) {
                 isTyping = true;
                 socket.emit('typing', {
-                    roomNumber: ROOM_NUMBER,
+                    guestUniqueId: GUEST_UNIQUE_ID,
                     checkinDate: CHECKIN_DATE,
                     senderName: GUEST_NAME,
                     senderType: 'guest'
@@ -2252,9 +2252,9 @@
             // Set new timeout
             if (input.value.trim()) {
                 typingTimeout = setTimeout(() => {
-                    if (isTyping && socket) {
+                    if (isTyping && socket && GUEST_UNIQUE_ID) {
                         socket.emit('stop_typing', { 
-                            roomNumber: ROOM_NUMBER,
+                            guestUniqueId: GUEST_UNIQUE_ID,
                             checkinDate: CHECKIN_DATE
                         });
                         isTyping = false;
