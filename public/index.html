@@ -1422,6 +1422,19 @@
             const file = event.target.files[0];
             if (file) {
                 try {
+                    // Ensure GUEST_UNIQUE_ID is set before saving
+                    if (!GUEST_UNIQUE_ID) {
+                        const storedId = localStorage.getItem('guest_unique_id');
+                        if (storedId) {
+                            GUEST_UNIQUE_ID = storedId;
+                            console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', storedId);
+                        } else {
+                            console.error('❌ Cannot save profile photo: Guest not logged in');
+                            alert('Profil fotoğrafı kaydedilemedi. Lütfen önce giriş yapın.');
+                            return;
+                        }
+                    }
+                    
                     // Resize image to 400x400 max (profile photo size)
                     const resizedPhoto = await resizeImage(file, 400, 400, 0.9);
                     guestProfilePhoto = resizedPhoto;
