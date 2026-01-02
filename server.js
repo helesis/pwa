@@ -363,24 +363,37 @@ io.on('connection', (socket) => {
     logInfo(`✅ Client joined room: ${roomId}`);
     
     try {
-      logDebug('📊 Fetching chat history for room:', roomNumber, 'check-in:', actualCheckinDate);
-      // Send chat history (last 50 messages) filtered by room_number AND checkin_date
+      logDebug('📊 Fetching chat history for room:', actualRoomNumber, 'check-in:', actualCheckinDate, 'guest_unique_id:', guestUniqueId);
+      // Send chat history (last 50 messages) filtered by guest_unique_id or room_number + checkin_date
       let result;
-      if (actualCheckinDate) {
+      if (guestUniqueId) {
+        // Use guest_unique_id to find room and messages
+        result = await pool.query(`
+          SELECT m.* FROM messages m
+          INNER JOIN rooms r ON m.room_number = r.room_number AND m.checkin_date = r.checkin_date
+          WHERE r.guest_unique_id = $1
+          ORDER BY m.timestamp DESC 
+          LIMIT 50
+        `, [guestUniqueId]);
+      } else if (actualCheckinDate && actualRoomNumber) {
         result = await pool.query(`
           SELECT * FROM messages 
           WHERE room_number = $1 AND checkin_date = $2
           ORDER BY timestamp DESC 
           LIMIT 50
-        `, [roomNumber, actualCheckinDate]);
-      } else {
+        `, [actualRoomNumber, actualCheckinDate]);
+      } else if (actualRoomNumber) {
         // Fallback: if no checkin_date, use only room_number (for backward compatibility)
         result = await pool.query(`
         SELECT * FROM messages 
         WHERE room_number = $1 
         ORDER BY timestamp DESC 
         LIMIT 50
-      `, [roomNumber]);
+      `, [actualRoomNumber]);
+      } else {
+        logDebug('⚠️ Cannot fetch chat history: missing room info');
+        socket.emit('chat_history', []);
+        return;
       }
       
       logDebug('📊 Messages found:', result.rows.length);
