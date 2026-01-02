@@ -820,9 +820,6 @@
                         <div class="assistant-role-header">Voyage Assistant</div>
                     </div>
                 </div>
-                <button onclick="scanTeamQR()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-                    📷 Takım QR'ı Okut
-                </button>
             </div>
             
             <div class="date-filter" id="dateFilterContainer">
@@ -1912,30 +1909,7 @@
             return div.innerHTML;
         }
 
-        // Scan team QR code
-        async function scanTeamQR() {
-            // Check if browser supports camera
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                // Fallback: prompt for token
-                const token = prompt('QR kod token\'ını girin:');
-                if (token) {
-                    await joinTeamWithToken(token);
-                }
-                return;
-            }
-            
-            // Try to use camera for QR scanning
-            // For now, we'll use a simple input prompt
-            // In production, you might want to use a QR scanner library like jsQR
-            const token = prompt('QR kod token\'ını girin veya QR kod linkini yapıştırın:');
-            if (token) {
-                // Extract token from URL if full URL is pasted
-                const urlMatch = token.match(/token=([^&]+)/);
-                const actualToken = urlMatch ? urlMatch[1] : token;
-                await joinTeamWithToken(actualToken);
-            }
-        }
-
+        // Join team with token (used when token is in URL)
         async function joinTeamWithToken(token) {
             try {
                 const response = await fetch('/api/teams/join', {

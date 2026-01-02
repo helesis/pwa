@@ -866,17 +866,10 @@
         async function loadGuestInfo() {
             console.log('🔍 Loading guest info...', { ROOM_NUMBER, INVITE_TOKEN });
             
-            // Token ZORUNLU - token yoksa hata göster
+            // Token yoksa assistant sayfasına yönlendir (asistan login olmuş olabilir)
             if (!INVITE_TOKEN) {
-                console.error('❌ No invite token provided');
-                document.body.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; flex-direction: column; padding: 20px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                        <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
-                        <h1 style="font-size: 24px; margin-bottom: 15px; color: #1A4D6D; font-weight: 600;">Geçersiz Erişim</h1>
-                        <p style="font-size: 16px; color: #666; margin-bottom: 30px; line-height: 1.6;">Bu sayfaya erişmek için geçerli bir davet linki gereklidir.</p>
-                        <a href="/" style="background: #1A4D6D; color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; display: inline-block; transition: all 0.3s;">Ana Sayfaya Dön</a>
-                    </div>
-                `;
+                console.log('ℹ️ No invite token, redirecting to assistant page');
+                window.location.href = '/assistant.html';
                 return false;
             }
             
