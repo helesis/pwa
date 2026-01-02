@@ -1082,7 +1082,7 @@
                     if (!GUEST_UNIQUE_ID) {
                         // Generate unique ID using the same algorithm as backend
                         console.log('🔧 Backend did not return guest_unique_id, generating...');
-                        GUEST_UNIQUE_ID = generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                        GUEST_UNIQUE_ID = await generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
                         console.log('✅ Generated GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
                     } else {
                         console.log('✅ Guest Unique ID from backend:', GUEST_UNIQUE_ID);
@@ -1121,6 +1121,66 @@
             }
         }
 
+        // Generate guest unique ID (same algorithm as backend)
+        async function generateGuestUniqueId(guestName, guestSurname, checkinDate, checkoutDate) {
+            if (!checkinDate) {
+                return null;
+            }
+            
+            // Normalize inputs - use 'Guest' if name is not provided
+            const name = (guestName || guestSurname || 'Guest').trim().toLowerCase().replace(/\s+/g, '_');
+            const surname = (guestSurname || '').trim().toLowerCase().replace(/\s+/g, '_');
+            
+            // Normalize dates
+            let checkin = '';
+            if (checkinDate instanceof Date) {
+                checkin = checkinDate.toISOString().split('T')[0];
+            } else if (checkinDate) {
+                checkin = String(checkinDate).split('T')[0];
+            }
+            
+            let checkout = '';
+            if (checkoutDate instanceof Date) {
+                checkout = checkoutDate.toISOString().split('T')[0];
+            } else if (checkoutDate) {
+                checkout = String(checkoutDate).split('T')[0];
+            }
+            
+            // Create unique ID: name_surname_checkin_checkout (hash for uniqueness)
+            const combined = checkout 
+                ? `${name}_${surname}_${checkin}_${checkout}`
+                : `${name}_${surname}_${checkin}`;
+            
+            // Use Web Crypto API to create SHA256 hash (same as backend)
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(combined);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+                
+                return checkout 
+                    ? `${name}_${surname}_${checkin}_${checkout}_${hash}`
+                    : `${name}_${surname}_${checkin}_${hash}`;
+            } catch (error) {
+                console.error('Error generating hash:', error);
+                // Fallback to simple hash if crypto API fails
+                function simpleHash(str) {
+                    let hash = 0;
+                    for (let i = 0; i < str.length; i++) {
+                        const char = str.charCodeAt(i);
+                        hash = ((hash << 5) - hash) + char;
+                        hash = hash & hash;
+                    }
+                    return Math.abs(hash).toString(16).substring(0, 16);
+                }
+                const hash = simpleHash(combined);
+                return checkout 
+                    ? `${name}_${surname}_${checkin}_${checkout}_${hash}`
+                    : `${name}_${surname}_${checkin}_${hash}`;
+            }
+        }
+
         // Load guest info after login
         let guestInfoLoaded = false;
         
@@ -1138,7 +1198,7 @@
                     console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', GUEST_UNIQUE_ID);
                 } else {
                     // Generate unique ID using the same algorithm as backend
-                    GUEST_UNIQUE_ID = generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                    GUEST_UNIQUE_ID = await generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
                     if (GUEST_UNIQUE_ID) {
                         console.log('✅ Generated GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
                         localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
@@ -1256,7 +1316,7 @@
                         console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', guestUniqueId);
                     } else if (GUEST_NAME && CHECKIN_DATE) {
                         // Generate unique ID if we have the required info
-                        guestUniqueId = generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                        guestUniqueId = await generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
                         if (guestUniqueId) {
                             GUEST_UNIQUE_ID = guestUniqueId;
                             localStorage.setItem('guest_unique_id', guestUniqueId);
