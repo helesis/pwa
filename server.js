@@ -1515,12 +1515,27 @@ app.post('/api/team-assignments', async (req, res) => {
     const createdAssignments = [];
     
     for (const assignment of assignments) {
-      const { room_number, checkin_date, guest_name, guest_surname } = assignment;
+      const { room_number, checkin_date, guest_name, guest_surname, guest_unique_id: provided_guest_unique_id, checkout_date } = assignment;
       
-      // Generate guest_unique_id if guest info is provided
-      let guest_unique_id = null;
-      if (guest_name && checkin_date) {
-        guest_unique_id = generateGuestUniqueId(guest_name, guest_surname, checkin_date, checkout_date);
+      // Use provided guest_unique_id if available, otherwise generate it
+      let guest_unique_id = provided_guest_unique_id || null;
+      if (!guest_unique_id && guest_name && checkin_date) {
+        // If checkout_date is not provided, try to get it from the room
+        let checkoutDate = checkout_date;
+        if (!checkoutDate && room_number && checkin_date) {
+          try {
+            const roomResult = await pool.query(
+              'SELECT checkout_date FROM rooms WHERE room_number = $1 AND checkin_date = $2 LIMIT 1',
+              [room_number, checkin_date]
+            );
+            if (roomResult.rows.length > 0) {
+              checkoutDate = roomResult.rows[0].checkout_date;
+            }
+          } catch (error) {
+            console.error('Error fetching checkout_date from room:', error);
+          }
+        }
+        guest_unique_id = generateGuestUniqueId(guest_name, guest_surname, checkin_date, checkoutDate);
       }
       
       // If room_number is not provided but guest_unique_id is, we can still create assignment
