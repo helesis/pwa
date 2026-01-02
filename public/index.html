@@ -1061,9 +1061,12 @@
                 
                 const data = await response.json();
                 
+                console.log('📋 Login response:', data);
+                
                 if (response.ok && data.success) {
                     // Login successful
                     GUEST_UNIQUE_ID = data.guest_unique_id;
+                    console.log('✅ Guest Unique ID set:', GUEST_UNIQUE_ID);
                     GUEST_NAME = data.guest_name || 'Misafir';
                     GUEST_SURNAME = data.guest_surname || surname;
                     CHECKIN_DATE = data.checkin_date || checkinDate;
