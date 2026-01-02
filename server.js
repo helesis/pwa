@@ -1687,6 +1687,14 @@ app.post('/api/invite/:token/use', async (req, res) => {
 // Initialize test data (rooms with random check-ins for next 10 days)
 async function initializeTestData() {
   try {
+    // Skip if ENABLE_TEST_DATA is not set to 'true'
+    if (process.env.ENABLE_TEST_DATA !== 'true') {
+      console.log('ℹ️ Test data initialization skipped (ENABLE_TEST_DATA not set to "true")');
+      return;
+    }
+    
+    console.log('🔄 Starting test data initialization...');
+    
     // Random data pools
     const firstNames = [
       'Ali', 'Ayşe', 'Mehmet', 'Zeynep', 'Can', 'Lena', 'John', 'Maria', 'David', 'Anna',
@@ -1731,12 +1739,12 @@ async function initializeTestData() {
       assistantId = assistantResult.rows[0].id;
     } else {
       const existing = await pool.query('SELECT id FROM assistants WHERE email = $1', ['assistant@voyage.com']);
-      assistantId = existing.rows[0].id;
+      assistantId = existing.rows[0]?.id;
     }
     
     // Generate random check-ins for next 10 days
     const today = new Date();
-    const roomsCreated = [];
+    const inserts = [];
     
     for (let day = 0; day < 10; day++) {
       const checkinDate = new Date(today);
@@ -1749,16 +1757,6 @@ async function initializeTestData() {
       for (let i = 0; i < checkinsPerDay; i++) {
         // Random room number
         const roomNumber = roomNumbers[Math.floor(Math.random() * roomNumbers.length)];
-        
-        // Check if room already has a check-in on this date
-        const existingCheck = await pool.query(
-          'SELECT id FROM rooms WHERE room_number = $1 AND checkin_date = $2',
-          [roomNumber, checkinDateStr]
-        );
-        
-        if (existingCheck.rows.length > 0) {
-          continue; // Skip if room already has check-in on this date
-        }
         
         // Random guest data
         const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -1773,67 +1771,73 @@ async function initializeTestData() {
         checkoutDate.setDate(checkinDate.getDate() + Math.floor(Math.random() * 7) + 1);
         const checkoutDateStr = checkoutDate.toISOString().split('T')[0];
         
-        // Create room with unique constraint on (room_number, checkin_date)
-        // Since room_number is UNIQUE, we need to handle this differently
-        // We'll use a composite key approach or allow multiple rooms with same number but different dates
-        try {
-          await pool.query(`
-            INSERT INTO rooms (
-              room_number, 
-              guest_name, 
-              guest_surname, 
-              checkin_date, 
-              checkout_date, 
-              adult_count,
-              child_count,
-              agency,
-              country,
-              is_active
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
-            ON CONFLICT (room_number, checkin_date) 
-            DO UPDATE SET 
-              guest_name = EXCLUDED.guest_name,
-              guest_surname = EXCLUDED.guest_surname,
-              checkout_date = EXCLUDED.checkout_date,
-              adult_count = EXCLUDED.adult_count,
-              child_count = EXCLUDED.child_count,
-              agency = EXCLUDED.agency,
-              country = EXCLUDED.country,
-              is_active = true
-          `, [
-            roomNumber,
-            firstName,
-            lastName,
-            checkinDateStr,
-            checkoutDateStr,
-            adultCount,
-            childCount,
-            agency,
-            country
-          ]);
-          
-          roomsCreated.push({ roomNumber, checkinDate: checkinDateStr, guest: `${firstName} ${lastName}` });
-        } catch (error) {
-          // If room_number conflict, try with different room number
-          console.log(`⚠️ Room ${roomNumber} conflict for ${checkinDateStr}, skipping...`);
-        }
+        inserts.push({
+          roomNumber,
+          firstName,
+          lastName,
+          checkinDateStr,
+          checkoutDateStr,
+          adultCount,
+          childCount,
+          agency,
+          country
+        });
       }
     }
     
-    console.log(`✅ Test data initialized: ${roomsCreated.length} check-ins created for next 10 days`);
-    console.log(`📊 Check-ins per day:`, roomsCreated.reduce((acc, r) => {
-      acc[r.checkinDate] = (acc[r.checkinDate] || 0) + 1;
-      return acc;
-    }, {}));
+    // Batch insert - process in chunks of 50 to avoid query size limits
+    const chunkSize = 50;
+    let totalInserted = 0;
+    
+    for (let i = 0; i < inserts.length; i += chunkSize) {
+      const chunk = inserts.slice(i, i + chunkSize);
+      
+      const values = chunk.map((_, idx) => {
+        const base = idx * 9;
+        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, true)`;
+      }).join(', ');
+      
+      const params = chunk.flatMap(ins => [
+        ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
+        ins.checkoutDateStr, ins.adultCount, ins.childCount, ins.agency, ins.country
+      ]);
+      
+      try {
+        const result = await pool.query(`
+          INSERT INTO rooms (
+            room_number, guest_name, guest_surname, checkin_date, 
+            checkout_date, adult_count, child_count, agency, country, is_active
+          )
+          VALUES ${values}
+          ON CONFLICT (room_number, checkin_date) DO NOTHING
+        `, params);
+        
+        totalInserted += result.rowCount || 0;
+      } catch (error) {
+        console.error(`⚠️ Error inserting chunk ${i / chunkSize + 1}:`, error.message);
+      }
+    }
+    
+    // Count actual check-ins created
+    const result = await pool.query(`
+      SELECT COUNT(*) as count 
+      FROM rooms 
+      WHERE checkin_date >= CURRENT_DATE 
+        AND checkin_date <= CURRENT_DATE + INTERVAL '10 days'
+    `);
+    
+    const actualCount = parseInt(result.rows[0].count);
+    console.log(`✅ Test data initialization completed: ${actualCount} check-ins found for next 10 days`);
+    console.log(`📊 Attempted to insert: ${inserts.length}, Actually inserted: ${totalInserted}`);
   } catch (error) {
     console.error('❌ Error initializing test data:', error);
   }
 }
 
-// Initialize test data after database setup
+// Initialize database and start server
 initializeDatabase().then(() => {
-  initializeTestData();
+  // Server will start immediately, test data will initialize in background
+  console.log('✅ Database initialized, starting server...');
 }).catch(console.error);
 
 // Health check
@@ -2044,6 +2048,14 @@ httpServer.listen(PORT, () => {
   console.log('');
   console.log('🏨 ════════════════════════════════════════════');
   console.log('');
+  
+  // Initialize test data in background (non-blocking, after server starts)
+  // This prevents blocking Render deploy
+  setTimeout(() => {
+    initializeTestData().catch(err => {
+      console.error('⚠️ Test data initialization failed (non-critical):', err.message);
+    });
+  }, 3000); // Wait 3 seconds after server starts
 });
 
 // Graceful shutdown
