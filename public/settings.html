@@ -1013,7 +1013,7 @@
                                     <thead>
                                         <tr>
                                             <th>Takım</th>
-                                            <th>Oda No</th>
+                                            <th>Unique ID</th>
                                             <th>Avatar</th>
                                             <th>Misafir</th>
                                             <th>Check-in Tarihi</th>
@@ -1031,7 +1031,7 @@
                                             return roomAssignments.map(a => `
                                                 <tr style="background: #f0f9f4;">
                                                     <td>${a.team_name}</td>
-                                                    <td>${r.room_number}</td>
+                                                    <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || r.room_number || '-'}</td>
                                                     <td>
                                                         ${r.profile_photo ? `
                                                             <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
@@ -1067,7 +1067,7 @@
                                 <table class="table">
                                     <thead>
                                         <tr>
-                                            <th>Oda No</th>
+                                            <th>Unique ID</th>
                                             <th>Avatar</th>
                                             <th>Misafir</th>
                                             <th>Check-in Tarihi</th>
@@ -1081,7 +1081,7 @@
                                     <tbody>
                                         ${unassignedRooms.map(r => `
                                             <tr style="background: #fff3cd;">
-                                                <td>${r.room_number}</td>
+                                                <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || r.room_number || '-'}</td>
                                                 <td>
                                                     ${r.profile_photo ? `
                                                         <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
@@ -1168,7 +1168,7 @@
                             ${assignments.map(a => `
                                 <tr>
                                     <td>${a.team_name}</td>
-                                    <td>${a.room_number}</td>
+                                    <td style="font-family: monospace; font-size: 11px;">${a.guest_unique_id || a.room_number || '-'}</td>
                                     <td>
                                         ${a.profile_photo ? `
                                             <img src="${a.profile_photo}" alt="${a.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">

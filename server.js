@@ -267,8 +267,8 @@ function logInfo(...args) {
   console.log(...args);
 }
 
-// Generate guest unique ID from name, surname and checkin_date
-function generateGuestUniqueId(guestName, guestSurname, checkinDate) {
+// Generate guest unique ID from name, surname, checkin_date and checkout_date
+function generateGuestUniqueId(guestName, guestSurname, checkinDate, checkoutDate) {
   if (!checkinDate) {
     return null;
   }
@@ -276,17 +276,24 @@ function generateGuestUniqueId(guestName, guestSurname, checkinDate) {
   // Normalize inputs - use 'Guest' if name is not provided
   const name = (guestName || guestSurname || 'Guest').trim().toLowerCase().replace(/\s+/g, '_');
   const surname = (guestSurname || '').trim().toLowerCase().replace(/\s+/g, '_');
-  const date = checkinDate instanceof Date 
+  const checkin = checkinDate instanceof Date 
     ? checkinDate.toISOString().split('T')[0] 
     : String(checkinDate).split('T')[0];
+  const checkout = checkoutDate instanceof Date 
+    ? checkoutDate.toISOString().split('T')[0] 
+    : (checkoutDate ? String(checkoutDate).split('T')[0] : '');
   
-  // Create unique ID: name_surname_date (hash for uniqueness)
-  const combined = `${name}_${surname}_${date}`;
+  // Create unique ID: name_surname_checkin_checkout (hash for uniqueness)
+  const combined = checkout 
+    ? `${name}_${surname}_${checkin}_${checkout}`
+    : `${name}_${surname}_${checkin}`;
   
   // Use crypto to create a short hash
   const hash = createHash('sha256').update(combined).digest('hex').substring(0, 16);
   
-  return `${name}_${surname}_${date}_${hash}`;
+  return checkout 
+    ? `${name}_${surname}_${checkin}_${checkout}_${hash}`
+    : `${name}_${surname}_${checkin}_${hash}`;
 }
 
 // Socket.IO Connection
@@ -823,7 +830,7 @@ app.post('/api/rooms', async (req, res) => {
     const { roomNumber, guestName, guestSurname, checkinDate, checkoutDate } = req.body;
     
     // Generate guest_unique_id if guest info is provided
-    const guest_unique_id = generateGuestUniqueId(guestName, guestSurname, checkinDate);
+    const guest_unique_id = generateGuestUniqueId(guestName, guestSurname, checkinDate, checkoutDate);
     
     await pool.query(`
       INSERT INTO rooms (room_number, guest_name, guest_surname, checkin_date, checkout_date, guest_unique_id)
@@ -1142,9 +1149,9 @@ app.post('/api/guest/login', async (req, res) => {
       const guestName = guest.guest_name || guest.guest_surname || 'Guest';
       const guestSurname = guest.guest_surname || '';
       
-      console.log('🔧 Generating guest_unique_id with:', { guestName, guestSurname, checkin_date: guest.checkin_date });
+      console.log('🔧 Generating guest_unique_id with:', { guestName, guestSurname, checkin_date: guest.checkin_date, checkout_date: guest.checkout_date });
       
-      guest_unique_id = generateGuestUniqueId(guestName, guestSurname, guest.checkin_date);
+      guest_unique_id = generateGuestUniqueId(guestName, guestSurname, guest.checkin_date, guest.checkout_date);
       
       if (guest_unique_id) {
         // Update the room with the generated guest_unique_id
@@ -1506,7 +1513,7 @@ app.post('/api/team-assignments', async (req, res) => {
       // Generate guest_unique_id if guest info is provided
       let guest_unique_id = null;
       if (guest_name && checkin_date) {
-        guest_unique_id = generateGuestUniqueId(guest_name, guest_surname, checkin_date);
+        guest_unique_id = generateGuestUniqueId(guest_name, guest_surname, checkin_date, checkout_date);
       }
       
       // If room_number is not provided but guest_unique_id is, we can still create assignment
@@ -1645,7 +1652,7 @@ app.post('/api/admin/update-checkin-dates', async (req, res) => {
     // Update checkin_date to today and regenerate guest_unique_id
     // First get all rooms that will be updated
     const roomsToUpdate = await pool.query(
-      `SELECT room_number, guest_name, guest_surname, checkin_date 
+      `SELECT room_number, guest_name, guest_surname, checkin_date, checkout_date 
        FROM rooms 
        WHERE checkin_date = $1::date`,
       [yesterdayStr]
@@ -1653,7 +1660,7 @@ app.post('/api/admin/update-checkin-dates', async (req, res) => {
     
     // Update each room with new guest_unique_id
     for (const room of roomsToUpdate.rows) {
-      const guest_unique_id = generateGuestUniqueId(room.guest_name, room.guest_surname, todayStr);
+      const guest_unique_id = generateGuestUniqueId(room.guest_name, room.guest_surname, todayStr, room.checkout_date);
       await pool.query(
         `UPDATE rooms 
          SET checkin_date = $1::date,
@@ -1938,7 +1945,7 @@ async function initializeTestData() {
       }).join(', ');
       
       const params = chunk.flatMap(ins => {
-        const guest_unique_id = generateGuestUniqueId(ins.firstName, ins.lastName, ins.checkinDateStr);
+        const guest_unique_id = generateGuestUniqueId(ins.firstName, ins.lastName, ins.checkinDateStr, ins.checkoutDateStr);
         return [
           ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
           ins.checkoutDateStr, ins.adultCount, ins.childCount, ins.agency, ins.country, guest_unique_id
@@ -1984,6 +1991,63 @@ initializeDatabase().then(() => {
 }).catch(console.error);
 
 // Health check
+// Migration endpoint: Update all existing guests with new guest_unique_id algorithm
+app.post('/api/migrate/update-guest-unique-ids', async (req, res) => {
+  try {
+    logInfo('🔄 Starting migration: Updating guest_unique_id for all guests...');
+    
+    // Get all rooms that need guest_unique_id update
+    const rooms = await pool.query(`
+      SELECT id, room_number, guest_name, guest_surname, checkin_date, checkout_date, guest_unique_id
+      FROM rooms
+      WHERE is_active = true
+      ORDER BY id
+    `);
+    
+    let updated = 0;
+    let skipped = 0;
+    
+    for (const room of rooms.rows) {
+      // Generate new guest_unique_id with checkout_date included
+      const newGuestUniqueId = generateGuestUniqueId(
+        room.guest_name,
+        room.guest_surname,
+        room.checkin_date,
+        room.checkout_date
+      );
+      
+      if (!newGuestUniqueId) {
+        logDebug(`⚠️ Skipping room ${room.id}: Cannot generate guest_unique_id`);
+        skipped++;
+        continue;
+      }
+      
+      // Update if different or null
+      if (!room.guest_unique_id || room.guest_unique_id !== newGuestUniqueId) {
+        await pool.query(
+          'UPDATE rooms SET guest_unique_id = $1 WHERE id = $2',
+          [newGuestUniqueId, room.id]
+        );
+        updated++;
+        logDebug(`✅ Updated room ${room.id}: ${newGuestUniqueId}`);
+      } else {
+        skipped++;
+      }
+    }
+    
+    logInfo(`✅ Migration completed: ${updated} updated, ${skipped} skipped`);
+    res.json({ 
+      success: true, 
+      updated, 
+      skipped, 
+      total: rooms.rows.length 
+    });
+  } catch (error) {
+    console.error('❌ Migration error:', error);
+    res.status(500).json({ error: 'Migration failed', details: error.message });
+  }
+});
+
 app.get('/health', async (req, res) => {
   try {
     // Test database connection
