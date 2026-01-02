@@ -1190,14 +1190,50 @@
         // Avatar handling functions
         function handleAssistantAvatarChange(event) {
             const file = event.target.files[0];
+            console.log('📸 Avatar file selected:', file ? file.name : 'none');
+            
             if (file) {
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Dosya boyutu çok büyük. Maksimum 5MB olmalıdır.');
+                    event.target.value = ''; // Clear selection
+                    return;
+                }
+                
+                // Check file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Lütfen bir resim dosyası seçin.');
+                    event.target.value = ''; // Clear selection
+                    return;
+                }
+                
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const preview = document.getElementById('assistant-avatar-preview');
-                    preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
-                    document.getElementById('assistant-avatar-data').value = e.target.result;
+                    const avatarDataInput = document.getElementById('assistant-avatar-data');
+                    
+                    if (!preview || !avatarDataInput) {
+                        console.error('❌ Avatar preview or data input not found');
+                        return;
+                    }
+                    
+                    const base64Data = e.target.result;
+                    console.log('📸 Avatar loaded, size:', base64Data.length, 'chars');
+                    
+                    preview.innerHTML = `<img src="${base64Data}" alt="Avatar">`;
+                    avatarDataInput.value = base64Data;
+                    
+                    console.log('✅ Avatar data saved to hidden input');
                 };
+                
+                reader.onerror = function(error) {
+                    console.error('❌ Error reading file:', error);
+                    alert('Dosya okunurken bir hata oluştu.');
+                };
+                
                 reader.readAsDataURL(file);
+            } else {
+                console.log('⚠️ No file selected');
             }
         }
 
@@ -1249,20 +1285,47 @@
 
         async function saveAssistant(e) {
             e.preventDefault();
-            const avatarData = document.getElementById('assistant-avatar-data').value;
-            const data = {
-                name: document.getElementById('assistant-name').value,
-                email: document.getElementById('assistant-email').value || null,
-                avatar: avatarData || null  // Send empty string as null
-            };
-
-            console.log('💾 Saving assistant:', { ...data, avatar: avatarData ? 'base64 data (hidden)' : 'null' });
-
+            e.stopPropagation();
+            
+            console.log('💾 saveAssistant called');
+            
             try {
+                const nameInput = document.getElementById('assistant-name');
+                const emailInput = document.getElementById('assistant-email');
+                const avatarDataInput = document.getElementById('assistant-avatar-data');
+                
+                if (!nameInput || !avatarDataInput) {
+                    console.error('❌ Form elements not found');
+                    showAlert('Form elemanları bulunamadı', 'error');
+                    return;
+                }
+                
+                const name = nameInput.value.trim();
+                if (!name) {
+                    showAlert('Assistant adı gereklidir', 'error');
+                    return;
+                }
+                
+                const avatarData = avatarDataInput.value || null;
+                const data = {
+                    name: name,
+                    email: emailInput ? (emailInput.value.trim() || null) : null,
+                    avatar: avatarData || null
+                };
+
+                console.log('💾 Saving assistant:', { 
+                    id: currentAssistantId,
+                    name: data.name,
+                    email: data.email,
+                    avatar: avatarData ? `base64 (${avatarData.length} chars)` : 'null' 
+                });
+
                 const url = currentAssistantId 
                     ? `/api/assistants/${currentAssistantId}`
                     : '/api/assistants';
                 const method = currentAssistantId ? 'PUT' : 'POST';
+
+                console.log('📡 Sending request:', method, url);
 
                 const response = await fetch(url, {
                     method,
@@ -1270,14 +1333,21 @@
                     body: JSON.stringify(data)
                 });
 
+                console.log('📡 Response status:', response.status);
+
                 if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Assistant saved successfully:', result);
                     closeAssistantModal();
                     loadAssistants();
                     showAlert('Assistant başarıyla kaydedildi', 'success');
                 } else {
-                    showAlert('Hata: ' + (await response.text()), 'error');
+                    const errorText = await response.text();
+                    console.error('❌ Error response:', response.status, errorText);
+                    showAlert('Hata: ' + errorText, 'error');
                 }
             } catch (error) {
+                console.error('❌ Exception in saveAssistant:', error);
                 showAlert('Hata: ' + error.message, 'error');
             }
         }
@@ -1962,6 +2032,19 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadAssistants();
+            
+            // Ensure form submit handlers are attached
+            const assistantForm = document.getElementById('assistant-form');
+            if (assistantForm) {
+                assistantForm.addEventListener('submit', saveAssistant);
+                console.log('✅ Assistant form submit handler attached');
+            }
+            
+            const teamForm = document.getElementById('team-form');
+            if (teamForm) {
+                teamForm.addEventListener('submit', saveTeam);
+                console.log('✅ Team form submit handler attached');
+            }
         });
     </script>
 </body>
