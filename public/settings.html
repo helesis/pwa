@@ -1629,6 +1629,8 @@
 
         // Select team card
         function selectTeamCard(teamId) {
+            console.log('🎴 selectTeamCard called with teamId:', teamId);
+            
             // Remove previous selection
             document.querySelectorAll('.team-card').forEach(card => {
                 card.classList.remove('selected');
@@ -1638,7 +1640,16 @@
             const card = document.querySelector(`.team-card[data-team-id="${teamId}"]`);
             if (card) {
                 card.classList.add('selected');
-                document.getElementById('assignment-team').value = teamId;
+                console.log('✅ Team card selected:', teamId);
+                
+                // Also update the hidden select element (for compatibility)
+                const teamSelect = document.getElementById('assignment-team');
+                if (teamSelect) {
+                    teamSelect.value = teamId;
+                    console.log('✅ Team select value updated:', teamId);
+                }
+            } else {
+                console.error('❌ Team card not found for teamId:', teamId);
             }
         }
 
@@ -1743,9 +1754,31 @@
 
         async function saveAssignment(e) {
             e.preventDefault();
-            const teamId = parseInt(document.getElementById('assignment-team').value);
+            e.stopPropagation();
             
+            console.log('💾 saveAssignment called');
+            
+            // Get team ID from either select dropdown or selected card
+            let teamId = null;
+            
+            // First try to get from select dropdown (multi-room assignment)
+            const teamSelect = document.getElementById('assignment-team');
+            if (teamSelect && teamSelect.value) {
+                teamId = parseInt(teamSelect.value);
+                console.log('📋 Team ID from select:', teamId);
+            }
+            
+            // If no team from select, try to get from selected card (single room assignment)
             if (!teamId) {
+                const selectedCard = document.querySelector('.team-card.selected');
+                if (selectedCard) {
+                    teamId = parseInt(selectedCard.getAttribute('data-team-id'));
+                    console.log('🎴 Team ID from selected card:', teamId);
+                }
+            }
+            
+            if (!teamId || isNaN(teamId)) {
+                console.error('❌ No team selected');
                 showAlert('Lütfen bir takım seçin', 'error');
                 return;
             }
@@ -1758,13 +1791,17 @@
             
             if (selectedRoomNumber && selectedCheckinDate) {
                 // Single room assignment
+                console.log('🏨 Single room assignment:', selectedRoomNumber, selectedCheckinDate);
                 selectedGuests = [{ 
                     room_number: selectedRoomNumber, 
                     checkin_date: selectedCheckinDate 
                 }];
             } else {
                 // Multi-room assignment (from checkboxes)
-                selectedGuests = Array.from(document.querySelectorAll('#assignment-guests-checkboxes input:checked'))
+                const checkedBoxes = document.querySelectorAll('#assignment-guests-checkboxes input:checked');
+                console.log('📋 Multi-room assignment, checked boxes:', checkedBoxes.length);
+                
+                selectedGuests = Array.from(checkedBoxes)
                     .map(cb => {
                         const [roomNumber, date] = cb.value.split('|');
                         if (!date) {
@@ -1778,26 +1815,39 @@
                     return;
                 }
             }
+            
+            console.log('💾 Saving assignment:', { teamId, selectedGuests });
 
             try {
+                const requestBody = {
+                    team_id: teamId,
+                    assignments: selectedGuests
+                };
+                
+                console.log('📡 Sending request to /api/team-assignments:', requestBody);
+                
                 const response = await fetch('/api/team-assignments', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        team_id: teamId,
-                        assignments: selectedGuests
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('📡 Response status:', response.status, response.statusText);
+
                 if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Assignment saved successfully:', result);
                     closeAssignmentModal();
                     loadAssignments();
                     loadUnassignedRooms(); // Yenile
                     showAlert('Eşleştirme başarıyla yapıldı', 'success');
                 } else {
-                    showAlert('Hata: ' + (await response.text()), 'error');
+                    const errorText = await response.text();
+                    console.error('❌ Error response:', response.status, errorText);
+                    showAlert('Hata: ' + errorText, 'error');
                 }
             } catch (error) {
+                console.error('❌ Exception in saveAssignment:', error);
                 showAlert('Hata: ' + error.message, 'error');
             }
         }
@@ -2120,6 +2170,12 @@
             if (teamForm) {
                 teamForm.addEventListener('submit', saveTeam);
                 console.log('✅ Team form submit handler attached');
+            }
+            
+            const assignmentForm = document.getElementById('assignment-form');
+            if (assignmentForm) {
+                assignmentForm.addEventListener('submit', saveAssignment);
+                console.log('✅ Assignment form submit handler attached');
             }
         });
     </script>
