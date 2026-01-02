@@ -1140,6 +1140,7 @@
         let currentRoom = null;
         let currentRoomNumber = null;
         let currentCheckinDate = null;
+        let currentGuestUniqueId = null;
         let inviteData = null;
 
         // Set today's date as default
@@ -1270,6 +1271,9 @@
                     roomElement.className = 'room-item';
                     roomElement.setAttribute('data-room-number', room.room_number);
                     roomElement.setAttribute('data-checkin-date', room.checkin_date);
+                    if (room.guest_unique_id) {
+                        roomElement.setAttribute('data-guest-unique-id', room.guest_unique_id);
+                    }
                     
                     // Format last message time
                     let lastMessageTime = '';
@@ -1317,7 +1321,7 @@
                             </div>
                         </div>
                     `;
-                    roomElement.addEventListener('click', () => selectRoom(room.room_number, room.guest_name, room.guest_surname, room.checkin_date, roomElement));
+                    roomElement.addEventListener('click', () => selectRoom(room.room_number, room.guest_name, room.guest_surname, room.checkin_date, room.guest_unique_id, roomElement));
                     
                     // Sağ tıklama menüsü ekle
                     roomElement.addEventListener('contextmenu', (e) => {
@@ -1333,10 +1337,11 @@
         }
 
         // Select room and load chat
-        function selectRoom(roomNumber, guestName, guestSurname, checkinDate, element) {
+        function selectRoom(roomNumber, guestName, guestSurname, checkinDate, guestUniqueId, element) {
             currentRoomNumber = roomNumber;
             currentCheckinDate = checkinDate;
-            currentRoom = { roomNumber, guestName, guestSurname, checkinDate };
+            currentGuestUniqueId = guestUniqueId;
+            currentRoom = { roomNumber, guestName, guestSurname, checkinDate, guestUniqueId };
             
             // Update UI
             document.querySelectorAll('.room-item').forEach(item => {
@@ -1364,10 +1369,11 @@
                 }
             }
             
-            // Join room and load chat with checkin_date
+            // Join room and load chat with guest_unique_id if available, otherwise use room_number + checkin_date
             socket.emit('join_room', {
                 roomNumber: roomNumber,
-                checkinDate: checkinDate
+                checkinDate: checkinDate,
+                guestUniqueId: guestUniqueId || null
             });
             // Note: loadChatHistory is handled by socket.on('chat_history')
             
@@ -1399,8 +1405,13 @@
         function goBackToList() {
             showListView();
             // Leave room socket
-            if (currentRoomNumber && currentCheckinDate) {
-                const roomId = `${currentRoomNumber}_${currentCheckinDate}`;
+            if (currentGuestUniqueId) {
+                socket.emit('leave_room', {
+                    roomNumber: currentRoomNumber,
+                    checkinDate: currentCheckinDate,
+                    guestUniqueId: currentGuestUniqueId
+                });
+            } else if (currentRoomNumber && currentCheckinDate) {
                 socket.emit('leave_room', {
                     roomNumber: currentRoomNumber,
                     checkinDate: currentCheckinDate
@@ -1410,6 +1421,7 @@
             currentRoom = null;
             currentRoomNumber = null;
             currentCheckinDate = null;
+            currentGuestUniqueId = null;
             // Clear chat UI
             document.getElementById('chatContainer').innerHTML = '<div class="empty-state">Bir oda seçerek chat\'e başlayın</div>';
             document.getElementById('chatRoomName').textContent = 'Bir oda seçin';
@@ -1727,6 +1739,7 @@
             socket.emit('send_message', {
                 roomNumber: currentRoomNumber,
                 checkinDate: currentCheckinDate,
+                guestUniqueId: currentGuestUniqueId || null,
                 senderType: 'assistant',
                 senderName: 'Assistant',
                 message: message
