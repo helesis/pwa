@@ -873,6 +873,73 @@ app.get('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
   }
 });
 
+// Get profile photo for a guest (by guest_unique_id)
+app.get('/api/guests/:guestUniqueId/profile-photo', async (req, res) => {
+  try {
+    const { guestUniqueId } = req.params;
+    logDebug('📸 Fetching profile photo for guest:', guestUniqueId);
+    
+    const result = await pool.query(
+      'SELECT profile_photo FROM rooms WHERE guest_unique_id = $1',
+      [guestUniqueId]
+    );
+    
+    if (result.rows.length === 0) {
+      logDebug('⚠️ Guest not found:', guestUniqueId);
+      // Return null instead of 404 - guest might not exist yet
+      return res.json({ profilePhoto: null });
+    }
+    
+    const profilePhoto = result.rows[0].profile_photo || null;
+    logDebug('✅ Profile photo fetched:', profilePhoto ? 'exists' : 'null');
+    res.json({ profilePhoto });
+  } catch (error) {
+    console.error('❌ Error fetching profile photo:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Return null instead of 500 - don't break the app
+    res.json({ profilePhoto: null });
+  }
+});
+
+// Save profile photo for a guest (by guest_unique_id)
+app.post('/api/guests/:guestUniqueId/profile-photo', async (req, res) => {
+  try {
+    const { profilePhoto } = req.body;
+    const { guestUniqueId } = req.params;
+    
+    logDebug('📸 Saving profile photo for guest:', guestUniqueId);
+    logDebug('📸 Photo data length:', profilePhoto ? profilePhoto.length : 0);
+    
+    if (!profilePhoto) {
+      return res.status(400).json({ error: 'Profile photo data is required' });
+    }
+    
+    // Check if photo data is too large (PostgreSQL TEXT can handle up to 1GB, but we'll limit to 5MB for base64)
+    if (profilePhoto.length > 5 * 1024 * 1024) {
+      console.error('❌ Profile photo too large:', profilePhoto.length);
+      return res.status(400).json({ error: 'Profile photo is too large (max 5MB)' });
+    }
+    
+    // Update room with profile photo using guest_unique_id
+    const result = await pool.query(
+      'UPDATE rooms SET profile_photo = $1 WHERE guest_unique_id = $2 RETURNING id, room_number',
+      [profilePhoto, guestUniqueId]
+    );
+    
+    if (result.rows.length === 0) {
+      logDebug('⚠️ Guest not found:', guestUniqueId);
+      return res.status(404).json({ error: 'Guest not found' });
+    }
+    
+    logDebug('✅ Profile photo saved for guest:', guestUniqueId);
+    res.json({ success: true, roomNumber: result.rows[0].room_number });
+  } catch (error) {
+    console.error('❌ Error saving profile photo:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Save profile photo for a room
 app.post('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
   try {
