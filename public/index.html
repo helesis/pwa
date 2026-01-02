@@ -2147,9 +2147,9 @@
                 return;
             }
             
-            if (!ROOM_NUMBER) {
-                console.error('❌ Room number not available');
-                alert('Oda bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
+            if (!GUEST_UNIQUE_ID) {
+                console.error('❌ Guest unique ID not available');
+                alert('Misafir bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
                 return;
             }
             
@@ -2158,7 +2158,7 @@
             
             if (!message) return;
             
-            console.log('📤 Sending message:', { roomNumber: ROOM_NUMBER, checkinDate: CHECKIN_DATE, message: message.substring(0, 30) });
+            console.log('📤 Sending message:', { guestUniqueId: GUEST_UNIQUE_ID, checkinDate: CHECKIN_DATE, message: message.substring(0, 30) });
             
             // Create temporary message ID for optimistic update
             const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -2186,7 +2186,7 @@
             // Stop typing indicator
             if (isTyping && socket) {
                 socket.emit('stop_typing', { 
-                    roomNumber: ROOM_NUMBER,
+                    guestUniqueId: GUEST_UNIQUE_ID,
                     checkinDate: CHECKIN_DATE
                 });
                 isTyping = false;
@@ -2194,7 +2194,7 @@
             
             // Send to server
             socket.emit('send_message', {
-                roomNumber: ROOM_NUMBER,
+                guestUniqueId: GUEST_UNIQUE_ID,
                 checkinDate: CHECKIN_DATE,
                 senderType: 'guest',
                 senderName: GUEST_NAME,
