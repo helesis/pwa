@@ -1187,19 +1187,58 @@
             }
         }
 
+        // Resize image to optimal size for avatar
+        function resizeImage(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Calculate new dimensions while maintaining aspect ratio
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height = (height * maxWidth) / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width = (width * maxHeight) / height;
+                                height = maxHeight;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert to base64
+                        const resizedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(resizedDataUrl);
+                    };
+                    img.onerror = function() {
+                        reject(new Error('Resim yüklenirken hata oluştu'));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = function() {
+                    reject(new Error('Dosya okunurken hata oluştu'));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         // Avatar handling functions
-        function handleAssistantAvatarChange(event) {
+        async function handleAssistantAvatarChange(event) {
             const file = event.target.files[0];
             console.log('📸 Avatar file selected:', file ? file.name : 'none');
             
             if (file) {
-                // Check file size (max 5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('Dosya boyutu çok büyük. Maksimum 5MB olmalıdır.');
-                    event.target.value = ''; // Clear selection
-                    return;
-                }
-                
                 // Check file type
                 if (!file.type.startsWith('image/')) {
                     alert('Lütfen bir resim dosyası seçin.');
@@ -1207,46 +1246,83 @@
                     return;
                 }
                 
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('assistant-avatar-preview');
-                    const avatarDataInput = document.getElementById('assistant-avatar-data');
-                    
-                    if (!preview || !avatarDataInput) {
-                        console.error('❌ Avatar preview or data input not found');
-                        return;
-                    }
-                    
-                    const base64Data = e.target.result;
-                    console.log('📸 Avatar loaded, size:', base64Data.length, 'chars');
-                    
-                    preview.innerHTML = `<img src="${base64Data}" alt="Avatar">`;
-                    avatarDataInput.value = base64Data;
-                    
-                    console.log('✅ Avatar data saved to hidden input');
-                };
+                const preview = document.getElementById('assistant-avatar-preview');
+                const avatarDataInput = document.getElementById('assistant-avatar-data');
                 
-                reader.onerror = function(error) {
-                    console.error('❌ Error reading file:', error);
-                    alert('Dosya okunurken bir hata oluştu.');
-                };
+                if (!preview || !avatarDataInput) {
+                    console.error('❌ Avatar preview or data input not found');
+                    return;
+                }
                 
-                reader.readAsDataURL(file);
+                // Show loading state
+                preview.innerHTML = '<span style="font-size: 14px;">Yükleniyor...</span>';
+                
+                try {
+                    // Resize image to 400x400 max (avatar size) with 0.9 quality
+                    const originalSize = (file.size / 1024 / 1024).toFixed(2);
+                    console.log('📸 Original file size:', originalSize, 'MB');
+                    
+                    const resizedData = await resizeImage(file, 400, 400, 0.9);
+                    const resizedSize = (resizedData.length / 1024 / 1024).toFixed(2);
+                    console.log('📸 Resized data size:', resizedSize, 'MB');
+                    console.log('📸 Compression ratio:', ((1 - resizedData.length / (file.size * 1.33)) * 100).toFixed(1) + '%'); // base64 is ~33% larger
+                    
+                    preview.innerHTML = `<img src="${resizedData}" alt="Avatar">`;
+                    avatarDataInput.value = resizedData;
+                    
+                    console.log('✅ Avatar resized and saved to hidden input');
+                } catch (error) {
+                    console.error('❌ Error processing avatar:', error);
+                    alert('Fotoğraf işlenirken bir hata oluştu: ' + error.message);
+                    preview.innerHTML = '<span>👤</span>';
+                    event.target.value = ''; // Clear selection
+                }
             } else {
                 console.log('⚠️ No file selected');
             }
         }
 
-        function handleTeamAvatarChange(event) {
+        async function handleTeamAvatarChange(event) {
             const file = event.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('team-avatar-preview');
-                    preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
-                    document.getElementById('team-avatar-data').value = e.target.result;
-                };
-                reader.readAsDataURL(file);
+                // Check file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Lütfen bir resim dosyası seçin.');
+                    event.target.value = ''; // Clear selection
+                    return;
+                }
+                
+                const preview = document.getElementById('team-avatar-preview');
+                const avatarDataInput = document.getElementById('team-avatar-data');
+                
+                if (!preview || !avatarDataInput) {
+                    console.error('❌ Team avatar preview or data input not found');
+                    return;
+                }
+                
+                // Show loading state
+                preview.innerHTML = '<span style="font-size: 14px;">Yükleniyor...</span>';
+                
+                try {
+                    // Resize image to 400x400 max (avatar size) with 0.9 quality
+                    const originalSize = (file.size / 1024 / 1024).toFixed(2);
+                    console.log('📸 Team avatar - Original file size:', originalSize, 'MB');
+                    
+                    const resizedData = await resizeImage(file, 400, 400, 0.9);
+                    const resizedSize = (resizedData.length / 1024 / 1024).toFixed(2);
+                    console.log('📸 Team avatar - Resized data size:', resizedSize, 'MB');
+                    console.log('📸 Team avatar - Compression ratio:', ((1 - resizedData.length / (file.size * 1.33)) * 100).toFixed(1) + '%');
+                    
+                    preview.innerHTML = `<img src="${resizedData}" alt="Avatar">`;
+                    avatarDataInput.value = resizedData;
+                    
+                    console.log('✅ Team avatar resized and saved to hidden input');
+                } catch (error) {
+                    console.error('❌ Error processing team avatar:', error);
+                    alert('Fotoğraf işlenirken bir hata oluştu: ' + error.message);
+                    preview.innerHTML = '<span>👥</span>';
+                    event.target.value = ''; // Clear selection
+                }
             }
         }
 
