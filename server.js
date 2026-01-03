@@ -78,64 +78,120 @@ pool.on('error', (err) => {
 // Initialize database tables
 async function initializeDatabase() {
   try {
+    // Drop all existing tables in correct order (respecting foreign keys)
+    console.log('🗑️ Dropping existing tables...');
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS messages (
+      DROP TABLE IF EXISTS messages CASCADE;
+      DROP TABLE IF EXISTS team_room_assignments CASCADE;
+      DROP TABLE IF EXISTS assistant_teams CASCADE;
+      DROP TABLE IF EXISTS assistant_assignments CASCADE;
+      DROP TABLE IF EXISTS room_invites CASCADE;
+      DROP TABLE IF EXISTS team_invites CASCADE;
+      DROP TABLE IF EXISTS rooms CASCADE;
+      DROP TABLE IF EXISTS assistants CASCADE;
+      DROP TABLE IF EXISTS teams CASCADE;
+    `);
+    console.log('✅ All tables dropped');
+    
+    // Create tables with new structure
+    await pool.query(`
+      -- Rooms table (guests)
+      CREATE TABLE rooms (
         id SERIAL PRIMARY KEY,
         room_number VARCHAR(50) NOT NULL,
-        checkin_date DATE,
+        guest_name VARCHAR(100) NOT NULL,
+        guest_surname VARCHAR(100) NOT NULL,
+        checkin_date DATE NOT NULL,
+        checkout_date DATE NOT NULL,
+        guest_unique_id VARCHAR(255) NOT NULL UNIQUE,
+        profile_photo TEXT,
+        adult_count INTEGER DEFAULT 1,
+        child_count INTEGER DEFAULT 0,
+        agency VARCHAR(100),
+        country VARCHAR(100),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Assistants table (email removed, spoken_languages added)
+      CREATE TABLE assistants (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        surname VARCHAR(100) NOT NULL,
+        password_hash VARCHAR(255),
+        spoken_languages TEXT,
+        avatar TEXT,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Teams table
+      CREATE TABLE teams (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        avatar TEXT,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Messages table (using guest_unique_id instead of room_number + checkin_date)
+      CREATE TABLE messages (
+        id SERIAL PRIMARY KEY,
+        guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
         sender_type VARCHAR(20) NOT NULL,
-        sender_name VARCHAR(100),
+        assistant_id INTEGER REFERENCES assistants(id) ON DELETE SET NULL,
         message TEXT NOT NULL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         delivered_at TIMESTAMP,
         read_at TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS rooms (
+      -- Assistant-Team assignments
+      CREATE TABLE assistant_teams (
         id SERIAL PRIMARY KEY,
-        room_number VARCHAR(50) NOT NULL,
-        guest_name VARCHAR(100),
-        checkin_date DATE,
-        checkout_date DATE,
+        assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,
+        team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_active BOOLEAN DEFAULT true,
-        profile_photo TEXT,
-        UNIQUE(room_number, checkin_date)
+        UNIQUE(assistant_id, team_id)
       );
 
-      -- Add checkin_date column to messages if it doesn't exist
-      ALTER TABLE messages ADD COLUMN IF NOT EXISTS checkin_date DATE;
-      
-      -- Add delivered_at and read_at columns if they don't exist
-      ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;
-      ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
-      
-      -- Update existing messages: set checkin_date from rooms table where possible
-      UPDATE messages m
-      SET checkin_date = (
-        SELECT r.checkin_date 
-        FROM rooms r 
-        WHERE r.room_number = m.room_number 
-        ORDER BY r.checkin_date DESC 
-        LIMIT 1
-      )
-      WHERE m.checkin_date IS NULL;
-
-      CREATE INDEX IF NOT EXISTS idx_messages_room_number ON messages(room_number);
-      CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_messages_room_checkin ON messages(room_number, checkin_date);
-      CREATE INDEX IF NOT EXISTS idx_messages_delivered ON messages(delivered_at);
-      CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read_at);
-      CREATE INDEX IF NOT EXISTS idx_rooms_room_checkin ON rooms(room_number, checkin_date);
-
-      -- Assistant'lar tablosu
-      CREATE TABLE IF NOT EXISTS assistants (
+      -- Team-Room assignments (using guest_unique_id)
+      CREATE TABLE team_room_assignments (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        email VARCHAR(255) UNIQUE,
-        password_hash VARCHAR(255),
+        team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+        guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        UNIQUE(team_id, guest_unique_id)
       );
+
+      -- Assistant-Room assignments (legacy support, using guest_unique_id)
+      CREATE TABLE assistant_assignments (
+        id SERIAL PRIMARY KEY,
+        assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,
+        guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT true,
+        UNIQUE(assistant_id, guest_unique_id)
+      );
+
+      -- Indexes
+      CREATE INDEX idx_rooms_guest_unique_id ON rooms(guest_unique_id);
+      CREATE INDEX idx_rooms_room_checkin ON rooms(room_number, checkin_date);
+      CREATE INDEX idx_messages_guest_unique_id ON messages(guest_unique_id);
+      CREATE INDEX idx_messages_timestamp ON messages(timestamp);
+      CREATE INDEX idx_messages_assistant_id ON messages(assistant_id);
+      CREATE INDEX idx_messages_delivered ON messages(delivered_at);
+      CREATE INDEX idx_messages_read ON messages(read_at);
+      CREATE INDEX idx_assistant_teams_assistant ON assistant_teams(assistant_id);
+      CREATE INDEX idx_assistant_teams_team ON assistant_teams(team_id);
+      CREATE INDEX idx_team_room_assignments_team ON team_room_assignments(team_id);
+      CREATE INDEX idx_team_room_assignments_guest_unique_id ON team_room_assignments(guest_unique_id);
+      CREATE INDEX idx_assistant_assignments_assistant ON assistant_assignments(assistant_id);
+      CREATE INDEX idx_assistant_assignments_guest_unique_id ON assistant_assignments(guest_unique_id);
+    `);
 
       -- Assistant'a atanan odalar
       CREATE TABLE IF NOT EXISTS assistant_assignments (
@@ -2001,7 +2057,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
 });
 
 
-// Initialize test data (rooms with random check-ins for next 10 days)
+// Initialize test data: 6 assistants, 2 teams, 75 guests (5 per day for 15 days)
 async function initializeTestData() {
   try {
     // Skip if ENABLE_TEST_DATA is not set to 'true'
@@ -2012,21 +2068,81 @@ async function initializeTestData() {
     
     console.log('🔄 Starting test data initialization...');
     
-    // Random data pools
-    const firstNames = [
-      'Ali', 'Ayşe', 'Mehmet', 'Zeynep', 'Can', 'Lena', 'John', 'Maria', 'David', 'Anna',
-      'Michael', 'Sarah', 'James', 'Emma', 'Robert', 'Olivia', 'William', 'Sophia', 'Richard', 'Isabella',
-      'Thomas', 'Charlotte', 'Charles', 'Amelia', 'Joseph', 'Mia', 'Daniel', 'Harper', 'Matthew', 'Evelyn',
-      'Mark', 'Abigail', 'Donald', 'Emily', 'Steven', 'Elizabeth', 'Paul', 'Sofia', 'Andrew', 'Avery',
-      'Joshua', 'Ella', 'Kenneth', 'Madison', 'Kevin', 'Scarlett', 'Brian', 'Victoria', 'George', 'Aria'
+    // 6 Assistants with unique names
+    const assistants = [
+      { name: 'Ahmet', surname: 'Yıldız', spoken_languages: 'Türkçe, İngilizce, Almanca' },
+      { name: 'Elif', surname: 'Kaya', spoken_languages: 'Türkçe, İngilizce, Fransızca' },
+      { name: 'Mehmet', surname: 'Demir', spoken_languages: 'Türkçe, İngilizce, Rusça' },
+      { name: 'Zeynep', surname: 'Şahin', spoken_languages: 'Türkçe, İngilizce, İspanyolca' },
+      { name: 'Can', surname: 'Özkan', spoken_languages: 'Türkçe, İngilizce, İtalyanca' },
+      { name: 'Lena', surname: 'Podorozhna', spoken_languages: 'Türkçe, İngilizce, Ukraynaca' }
     ];
     
-    const lastNames = [
-      'Yılmaz', 'Demir', 'Kaya', 'Şahin', 'Özkan', 'Podorozhna', 'Smith', 'Johnson', 'Williams', 'Brown',
-      'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson',
-      'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Thompson', 'White', 'Harris', 'Sanchez',
-      'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott',
-      'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera'
+    // Create assistants
+    const assistantIds = [];
+    for (const assistant of assistants) {
+      const result = await pool.query(`
+        INSERT INTO assistants (name, surname, spoken_languages, is_active)
+        VALUES ($1, $2, $3, true)
+        RETURNING id
+      `, [assistant.name, assistant.surname, assistant.spoken_languages]);
+      assistantIds.push(result.rows[0].id);
+      console.log(`✅ Created assistant: ${assistant.name} ${assistant.surname} (ID: ${result.rows[0].id})`);
+    }
+    
+    // Create 2 teams
+    const teams = [
+      { name: 'Reception Team', description: 'Front desk and guest services' },
+      { name: 'Concierge Team', description: 'Guest assistance and recommendations' }
+    ];
+    
+    const teamIds = [];
+    for (const team of teams) {
+      const result = await pool.query(`
+        INSERT INTO teams (name, description, is_active)
+        VALUES ($1, $2, true)
+        RETURNING id
+      `, [team.name, team.description]);
+      teamIds.push(result.rows[0].id);
+      console.log(`✅ Created team: ${team.name} (ID: ${result.rows[0].id})`);
+    }
+    
+    // Assign assistants to teams (first 3 to team 1, last 3 to team 2)
+    for (let i = 0; i < 3; i++) {
+      await pool.query(`
+        INSERT INTO assistant_teams (assistant_id, team_id, is_active)
+        VALUES ($1, $2, true)
+      `, [assistantIds[i], teamIds[0]]);
+    }
+    for (let i = 3; i < 6; i++) {
+      await pool.query(`
+        INSERT INTO assistant_teams (assistant_id, team_id, is_active)
+        VALUES ($1, $2, true)
+      `, [assistantIds[i], teamIds[1]]);
+    }
+    console.log('✅ Assigned assistants to teams');
+    
+    // Guest names (different from assistant names)
+    const guestFirstNames = [
+      'Ali', 'Ayşe', 'Fatma', 'Mustafa', 'Hatice', 'İbrahim', 'Zeliha', 'Hasan', 'Emine', 'Osman',
+      'John', 'Sarah', 'Michael', 'Emma', 'David', 'Olivia', 'James', 'Sophia', 'Robert', 'Isabella',
+      'Thomas', 'Charlotte', 'Charles', 'Amelia', 'Joseph', 'Mia', 'Daniel', 'Harper', 'Matthew', 'Evelyn',
+      'Mark', 'Abigail', 'Steven', 'Emily', 'Paul', 'Sofia', 'Andrew', 'Avery', 'Joshua', 'Ella',
+      'Kenneth', 'Madison', 'Kevin', 'Scarlett', 'Brian', 'Victoria', 'George', 'Aria', 'Edward', 'Grace',
+      'Henry', 'Lily', 'Jack', 'Chloe', 'Oliver', 'Zoe', 'Lucas', 'Nora', 'Alexander', 'Hannah',
+      'Benjamin', 'Aubrey', 'Mason', 'Addison', 'Ethan', 'Eleanor', 'Logan', 'Natalie', 'Jackson', 'Luna',
+      'Levi', 'Penelope', 'Sebastian', 'Riley', 'Mateo', 'Layla', 'Jack', 'Lillian', 'Owen', 'Aurora'
+    ];
+    
+    const guestLastNames = [
+      'Yılmaz', 'Demir', 'Kaya', 'Şahin', 'Özkan', 'Çelik', 'Arslan', 'Doğan', 'Şimşek', 'Yıldız',
+      'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+      'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee',
+      'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young',
+      'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green', 'Adams',
+      'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts', 'Gomez', 'Phillips',
+      'Evans', 'Turner', 'Diaz', 'Parker', 'Cruz', 'Edwards', 'Collins', 'Reyes', 'Stewart', 'Morris',
+      'Rogers', 'Reed', 'Cook', 'Morgan', 'Bell', 'Murphy', 'Bailey', 'Rivera', 'Cooper', 'Richardson'
     ];
     
     const countries = [
@@ -2043,41 +2159,28 @@ async function initializeTestData() {
     // Room numbers (301-400)
     const roomNumbers = Array.from({ length: 100 }, (_, i) => String(301 + i));
     
-    // Create test assistant if not exists
-    const assistantResult = await pool.query(`
-      INSERT INTO assistants (name, email, is_active)
-      VALUES ('Test Assistant', 'assistant@voyage.com', true)
-      ON CONFLICT (email) DO NOTHING
-      RETURNING id
-    `);
-    
-    let assistantId;
-    if (assistantResult.rows.length > 0) {
-      assistantId = assistantResult.rows[0].id;
-    } else {
-      const existing = await pool.query('SELECT id FROM assistants WHERE email = $1', ['assistant@voyage.com']);
-      assistantId = existing.rows[0]?.id;
-    }
-    
-    // Generate random check-ins for next 10 days
+    // Generate guests for next 15 days (5 per day = 75 total)
     const today = new Date();
     const inserts = [];
+    let usedNames = new Set(); // Track used name combinations
     
-    for (let day = 0; day < 10; day++) {
+    for (let day = 0; day < 15; day++) {
       const checkinDate = new Date(today);
       checkinDate.setDate(today.getDate() + day);
       const checkinDateStr = checkinDate.toISOString().split('T')[0];
       
-      // Random number of check-ins per day (3-8)
-      const checkinsPerDay = Math.floor(Math.random() * 6) + 3;
-      
-      for (let i = 0; i < checkinsPerDay; i++) {
-        // Random room number
-        const roomNumber = roomNumbers[Math.floor(Math.random() * roomNumbers.length)];
+      // 5 guests per day
+      for (let i = 0; i < 5; i++) {
+        let firstName, lastName, nameKey;
+        // Ensure unique name combination
+        do {
+          firstName = guestFirstNames[Math.floor(Math.random() * guestFirstNames.length)];
+          lastName = guestLastNames[Math.floor(Math.random() * guestLastNames.length)];
+          nameKey = `${firstName}_${lastName}`;
+        } while (usedNames.has(nameKey));
+        usedNames.add(nameKey);
         
-        // Random guest data
-        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        const roomNumber = roomNumbers[Math.floor(Math.random() * roomNumbers.length)];
         const adultCount = Math.floor(Math.random() * 3) + 1; // 1-3 adults
         const childCount = Math.random() > 0.6 ? Math.floor(Math.random() * 3) : 0; // 40% chance of children
         const country = countries[Math.floor(Math.random() * countries.length)];
@@ -2088,21 +2191,24 @@ async function initializeTestData() {
         checkoutDate.setDate(checkinDate.getDate() + Math.floor(Math.random() * 7) + 1);
         const checkoutDateStr = checkoutDate.toISOString().split('T')[0];
         
+        const guest_unique_id = generateGuestUniqueId(firstName, lastName, checkinDateStr, checkoutDateStr);
+        
         inserts.push({
-            roomNumber,
-            firstName,
-            lastName,
-            checkinDateStr,
-            checkoutDateStr,
-            adultCount,
-            childCount,
-            agency,
-            country
+          roomNumber,
+          firstName,
+          lastName,
+          checkinDateStr,
+          checkoutDateStr,
+          adultCount,
+          childCount,
+          agency,
+          country,
+          guest_unique_id
         });
       }
     }
     
-    // Batch insert - process in chunks of 50 to avoid query size limits
+    // Batch insert rooms
     const chunkSize = 50;
     let totalInserted = 0;
     
@@ -2110,45 +2216,53 @@ async function initializeTestData() {
       const chunk = inserts.slice(i, i + chunkSize);
       
       const values = chunk.map((_, idx) => {
-        const base = idx * 10;
-        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, $${base+10}, true)`;
+        const base = idx * 11;
+        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, $${base+10}, $${base+11}, true)`;
       }).join(', ');
       
-      const params = chunk.flatMap(ins => {
-        const guest_unique_id = generateGuestUniqueId(ins.firstName, ins.lastName, ins.checkinDateStr, ins.checkoutDateStr);
-        return [
-          ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
-          ins.checkoutDateStr, ins.adultCount, ins.childCount, ins.agency, ins.country, guest_unique_id
-        ];
-      });
+      const params = chunk.flatMap(ins => [
+        ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
+        ins.checkoutDateStr, ins.guest_unique_id, ins.adultCount, ins.childCount, ins.agency, ins.country, ins.guest_unique_id
+      ]);
       
       try {
         const result = await pool.query(`
           INSERT INTO rooms (
             room_number, guest_name, guest_surname, checkin_date, 
-            checkout_date, adult_count, child_count, agency, country, guest_unique_id, is_active
+            checkout_date, guest_unique_id, adult_count, child_count, agency, country, is_active
           )
           VALUES ${values}
-          ON CONFLICT (room_number, checkin_date) DO NOTHING
+          ON CONFLICT (guest_unique_id) DO NOTHING
         `, params);
         
         totalInserted += result.rowCount || 0;
-        } catch (error) {
+      } catch (error) {
         console.error(`⚠️ Error inserting chunk ${i / chunkSize + 1}:`, error.message);
       }
     }
     
-    // Count actual check-ins created
-    const result = await pool.query(`
-      SELECT COUNT(*) as count 
-      FROM rooms 
+    // Assign rooms to teams (alternating)
+    const roomsResult = await pool.query(`
+      SELECT guest_unique_id FROM rooms 
       WHERE checkin_date >= CURRENT_DATE 
-        AND checkin_date <= CURRENT_DATE + INTERVAL '10 days'
+        AND checkin_date <= CURRENT_DATE + INTERVAL '15 days'
+      ORDER BY checkin_date, guest_unique_id
     `);
     
-    const actualCount = parseInt(result.rows[0].count);
-    console.log(`✅ Test data initialization completed: ${actualCount} check-ins found for next 10 days`);
-    console.log(`📊 Attempted to insert: ${inserts.length}, Actually inserted: ${totalInserted}`);
+    for (let i = 0; i < roomsResult.rows.length; i++) {
+      const teamId = teamIds[i % 2]; // Alternate between teams
+      await pool.query(`
+        INSERT INTO team_room_assignments (team_id, guest_unique_id, is_active)
+        VALUES ($1, $2, true)
+        ON CONFLICT (team_id, guest_unique_id) DO NOTHING
+      `, [teamId, roomsResult.rows[i].guest_unique_id]);
+    }
+    
+    console.log(`✅ Test data initialization completed:`);
+    console.log(`   - ${assistantIds.length} assistants created`);
+    console.log(`   - ${teamIds.length} teams created`);
+    console.log(`   - ${totalInserted} guests created (5 per day for 15 days)`);
+    console.log(`   - Rooms assigned to teams`);
   } catch (error) {
     console.error('❌ Error initializing test data:', error);
   }
