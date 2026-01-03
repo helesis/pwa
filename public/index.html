@@ -2291,17 +2291,44 @@
         }
 
         // Send message
-        function sendMessage() {
+        async function sendMessage() {
             if (!socket) {
                 console.error('❌ Socket not initialized');
                 alert('Bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
                 return;
             }
             
-            if (!GUEST_UNIQUE_ID) {
-                console.error('❌ Guest unique ID not available');
-                alert('Misafir bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
-                return;
+            // Ensure GUEST_UNIQUE_ID is available
+            let guestUniqueId = GUEST_UNIQUE_ID;
+            if (!guestUniqueId) {
+                console.log('🔧 GUEST_UNIQUE_ID is null, trying to restore or generate...');
+                // Try to restore from localStorage
+                guestUniqueId = localStorage.getItem('guest_unique_id');
+                if (guestUniqueId) {
+                    GUEST_UNIQUE_ID = guestUniqueId;
+                    console.log('✅ Restored GUEST_UNIQUE_ID from localStorage:', guestUniqueId);
+                } else if (GUEST_NAME && CHECKIN_DATE && CHECKOUT_DATE) {
+                    // Generate if we have all required info
+                    console.log('🔧 Generating GUEST_UNIQUE_ID from available info...');
+                    guestUniqueId = await generateGuestUniqueId(GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE);
+                    if (guestUniqueId) {
+                        GUEST_UNIQUE_ID = guestUniqueId;
+                        localStorage.setItem('guest_unique_id', guestUniqueId);
+                        console.log('✅ Generated GUEST_UNIQUE_ID:', guestUniqueId);
+                    } else {
+                        console.error('❌ Failed to generate GUEST_UNIQUE_ID');
+                        alert('Misafir bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
+                        return;
+                    }
+                } else {
+                    console.error('❌ Guest unique ID not available and cannot generate:', {
+                        hasName: !!GUEST_NAME,
+                        hasCheckin: !!CHECKIN_DATE,
+                        hasCheckout: !!CHECKOUT_DATE
+                    });
+                    alert('Misafir bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
+                    return;
+                }
             }
             
             const input = document.getElementById('messageInput');
