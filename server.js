@@ -351,7 +351,7 @@ io.on('connection', (socket) => {
       }
       
       const result = await pool.query(`
-        SELECT m.*, a.name as assistant_name, a.surname as assistant_surname
+        SELECT m.*, a.name as assistant_name, a.surname as assistant_surname, a.avatar as assistant_avatar
         FROM messages m
         LEFT JOIN assistants a ON m.assistant_id = a.id
         WHERE m.guest_unique_id = $1 
@@ -382,6 +382,7 @@ io.on('connection', (socket) => {
           senderType: row.sender_type,
           senderName: senderName,
           assistantId: row.assistant_id,
+          assistantAvatar: row.assistant_avatar,
           message: row.message,
           timestamp: row.timestamp,
           status: status,
