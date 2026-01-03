@@ -256,65 +256,25 @@ io.on('connection', (socket) => {
 
   // Join room
   socket.on('join_room', async (data) => {
-    // Support both old format (just roomNumber) and new format (object with roomNumber, checkinDate, guestUniqueId)
-    const roomNumber = typeof data === 'string' ? data : data.roomNumber;
-    const checkinDate = typeof data === 'object' && data.checkinDate ? data.checkinDate : null;
+    // Sadece guestUniqueId kullan
     const guestUniqueId = typeof data === 'object' && data.guestUniqueId ? data.guestUniqueId : null;
     
     logDebug('🔵 ========== SERVER: JOIN ROOM ==========');
     logDebug('🔵 Socket ID:', socket.id);
-    logDebug('🔵 Room Number:', roomNumber);
-    logDebug('🔵 Check-in Date:', checkinDate);
     logDebug('🔵 Guest Unique ID:', guestUniqueId);
     logDebug('🔵 Time:', new Date().toISOString());
     logDebug('🔵 Client IP:', socket.handshake.address);
     logDebug('🔵 User Agent:', socket.handshake.headers['user-agent']);
     
-    // If checkinDate not provided, try to get it
-    let actualCheckinDate = checkinDate;
-    let actualRoomNumber = roomNumber;
-    
-    if (!actualCheckinDate) {
-      // Try to get from room_number if provided
-      if (roomNumber) {
-      const roomResult = await pool.query(
-        'SELECT checkin_date FROM rooms WHERE room_number = $1',
-        [roomNumber]
-      );
-      if (roomResult.rows.length > 0) {
-        actualCheckinDate = roomResult.rows[0].checkin_date;
-          logDebug('🔵 Check-in date from room:', actualCheckinDate);
-        }
-      }
-      
-      // If still no checkin_date but we have guestUniqueId, try to get from guest_unique_id
-      if (!actualCheckinDate && guestUniqueId) {
-        const guestResult = await pool.query(
-          'SELECT checkin_date, room_number FROM rooms WHERE guest_unique_id = $1',
-          [guestUniqueId]
-        );
-        if (guestResult.rows.length > 0) {
-          actualCheckinDate = guestResult.rows[0].checkin_date;
-          if (!actualRoomNumber && guestResult.rows[0].room_number) {
-            actualRoomNumber = guestResult.rows[0].room_number;
-          }
-          logDebug('🔵 Check-in date from guest_unique_id:', actualCheckinDate);
-        }
-      }
+    // guestUniqueId zorunlu
+    if (!guestUniqueId) {
+      logDebug('⚠️ Cannot join room: missing guest_unique_id');
+      socket.emit('error', { message: 'Guest unique ID bulunamadı' });
+      return;
     }
     
-    // Use guest_unique_id if available, otherwise use room_number + checkin_date
-    let roomId;
-    if (guestUniqueId) {
-      roomId = `guest_${guestUniqueId}`;
-    } else if (actualCheckinDate && actualRoomNumber) {
-      roomId = `${actualRoomNumber}_${actualCheckinDate}`;
-    } else if (actualRoomNumber) {
-      roomId = actualRoomNumber;
-    } else {
-      logDebug('⚠️ Cannot determine room ID, using socket ID');
-      roomId = socket.id;
-    }
+    // Room ID sadece guestUniqueId'den oluşur
+    const roomId = `guest_${guestUniqueId}`;
     socket.join(roomId);
     logInfo(`✅ Client joined room: ${roomId}`);
     
@@ -327,24 +287,16 @@ io.on('connection', (socket) => {
     }
     
     try {
-      logDebug('📊 Fetching chat history for room:', actualRoomNumber, 'check-in:', actualCheckinDate, 'guest_unique_id:', guestUniqueId);
+      logDebug('📊 Fetching chat history for guest_unique_id:', guestUniqueId);
       // Send chat history (last 50 messages) filtered by guest_unique_id
-      let result;
-      if (guestUniqueId) {
-        // Use guest_unique_id to find messages
-        result = await pool.query(`
-          SELECT m.*, a.name as assistant_name, a.surname as assistant_surname
-          FROM messages m
-          LEFT JOIN assistants a ON m.assistant_id = a.id
-          WHERE m.guest_unique_id = $1
-          ORDER BY m.timestamp DESC 
-          LIMIT 50
-        `, [guestUniqueId]);
-      } else {
-        logDebug('⚠️ Cannot fetch chat history: missing guest_unique_id');
-        socket.emit('chat_history', []);
-        return;
-      }
+      const result = await pool.query(`
+        SELECT m.*, a.name as assistant_name, a.surname as assistant_surname, a.avatar as assistant_avatar
+        FROM messages m
+        LEFT JOIN assistants a ON m.assistant_id = a.id
+        WHERE m.guest_unique_id = $1
+        ORDER BY m.timestamp DESC 
+        LIMIT 50
+      `, [guestUniqueId]);
       
       logDebug('📊 Messages found:', result.rows.length);
       
