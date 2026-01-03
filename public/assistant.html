@@ -1349,7 +1349,14 @@
             currentRoomNumber = roomNumber;
             currentCheckinDate = checkinDate;
             currentGuestUniqueId = guestUniqueId;
-            currentRoom = { roomNumber, guestName, guestSurname, checkinDate, guestUniqueId };
+            
+            // Get profile photo from element or fetch from backend
+            let profilePhoto = null;
+            if (element && element.getAttribute('data-profile-photo')) {
+                profilePhoto = element.getAttribute('data-profile-photo');
+            }
+            
+            currentRoom = { roomNumber, guestName, guestSurname, checkinDate, guestUniqueId, profilePhoto };
             
             // Update UI
             document.querySelectorAll('.room-item').forEach(item => {
@@ -1364,8 +1371,7 @@
             
             // Update chat room avatar - try to get profile photo from room element or load it
             const chatRoomAvatar = document.getElementById('chatRoomAvatar');
-            if (element && element.getAttribute('data-profile-photo')) {
-                const profilePhoto = element.getAttribute('data-profile-photo');
+            if (profilePhoto) {
                 chatRoomAvatar.innerHTML = `<img src="${profilePhoto}" alt="${guestName || 'Guest'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
             } else {
                 // Try to load profile photo from backend
@@ -1374,7 +1380,9 @@
                         .then(res => res.json())
                         .then(data => {
                             if (data.profilePhoto) {
-                                chatRoomAvatar.innerHTML = `<img src="${data.profilePhoto}" alt="${guestName || 'Guest'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                                profilePhoto = data.profilePhoto;
+                                currentRoom.profilePhoto = profilePhoto;
+                                chatRoomAvatar.innerHTML = `<img src="${profilePhoto}" alt="${guestName || 'Guest'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                             } else {
                                 chatRoomAvatar.textContent = roomNumber;
                             }
