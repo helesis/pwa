@@ -72,6 +72,7 @@
             padding: 20px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 12px;
         }
 
@@ -79,6 +80,36 @@
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+
+        .rooms-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-btn {
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            color: white;
+            font-size: 20px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .logout-btn:active {
+            background: rgba(255,255,255,0.15);
         }
 
         .assistant-avatar-header {
@@ -830,6 +861,11 @@
                         <div class="assistant-name-header" id="assistantNameHeader">Asistan</div>
                         <div class="assistant-role-header" id="assistantTeamHeader">Voyage Assistant</div>
                     </div>
+                </div>
+                <div class="rooms-header-right">
+                    <button class="logout-btn" onclick="handleAssistantLogout()" title="Çıkış Yap">
+                        🚪
+                    </button>
                 </div>
             </div>
             
