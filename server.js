@@ -78,20 +78,23 @@ pool.on('error', (err) => {
 // Initialize database tables
 async function initializeDatabase() {
   try {
-    // Drop all existing tables in correct order (respecting foreign keys)
-    console.log('🗑️ Dropping existing tables...');
-    await pool.query(`
-      DROP TABLE IF EXISTS messages CASCADE;
-      DROP TABLE IF EXISTS team_room_assignments CASCADE;
-      DROP TABLE IF EXISTS assistant_teams CASCADE;
-      DROP TABLE IF EXISTS assistant_assignments CASCADE;
-      DROP TABLE IF EXISTS room_invites CASCADE;
-      DROP TABLE IF EXISTS team_invites CASCADE;
-      DROP TABLE IF EXISTS rooms CASCADE;
-      DROP TABLE IF EXISTS assistants CASCADE;
-      DROP TABLE IF EXISTS teams CASCADE;
+    // Check if tables already exist
+    const checkResult = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'rooms'
+      );
     `);
-    console.log('✅ All tables dropped');
+    
+    const tablesExist = checkResult.rows[0].exists;
+    
+    if (tablesExist) {
+      console.log('ℹ️ Database tables already exist, skipping initialization');
+      return;
+    }
+    
+    console.log('🔄 Creating database tables...');
     
     // Create tables with new structure
     await pool.query(`
