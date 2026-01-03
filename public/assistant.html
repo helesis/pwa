@@ -996,20 +996,32 @@
             const avatarPlaceholder = document.getElementById('assistantAvatarPlaceholder');
             const nameHeader = document.getElementById('assistantNameHeader');
             
-            if (ASSISTANT_AVATAR) {
+            console.log('🔄 Updating assistant header:', {
+                ASSISTANT_AVATAR: ASSISTANT_AVATAR ? `${ASSISTANT_AVATAR.substring(0, 50)}...` : 'null',
+                ASSISTANT_NAME: ASSISTANT_NAME
+            });
+            
+            // Check if avatar exists and is not empty
+            if (ASSISTANT_AVATAR && ASSISTANT_AVATAR.trim() !== '') {
                 avatarPlaceholder.style.display = 'none';
-                if (!avatarHeader.querySelector('img')) {
-                    const img = document.createElement('img');
-                    img.src = ASSISTANT_AVATAR;
+                let img = avatarHeader.querySelector('img');
+                if (!img) {
+                    img = document.createElement('img');
                     img.alt = ASSISTANT_NAME || 'Asistan';
                     avatarHeader.appendChild(img);
-                } else {
-                    avatarHeader.querySelector('img').src = ASSISTANT_AVATAR;
                 }
+                img.src = ASSISTANT_AVATAR;
+                img.onerror = function() {
+                    console.error('❌ Failed to load assistant avatar:', ASSISTANT_AVATAR);
+                    avatarPlaceholder.style.display = 'flex';
+                    if (img) img.remove();
+                };
+                console.log('✅ Assistant avatar set in header');
             } else {
                 avatarPlaceholder.style.display = 'flex';
                 const img = avatarHeader.querySelector('img');
                 if (img) img.remove();
+                console.log('ℹ️ No assistant avatar, showing placeholder');
             }
             
             if (ASSISTANT_NAME) {
