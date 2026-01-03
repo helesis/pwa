@@ -902,7 +902,13 @@
                         // User is logged in
                         ASSISTANT_ID = data.assistant.id;
                         ASSISTANT_NAME = data.assistant.name;
-                        ASSISTANT_AVATAR = data.assistant.avatar;
+                        ASSISTANT_AVATAR = data.assistant.avatar || null;
+                        
+                        console.log('✅ Assistant authenticated:', {
+                            id: ASSISTANT_ID,
+                            name: ASSISTANT_NAME,
+                            avatar: ASSISTANT_AVATAR ? `${ASSISTANT_AVATAR.substring(0, 50)}...` : 'null'
+                        });
                         
                         // Show dashboard, hide login
                         document.getElementById('loginContainer').style.display = 'none';
@@ -963,7 +969,13 @@
                     // Login successful
                     ASSISTANT_ID = data.assistant.id;
                     ASSISTANT_NAME = data.assistant.name;
-                    ASSISTANT_AVATAR = data.assistant.avatar;
+                    ASSISTANT_AVATAR = data.assistant.avatar || null;
+                    
+                    console.log('✅ Assistant logged in:', {
+                        id: ASSISTANT_ID,
+                        name: ASSISTANT_NAME,
+                        avatar: ASSISTANT_AVATAR ? `${ASSISTANT_AVATAR.substring(0, 50)}...` : 'null'
+                    });
                     
                     // Hide login, show dashboard
                     document.getElementById('loginContainer').style.display = 'none';
