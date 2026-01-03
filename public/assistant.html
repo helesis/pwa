@@ -1298,8 +1298,13 @@
                         ? `<span class="unread-badge">${room.unread_count}</span>` 
                         : '';
                     
+                    // Room avatar - show profile photo if available, otherwise room number
+                    const roomAvatarHTML = room.profile_photo 
+                        ? `<img src="${room.profile_photo}" alt="${room.guest_name || 'Guest'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                        : room.room_number;
+                    
                     roomElement.innerHTML = `
-                        <div class="room-avatar">${room.room_number}</div>
+                        <div class="room-avatar">${roomAvatarHTML}</div>
                         <div class="room-info">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                 <div class="room-name">${room.guest_name || ''} ${room.guest_surname || ''}</div>
@@ -1311,6 +1316,11 @@
                             </div>
                         </div>
                     `;
+                    
+                    // Store profile photo in element for later updates
+                    if (room.profile_photo) {
+                        roomElement.setAttribute('data-profile-photo', room.profile_photo);
+                    }
                     roomElement.addEventListener('click', () => selectRoom(room.room_number, room.guest_name, room.guest_surname, room.checkin_date, room.guest_unique_id, roomElement));
                     
                     // Sağ tıklama menüsü ekle
@@ -1351,7 +1361,31 @@
             
             document.getElementById('chatRoomName').textContent = `${guestName} ${guestSurname}`;
             document.getElementById('chatRoomDetails').textContent = `Oda ${roomNumber}`;
-            document.getElementById('chatRoomAvatar').textContent = roomNumber;
+            
+            // Update chat room avatar - try to get profile photo from room element or load it
+            const chatRoomAvatar = document.getElementById('chatRoomAvatar');
+            if (element && element.getAttribute('data-profile-photo')) {
+                const profilePhoto = element.getAttribute('data-profile-photo');
+                chatRoomAvatar.innerHTML = `<img src="${profilePhoto}" alt="${guestName || 'Guest'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            } else {
+                // Try to load profile photo from backend
+                if (guestUniqueId) {
+                    fetch(`/api/guests/${guestUniqueId}/profile-photo`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.profilePhoto) {
+                                chatRoomAvatar.innerHTML = `<img src="${data.profilePhoto}" alt="${guestName || 'Guest'}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                            } else {
+                                chatRoomAvatar.textContent = roomNumber;
+                            }
+                        })
+                        .catch(() => {
+                            chatRoomAvatar.textContent = roomNumber;
+                        });
+                } else {
+                    chatRoomAvatar.textContent = roomNumber;
+                }
+            }
             
             // Show chat view on mobile first (before showing input)
             if (window.innerWidth <= 768) {
@@ -1623,6 +1657,49 @@
             updateMessageStatus(data.messageId, 'sent');
         });
         
+        // Listen for profile photo updates
+        socket.on('profile_photo_updated', (data) => {
+            console.log('📸 Profile photo updated:', data);
+            const { guest_unique_id, room_number, profile_photo } = data;
+            
+            // Update room list avatar if this room is in the list
+            const roomElement = document.querySelector(`[data-guest-unique-id="${guest_unique_id}"]`) || 
+                              document.querySelector(`[data-room-number="${room_number}"]`);
+            
+            if (roomElement) {
+                const avatarElement = roomElement.querySelector('.room-avatar');
+                if (avatarElement && profile_photo) {
+                    avatarElement.innerHTML = `<img src="${profile_photo}" alt="Guest" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    roomElement.setAttribute('data-profile-photo', profile_photo);
+                    console.log('✅ Updated room list avatar');
+                }
+            }
+            
+            // Update chat header avatar if this is the currently selected room
+            if (currentGuestUniqueId === guest_unique_id || currentRoomNumber === room_number) {
+                const chatRoomAvatar = document.getElementById('chatRoomAvatar');
+                if (chatRoomAvatar && profile_photo) {
+                    chatRoomAvatar.innerHTML = `<img src="${profile_photo}" alt="Guest" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    console.log('✅ Updated chat header avatar');
+                }
+            }
+            
+            // Update message avatars for future messages (we'll need to store this in a variable)
+            // For now, we'll update existing messages in the chat
+            if (currentGuestUniqueId === guest_unique_id || currentRoomNumber === room_number) {
+                const chatContainer = document.getElementById('chatContainer');
+                if (chatContainer && profile_photo) {
+                    const guestMessages = chatContainer.querySelectorAll('.message:not(.sent) .message-avatar');
+                    guestMessages.forEach(avatar => {
+                        if (avatar.textContent.trim() === '🏨') {
+                            avatar.innerHTML = `<img src="${profile_photo}" alt="Guest" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                        }
+                    });
+                    console.log('✅ Updated message avatars');
+                }
+            }
+        });
+
         // Message status update (delivered/read)
         socket.on('message_status_update', (data) => {
             console.log('📬 ========== ASSISTANT: message_status_update received ==========');

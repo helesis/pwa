@@ -1027,6 +1027,16 @@ app.post('/api/guests/:guestUniqueId/profile-photo', async (req, res) => {
     }
     
     logDebug('✅ Profile photo saved for guest:', guestUniqueId);
+    
+    // Emit Socket.IO event to notify assistants about profile photo update
+    const roomNumber = result.rows[0].room_number;
+    io.emit('profile_photo_updated', {
+      guest_unique_id: guestUniqueId,
+      room_number: roomNumber,
+      profile_photo: profilePhoto
+    });
+    console.log('📢 Emitted profile_photo_updated event for guest:', guestUniqueId);
+    
     res.json({ success: true, roomNumber: result.rows[0].room_number });
   } catch (error) {
     console.error('❌ Error saving profile photo:', error);
