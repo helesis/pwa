@@ -2854,8 +2854,10 @@
             // Setup PWA fullscreen support
             setupPWAFullscreen();
             
-            // Initialize socket connection (will load guest info first)
+            // Initialize socket connection if guest is authenticated
+            if (GUEST_UNIQUE_ID) {
             await initializeSocket();
+            }
             
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
