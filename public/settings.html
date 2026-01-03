@@ -843,23 +843,12 @@
                     return;
                 }
 
-                // Load assistants and QR codes for each team
+                // Load assistants for each team
                 const teamsWithData = await Promise.all(teams.map(async (team) => {
                     const assistantsRes = await fetch(`/api/teams/${team.id}/assistants`);
                     const assistants = await assistantsRes.json();
                     
-                    // Load QR code
-                    let qrData = null;
-                    try {
-                        const qrRes = await fetch(`/api/teams/${team.id}/invite`);
-                        if (qrRes.ok) {
-                            qrData = await qrRes.json();
-                        }
-                    } catch (e) {
-                        console.error('Error loading QR for team:', team.id, e);
-                    }
-                    
-                    return { ...team, assistants, qrData };
+                    return { ...team, assistants };
                 }));
 
                 listEl.innerHTML = `
@@ -872,7 +861,6 @@
                                 <th>Açıklama</th>
                                 <th>Assistant'lar</th>
                                 <th>Aktif Oda Sayısı</th>
-                                <th>QR Kod</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
@@ -893,16 +881,6 @@
                                     <td>${t.assistants.map(a => a.name).join(', ') || '-'}</td>
                                     <td>
                                         <span class="badge badge-success">${t.active_room_count || 0} Oda</span>
-                                    </td>
-                                    <td>
-                                        ${t.qrData ? `
-                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                <img src="${t.qrData.qrCodeUrl}" alt="QR Code" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;" onclick="showTeamQRModal(${t.id}, '${t.name}')">
-                                                <button class="btn btn-primary" onclick="showTeamQRModal(${t.id}, '${t.name}')" style="padding: 6px 12px; font-size: 12px;">📱 Göster</button>
-                                            </div>
-                                        ` : `
-                                            <button class="btn btn-secondary" onclick="generateTeamQR(${t.id})" style="padding: 6px 12px; font-size: 12px;">QR Oluştur</button>
-                                        `}
                                     </td>
                                     <td>
                                         <span class="badge ${t.is_active ? 'badge-success' : 'badge-danger'}">
