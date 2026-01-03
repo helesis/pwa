@@ -1027,13 +1027,9 @@
             // Setup PWA fullscreen support
             setupPWAFullscreen();
             
-            // Set today's date as default
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('dateFilter').value = today;
-            
-            // Load assistant teams and rooms
+            // Load assistant teams and rooms (no date filter needed)
             await checkAssistantTeams();
-            loadRooms(today);
+            loadRooms();
         }
         // Socket.IO configuration with reconnection settings
         // Polling öncelikli (Render free tier için daha güvenilir)
@@ -1104,21 +1100,10 @@
                 return;
             }
             
-            // Update date filter if needed
-            if (checkinDate) {
-                const dateFilter = document.getElementById('dateFilter');
-                const checkinDateStr = checkinDate.split('T')[0];
-                if (dateFilter.value !== checkinDateStr) {
-                    dateFilter.value = checkinDateStr;
-                    loadRooms(checkinDateStr);
-                    // Wait for rooms to load, then select
-                    setTimeout(() => selectRoomFromAutoJoin(roomNumber, checkinDate), 500);
-                } else {
-                    selectRoomFromAutoJoin(roomNumber, checkinDate);
-                }
-            } else {
-                selectRoomFromAutoJoin(roomNumber, checkinDate);
-            }
+            // Reload rooms to ensure the room is in the list, then select
+            loadRooms();
+            // Wait for rooms to load, then select
+            setTimeout(() => selectRoomFromAutoJoin(roomNumber, checkinDate), 500);
         });
 
         function selectRoomFromAutoJoin(roomNumber, checkinDate) {
@@ -1143,13 +1128,12 @@
         let currentGuestUniqueId = null;
         let inviteData = null;
 
-        // Set today's date as default
-        document.getElementById('dateFilter').valueAsDate = new Date();
-
-        // Load rooms on date change
-        document.getElementById('dateFilter').addEventListener('change', (e) => {
-            loadRooms(e.target.value);
-        });
+        // Date filter removed - rooms are now shown based on checkout date and last message time
+        // Hide date filter container
+        const dateFilterContainer = document.getElementById('dateFilterContainer');
+        if (dateFilterContainer) {
+            dateFilterContainer.style.display = 'none';
+        }
 
         // iOS detection
         function isIOS() {
@@ -1222,14 +1206,14 @@
         });
 
         // Load rooms for selected date
-        async function loadRooms(date) {
+        async function loadRooms() {
             if (!ASSISTANT_ID) {
                 console.error('Cannot load rooms: ASSISTANT_ID is null');
                 return;
             }
             
             try {
-                const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms?date=${date}`);
+                const response = await fetch(`/api/assistant/${ASSISTANT_ID}/rooms`);
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -1255,7 +1239,7 @@
                 
                 if (rooms.length === 0) {
                     if (roomsList) {
-                        roomsList.innerHTML = '<div class="empty-state">Bu tarihte check-in olan oda bulunamadı</div>';
+                        roomsList.innerHTML = '<div class="empty-state">Aktif oda bulunamadı</div>';
                     }
                     return;
                 }

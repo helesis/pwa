@@ -1836,94 +1836,119 @@ app.get('/api/assistant/:assistantId/teams', async (req, res) => {
 app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
   try {
     const { assistantId } = req.params;
-    const { date } = req.query; // Optional: filter by date (default: today)
-    
-    const checkinDate = date || new Date().toISOString().split('T')[0];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
     
     // Get rooms assigned to assistant's teams with last message info
-    // Use GROUP BY instead of DISTINCT to allow ORDER BY with expressions
+    // Filter logic:
+    // 1. Show rooms until checkout_date + 1 day
+    // 2. If guest sent a message, show until last_message_time + 2 days
+    // 3. Use whichever is later
     const result = await pool.query(`
+      WITH room_messages AS (
+        SELECT 
+          r.id,
+          r.room_number,
+          r.guest_name,
+          r.guest_surname,
+          r.checkin_date,
+          r.checkout_date,
+          r.guest_unique_id,
+          r.is_active,
+          r.adult_count,
+          r.child_count,
+          r.country,
+          r.agency,
+          MAX(tra.assigned_at) as assigned_at,
+          (
+            SELECT m.message 
+            FROM messages m 
+            WHERE m.room_number = r.room_number 
+              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+            ORDER BY m.timestamp DESC 
+            LIMIT 1
+          ) as last_message,
+          (
+            SELECT m.timestamp 
+            FROM messages m 
+            WHERE m.room_number = r.room_number 
+              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+            ORDER BY m.timestamp DESC 
+            LIMIT 1
+          ) as last_message_time,
+          (
+            SELECT m.timestamp 
+            FROM messages m 
+            WHERE m.room_number = r.room_number 
+              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+              AND m.sender_type = 'guest'
+            ORDER BY m.timestamp DESC 
+            LIMIT 1
+          ) as last_guest_message_time,
+          COALESCE((
+            SELECT COUNT(*)::INTEGER
+            FROM messages m 
+            WHERE m.room_number = r.room_number 
+              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+              AND m.sender_type NOT IN ('assistant', 'staff')
+              AND m.read_at IS NULL
+          ), 0) as unread_count
+        FROM rooms r
+        INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
+          AND r.checkin_date = tra.checkin_date
+        INNER JOIN assistant_teams at ON tra.team_id = at.team_id
+        WHERE at.assistant_id = $1 
+          AND at.is_active = true
+          AND tra.is_active = true
+          AND r.is_active = true
+        GROUP BY 
+          r.id,
+          r.room_number,
+          r.guest_name,
+          r.guest_surname,
+          r.checkin_date,
+          r.checkout_date,
+          r.guest_unique_id,
+          r.is_active,
+          r.adult_count,
+          r.child_count,
+          r.country,
+          r.agency
+      )
       SELECT 
-        r.id,
-        r.room_number,
-        r.guest_name,
-        r.guest_surname,
-        r.checkin_date,
-        r.checkout_date,
-        r.guest_unique_id,
-        r.is_active,
-        r.adult_count,
-        r.child_count,
-        r.country,
-        r.agency,
-        MAX(tra.assigned_at) as assigned_at,
+        *,
+        COALESCE(last_message_time, checkin_date) as sort_timestamp,
+        -- Calculate expiry date: max of (checkout_date + 1 day) or (last_guest_message_time + 2 days)
+        GREATEST(
+          CASE 
+            WHEN checkout_date IS NOT NULL 
+            THEN (checkout_date + INTERVAL '1 day')::date
+            ELSE NULL
+          END,
+          CASE 
+            WHEN last_guest_message_time IS NOT NULL 
+            THEN (last_guest_message_time::date + INTERVAL '2 days')::date
+            ELSE NULL
+          END
+        ) as expiry_date
+      FROM room_messages
+      WHERE 
+        -- Show if checkout_date + 1 day >= today OR last_guest_message_time + 2 days >= today
         (
-          SELECT m.message 
-          FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-          ORDER BY m.timestamp DESC 
-          LIMIT 1
-        ) as last_message,
-        (
-          SELECT m.timestamp 
-          FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-          ORDER BY m.timestamp DESC 
-          LIMIT 1
-        ) as last_message_time,
-        COALESCE((
-          SELECT COUNT(*)::INTEGER
-          FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-            AND m.sender_type NOT IN ('assistant', 'staff')
-            AND m.read_at IS NULL
-        ), 0) as unread_count,
-        COALESCE((
-          SELECT m.timestamp 
-          FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-          ORDER BY m.timestamp DESC 
-          LIMIT 1
-        ), r.checkin_date) as sort_timestamp
-      FROM rooms r
-      INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
-        AND r.checkin_date = tra.checkin_date
-      INNER JOIN assistant_teams at ON tra.team_id = at.team_id
-      WHERE at.assistant_id = $1 
-        AND at.is_active = true
-        AND tra.is_active = true
-        AND r.checkin_date = $2
-        AND r.is_active = true
-        AND (
-          r.checkout_date IS NULL 
-          OR (r.checkout_date + INTERVAL '1 day') >= $3::date
+          checkout_date IS NULL 
+          OR (checkout_date + INTERVAL '1 day')::date >= $2::date
         )
-      GROUP BY 
-        r.id,
-        r.room_number,
-        r.guest_name,
-        r.guest_surname,
-        r.checkin_date,
-        r.checkout_date,
-        r.guest_unique_id,
-        r.is_active,
-        r.adult_count,
-        r.child_count,
-        r.country,
-        r.agency
+        OR (
+          last_guest_message_time IS NOT NULL 
+          AND (last_guest_message_time::date + INTERVAL '2 days')::date >= $2::date
+        )
       ORDER BY 
         sort_timestamp DESC,
-        r.room_number ASC
-    `, [assistantId, checkinDate, todayStr]);
+        room_number ASC
+    `, [assistantId, todayStr]);
     
-    console.log(`📋 Assistant ${assistantId} rooms for ${checkinDate}:`, result.rows.length);
+    console.log(`📋 Assistant ${assistantId} rooms (all active):`, result.rows.length);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Error fetching assistant rooms:', error);
