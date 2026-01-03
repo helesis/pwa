@@ -1289,28 +1289,8 @@
                         roomElement.setAttribute('data-guest-unique-id', room.guest_unique_id);
                     }
                     
-                    // Format last message time
-                    let lastMessageTime = '';
-                    if (room.last_message_time) {
-                        const msgTime = new Date(room.last_message_time);
-                        const now = new Date();
-                        const diffMs = now - msgTime;
-                        const diffMins = Math.floor(diffMs / 60000);
-                        const diffHours = Math.floor(diffMs / 3600000);
-                        const diffDays = Math.floor(diffMs / 86400000);
-                        
-                        if (diffMins < 1) {
-                            lastMessageTime = 'Şimdi';
-                        } else if (diffMins < 60) {
-                            lastMessageTime = `${diffMins} dk`;
-                        } else if (diffHours < 24) {
-                            lastMessageTime = `${diffHours} sa`;
-                        } else if (diffDays < 7) {
-                            lastMessageTime = `${diffDays} g`;
-                        } else {
-                            lastMessageTime = msgTime.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-                        }
-                    }
+                    // Format last message time using helper function
+                    const lastMessageTime = formatRoomTime(room.last_message_time);
                     
                     // Truncate last message
                     let lastMessage = room.last_message || '';
@@ -1332,7 +1312,7 @@
                         <div class="room-info">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                 <div class="room-name">${room.guest_name || ''} ${room.guest_surname || ''}</div>
-                                ${lastMessageTime ? `<div class="room-time">${lastMessageTime}</div>` : ''}
+                                ${lastMessageTime ? `<div class="room-time" data-timestamp="${room.last_message_time || ''}">${lastMessageTime}</div>` : ''}
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div class="room-last-message">${lastMessage || 'Henüz mesaj yok'}</div>
@@ -1355,6 +1335,11 @@
                     
                     roomsList.appendChild(roomElement);
                 });
+                
+                // Start room time updates if not already started
+                if (!roomTimeUpdateInterval) {
+                    startRoomTimeUpdates();
+                }
             } catch (error) {
                 console.error('Error loading rooms:', error);
             }
@@ -1381,6 +1366,27 @@
             } else {
                 return msgTime.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
             }
+        }
+
+        // Update room times periodically
+        let roomTimeUpdateInterval = null;
+        function startRoomTimeUpdates() {
+            if (roomTimeUpdateInterval) {
+                clearInterval(roomTimeUpdateInterval);
+            }
+            roomTimeUpdateInterval = setInterval(() => {
+                const roomsList = document.getElementById('roomsList');
+                if (!roomsList) return;
+                
+                const roomElements = roomsList.querySelectorAll('.room-item');
+                roomElements.forEach(roomEl => {
+                    const timeEl = roomEl.querySelector('.room-time');
+                    if (timeEl && timeEl.getAttribute('data-timestamp')) {
+                        const timestamp = timeEl.getAttribute('data-timestamp');
+                        timeEl.textContent = formatRoomTime(timestamp);
+                    }
+                });
+            }, 60000); // Update every minute
         }
 
         // Update room in list when new message arrives
@@ -1412,6 +1418,7 @@
             // Update time
             const timeEl = roomElement.querySelector('.room-time');
             if (timeEl && timestamp) {
+                timeEl.setAttribute('data-timestamp', timestamp);
                 timeEl.textContent = formatRoomTime(timestamp);
             }
             
