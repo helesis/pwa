@@ -1209,10 +1209,10 @@ app.get('/api/assistants/:id', async (req, res) => {
 // Create assistant
 app.post('/api/assistants', async (req, res) => {
   try {
-    const { name, email, avatar } = req.body;
+    const { name, surname, spoken_languages, avatar } = req.body;
     const result = await pool.query(
-      'INSERT INTO assistants (name, email, avatar) VALUES ($1, $2, $3) RETURNING *',
-      [name, email || null, avatar || null]
+      'INSERT INTO assistants (name, surname, spoken_languages, avatar) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, surname || null, spoken_languages || null, avatar || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
