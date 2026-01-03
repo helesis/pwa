@@ -2088,13 +2088,13 @@ async function initializeTestData() {
       const chunk = inserts.slice(i, i + chunkSize);
       
       const values = chunk.map((_, idx) => {
-        const base = idx * 11;
-        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, $${base+10}, $${base+11}, true)`;
+        const base = idx * 10;
+        return `($${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, $${base+7}, $${base+8}, $${base+9}, $${base+10}, true)`;
       }).join(', ');
       
       const params = chunk.flatMap(ins => [
         ins.roomNumber, ins.firstName, ins.lastName, ins.checkinDateStr,
-        ins.checkoutDateStr, ins.guest_unique_id, ins.adultCount, ins.childCount, ins.agency, ins.country, ins.guest_unique_id
+        ins.checkoutDateStr, ins.guest_unique_id, ins.adultCount, ins.childCount, ins.agency, ins.country
       ]);
       
       try {
