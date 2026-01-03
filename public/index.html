@@ -2253,22 +2253,24 @@
                 const isSent = messageEl.getAttribute('data-is-sent') === 'true';
                 if (isSent) {
                     console.log('🔧 Status element missing for sent message, creating it...');
-                    const messageBubble = messageEl.querySelector('.message-bubble');
-                    if (!messageBubble) {
-                        console.error('⚠️ message-bubble not found');
-                        return;
-                    }
                     
-                    // Status elementi yoksa oluştur
-                    let messageTime = messageBubble.querySelector('.message-time');
+                    // message-time is a sibling of message-bubble, not inside it
+                    // So we should search directly in messageEl or message-content
+                    let messageTime = messageEl.querySelector('.message-time');
                     if (!messageTime) {
-                        // Create message-time if it doesn't exist
+                        // If message-time doesn't exist (shouldn't happen, but just in case)
                         console.log('🔧 message-time missing, creating it...');
-                        const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                        messageTime = document.createElement('div');
-                        messageTime.className = 'message-time';
-                        messageTime.textContent = time;
-                        messageBubble.appendChild(messageTime);
+                        const messageContent = messageEl.querySelector('.message-content');
+                        if (messageContent) {
+                            const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                            messageTime = document.createElement('div');
+                            messageTime.className = 'message-time';
+                            messageTime.textContent = time;
+                            messageContent.appendChild(messageTime);
+                        } else {
+                            console.error('⚠️ message-content not found');
+                            return;
+                        }
                     }
                     
                     // Create status element
