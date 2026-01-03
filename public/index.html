@@ -2408,8 +2408,7 @@
             // Stop typing indicator
             if (isTyping && socket) {
                 socket.emit('stop_typing', { 
-                    guestUniqueId: GUEST_UNIQUE_ID,
-                    checkinDate: CHECKIN_DATE
+                    guestUniqueId: GUEST_UNIQUE_ID
                 });
                 isTyping = false;
             }
@@ -2470,7 +2469,6 @@
                 isTyping = true;
                 socket.emit('typing', {
                     guestUniqueId: GUEST_UNIQUE_ID,
-                    checkinDate: CHECKIN_DATE,
                     senderName: GUEST_NAME,
                     senderType: 'guest'
                 });

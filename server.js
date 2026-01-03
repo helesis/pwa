@@ -535,19 +535,16 @@ io.on('connection', (socket) => {
 
   // Typing indicator
   socket.on('typing', async (data) => {
-    const { roomNumber, guestUniqueId, checkinDate } = data;
+    const { guestUniqueId } = data;
     
-    // Determine room ID
-    let roomId;
-    if (guestUniqueId) {
-      roomId = `guest_${guestUniqueId}`;
-    } else if (roomNumber && checkinDate) {
-      roomId = `${roomNumber}_${checkinDate}`;
-    } else if (roomNumber) {
-      roomId = roomNumber;
-    } else {
-      return; // Cannot determine room
+    // guestUniqueId zorunlu
+    if (!guestUniqueId) {
+      logDebug('⚠️ Cannot handle typing: missing guest_unique_id');
+      return;
     }
+    
+    // Room ID sadece guestUniqueId'den oluşur
+    const roomId = `guest_${guestUniqueId}`;
     
     socket.to(roomId).emit('user_typing', {
       senderName: data.senderName,
@@ -556,19 +553,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('stop_typing', async (data) => {
-    const { roomNumber, guestUniqueId, checkinDate } = data;
+    const { guestUniqueId } = data;
     
-    // Determine room ID
-    let roomId;
-    if (guestUniqueId) {
-      roomId = `guest_${guestUniqueId}`;
-    } else if (roomNumber && checkinDate) {
-      roomId = `${roomNumber}_${checkinDate}`;
-    } else if (roomNumber) {
-      roomId = roomNumber;
-    } else {
-      return; // Cannot determine room
+    // guestUniqueId zorunlu
+    if (!guestUniqueId) {
+      logDebug('⚠️ Cannot handle stop_typing: missing guest_unique_id');
+      return;
     }
+    
+    // Room ID sadece guestUniqueId'den oluşur
+    const roomId = `guest_${guestUniqueId}`;
     
     socket.to(roomId).emit('user_stopped_typing');
   });
