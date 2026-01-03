@@ -1638,6 +1638,12 @@
                 const assistantTeamEl = document.getElementById('assistantTeam');
                 
                 if (teams.length > 0) {
+                    // Store team name globally
+                    ASSISTANT_TEAM_NAME = teams.map(t => t.name).join(', ');
+                    
+                    // Update header with team name
+                    updateAssistantHeader();
+                    
                     // Assistant is in a team - show WhatsApp mode
                     // Hide date filter in WhatsApp mode
                     if (window.innerWidth <= 768 && dateFilterContainer) {
@@ -1662,6 +1668,9 @@
                         assistantInfo.style.display = 'flex';
                     }
                 } else {
+                    // No team - clear team name
+                    ASSISTANT_TEAM_NAME = null;
+                    updateAssistantHeader();
                     // Assistant not in team
                     if (dateFilterContainer) {
                         dateFilterContainer.style.display = 'block';
