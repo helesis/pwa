@@ -714,15 +714,30 @@ io.on('connection', (socket) => {
       
       if (messageResult.rows.length > 0) {
         const { room_number, checkin_date } = messageResult.rows[0];
-        // Normalize checkin_date to YYYY-MM-DD format for roomId
-        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
-        const roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
+        
+        // Try to get guest_unique_id from rooms table
+        let roomId;
+        const roomResult = await pool.query(
+          'SELECT guest_unique_id FROM rooms WHERE room_number = $1 AND checkin_date = $2',
+          [room_number, checkin_date]
+        );
+        
+        if (roomResult.rows.length > 0 && roomResult.rows[0].guest_unique_id) {
+          // Use guest_unique_id format (same as send_message handler)
+          roomId = `guest_${roomResult.rows[0].guest_unique_id}`;
+          logDebug('📤 Using guest_unique_id for roomId:', roomId);
+        } else {
+          // Fallback to old format
+          const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
+          roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
+          logDebug('📤 Using fallback roomId format:', roomId);
+        }
         
         logDebug('📤 Broadcasting message_status_update to room:', roomId, { 
           messageId, 
           status: 'delivered',
           room_number,
-          checkin_date: checkinDateStr
+          checkin_date: checkin_date ? checkin_date.toISOString().split('T')[0] : null
         });
         
         // Get all sockets in this room for debugging
@@ -764,15 +779,30 @@ io.on('connection', (socket) => {
       
       if (messageResult.rows.length > 0) {
         const { room_number, checkin_date } = messageResult.rows[0];
-        // Normalize checkin_date to YYYY-MM-DD format for roomId
-        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
-        const roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
+        
+        // Try to get guest_unique_id from rooms table
+        let roomId;
+        const roomResult = await pool.query(
+          'SELECT guest_unique_id FROM rooms WHERE room_number = $1 AND checkin_date = $2',
+          [room_number, checkin_date]
+        );
+        
+        if (roomResult.rows.length > 0 && roomResult.rows[0].guest_unique_id) {
+          // Use guest_unique_id format (same as send_message handler)
+          roomId = `guest_${roomResult.rows[0].guest_unique_id}`;
+          logDebug('📤 Using guest_unique_id for roomId:', roomId);
+        } else {
+          // Fallback to old format
+          const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
+          roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
+          logDebug('📤 Using fallback roomId format:', roomId);
+        }
         
         logDebug('📤 Broadcasting message_status_update (read) to room:', roomId, { 
           messageIds, 
           status: 'read',
           room_number,
-          checkin_date: checkinDateStr
+          checkin_date: checkin_date ? checkin_date.toISOString().split('T')[0] : null
         });
         
         // Broadcast status update to room (sender will see read ticks)
