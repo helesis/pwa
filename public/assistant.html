@@ -1792,59 +1792,69 @@
         function updateMessageStatus(messageId, status, retryCount = 0) {
             console.log('🔄 Assistant: Updating message status:', { messageId, status, retryCount });
             
-            // Önce chat container içinde ara
             const chatContainer = document.getElementById('chatContainer');
             if (!chatContainer) {
                 console.error('❌ Chat container not found');
                 return;
             }
             
-            const messageEl = chatContainer.querySelector(`[data-message-id="${messageId}"]`);
+            // Convert messageId to string for comparison
+            const messageIdStr = String(messageId);
+            const messageEl = chatContainer.querySelector(`[data-message-id="${messageIdStr}"]`);
+            
             if (!messageEl) {
-                if (retryCount < 10) { // Retry sayısını artır
+                if (retryCount < 10) {
                     console.log(`⏳ Assistant: Message element not found, retrying... (${retryCount + 1}/10)`);
                     setTimeout(() => {
                         updateMessageStatus(messageId, status, retryCount + 1);
-                    }, 300); // Delay'i biraz artır
+                    }, 300);
                 } else {
-                    console.error('⚠️ Assistant: Message element not found for ID after retries:', messageId);
-                    // Tüm mesajları listele debug için
+                    console.error('⚠️ Assistant: Message element not found for ID after retries:', messageIdStr);
                     const allMessages = chatContainer.querySelectorAll('.message[data-message-id]');
                     console.log('📋 Assistant: Available message IDs:', Array.from(allMessages).map(m => m.getAttribute('data-message-id')));
                 }
                 return;
             }
             
-            let statusEl = messageEl.querySelector('.message-status');
-            if (!statusEl) {
-                console.warn('⚠️ Assistant: Status element not found for message:', messageId);
-                // Eğer status elementi yoksa, mesaj gönderilmiş bir mesaj mı kontrol et
-                const isSent = messageEl.getAttribute('data-is-sent') === 'true';
-                if (isSent) {
-                    console.log('🔧 Assistant: Status element missing for sent message, creating it...');
-                    // Status elementi yoksa oluştur
-                    const messageTime = messageEl.querySelector('.message-time');
-                    if (messageTime) {
-                        const newStatusEl = document.createElement('span');
-                        newStatusEl.className = `message-status ${status}`;
-                        newStatusEl.innerHTML = '<span class="message-status-icon"></span>';
-                        messageTime.appendChild(newStatusEl);
-                        statusEl = newStatusEl; // Assign the newly created element
-                        console.log('✅ Assistant: Status element created');
-                        // Don't return here - continue to update the status below
-                    } else {
-                        console.error('⚠️ Assistant: message-time element not found, cannot create status element');
-                        return;
-                    }
-                } else {
-                    // Not a sent message, no status needed
-                    return;
-                }
+            const isSent = messageEl.getAttribute('data-is-sent') === 'true';
+            
+            // Only update status for sent messages
+            if (!isSent) {
+                console.log('ℹ️ Assistant: Message is not sent by assistant, skipping status update');
+                return;
             }
             
-            // Remove old status classes
+            let statusEl = messageEl.querySelector('.message-status');
+            
+            if (!statusEl) {
+                console.log('🔧 Assistant: Status element missing, creating it...');
+                const messageBubble = messageEl.querySelector('.message-bubble');
+                if (!messageBubble) {
+                    console.error('⚠️ Assistant: message-bubble not found');
+                    return;
+                }
+                
+                let messageTime = messageBubble.querySelector('.message-time');
+                if (!messageTime) {
+                    // If message-time doesn't exist, create it
+                    console.log('🔧 Assistant: message-time missing, creating it...');
+                    const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                    messageTime = document.createElement('div');
+                    messageTime.className = 'message-time';
+                    messageTime.textContent = time;
+                    messageBubble.appendChild(messageTime);
+                }
+                
+                // Create status element
+                statusEl = document.createElement('span');
+                statusEl.className = `message-status ${status}`;
+                statusEl.innerHTML = '<span class="message-status-icon"></span>';
+                messageTime.appendChild(statusEl);
+                console.log('✅ Assistant: Status element created');
+            }
+            
+            // Update status classes
             statusEl.classList.remove('sent', 'delivered', 'read');
-            // Add new status class
             statusEl.classList.add(status);
             console.log('✅ Assistant: Status updated to:', status, 'Classes:', statusEl.className);
         }
