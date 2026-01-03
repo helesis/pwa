@@ -1688,6 +1688,10 @@
                 const chatRoomAvatar = document.getElementById('chatRoomAvatar');
                 if (chatRoomAvatar && profile_photo) {
                     chatRoomAvatar.innerHTML = `<img src="${profile_photo}" alt="Guest" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    // Update currentRoom with new profile photo
+                    if (currentRoom) {
+                        currentRoom.profilePhoto = profile_photo;
+                    }
                     console.log('✅ Updated chat header avatar');
                 }
             }
