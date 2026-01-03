@@ -1075,7 +1075,7 @@
                                                 <td>${r.country || '-'}</td>
                                                 <td>${r.agency || '-'}</td>
                                                 <td>
-                                                    <button class="btn btn-primary" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                                    <button class="btn btn-primary" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}', '${r.room_number || ''}', '${r.checkin_date || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
                                                 </td>
                                             </tr>
                                         `).join('')}
@@ -1278,7 +1278,7 @@
                     return;
                 }
                 
-                const preview = document.getElementById('team-avatar-preview');
+                    const preview = document.getElementById('team-avatar-preview');
                 const avatarDataInput = document.getElementById('team-avatar-data');
                 
                 if (!preview || !avatarDataInput) {
@@ -1369,7 +1369,7 @@
                 }
                 
                 const avatarData = avatarDataInput.value || null;
-                const data = {
+            const data = {
                     name: name,
                     email: emailInput ? (emailInput.value.trim() || null) : null,
                     avatar: avatarData || null
@@ -1538,39 +1538,149 @@
             openTeamModal(id);
         }
 
-        // Open assignment modal for specific room by guest_unique_id
-        async function openAssignmentModalForRoomByGuestId(guestUniqueId) {
-            console.log('📂 Opening assignment modal for guest_unique_id:', guestUniqueId);
-            
-            if (!guestUniqueId) {
-                showAlert('Unique ID bulunamadı', 'error');
-                return;
+        // Generate guest unique ID (same algorithm as backend)
+        async function generateGuestUniqueId(guestName, guestSurname, checkinDate, checkoutDate) {
+            if (!checkinDate) {
+                return null;
             }
             
-            // Store selected guest unique id
-            const guestUniqueIdEl = document.getElementById('assignment-selected-guest-unique-id');
-            if (guestUniqueIdEl) {
-                guestUniqueIdEl.value = guestUniqueId;
+            // Normalize function for Turkish locale and Unicode
+            function normalizeText(text) {
+                if (!text) return '';
+                // Unicode normalization (NFC) - handles composed characters
+                let normalized = text.normalize('NFC');
+                // Turkish locale-aware lowercase conversion
+                normalized = normalized.toLocaleLowerCase('tr-TR');
+                // Replace multiple spaces with single space, then with underscore
+                normalized = normalized.trim().replace(/\s+/g, '_');
+                // Remove any remaining special characters except underscore
+                normalized = normalized.replace(/[^a-z0-9_ğüşıöç]/gi, '');
+                return normalized;
             }
+            
+            // Normalize inputs - use 'Guest' if name is not provided
+            const name = normalizeText(guestName || guestSurname || 'Guest');
+            const surname = normalizeText(guestSurname || '');
+            
+            // Normalize dates
+            let checkin = '';
+            if (checkinDate instanceof Date) {
+                checkin = checkinDate.toISOString().split('T')[0];
+            } else if (checkinDate) {
+                checkin = String(checkinDate).split('T')[0];
+            }
+            
+            let checkout = '';
+            if (checkoutDate instanceof Date) {
+                checkout = checkoutDate.toISOString().split('T')[0];
+            } else if (checkoutDate) {
+                checkout = String(checkoutDate).split('T')[0];
+            }
+            
+            // Create unique ID: name_surname_checkin_checkout (hash for uniqueness)
+            const combined = checkout 
+                ? `${name}_${surname}_${checkin}_${checkout}`
+                : `${name}_${surname}_${checkin}`;
+            
+            // Use Web Crypto API to create SHA256 hash (same as backend)
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(combined);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+                
+                return checkout 
+                    ? `${name}_${surname}_${checkin}_${checkout}_${hash}`
+                    : `${name}_${surname}_${checkin}_${hash}`;
+            } catch (error) {
+                console.error('Error generating hash:', error);
+                // Fallback to simple hash if crypto API fails
+                function simpleHash(str) {
+                    let hash = 0;
+                    for (let i = 0; i < str.length; i++) {
+                        const char = str.charCodeAt(i);
+                        hash = ((hash << 5) - hash) + char;
+                        hash = hash & hash;
+                    }
+                    return Math.abs(hash).toString(16).substring(0, 16);
+                }
+                const hash = simpleHash(combined);
+                return checkout 
+                    ? `${name}_${surname}_${checkin}_${checkout}_${hash}`
+                    : `${name}_${surname}_${checkin}_${hash}`;
+            }
+        }
+
+        // Open assignment modal for specific room by guest_unique_id (or room_number + checkin_date)
+        async function openAssignmentModalForRoomByGuestId(guestUniqueId, roomNumber = null, checkinDate = null) {
+            console.log('📂 Opening assignment modal for guest_unique_id:', guestUniqueId, 'roomNumber:', roomNumber, 'checkinDate:', checkinDate);
             
             // Hide guest checkboxes, show room info
             document.getElementById('assignment-room-info').style.display = 'block';
             document.getElementById('assignment-guests-group').style.display = 'none';
             
-            // Load room details by guest_unique_id
+            // Load room details - try by guest_unique_id first, then by room_number + checkin_date
             let room = null;
+            let actualGuestUniqueId = guestUniqueId;
+            
             try {
                 const roomsUrl = '/api/rooms';
                 const roomsRes = await fetch(roomsUrl);
                 const rooms = await roomsRes.json();
-                room = rooms.find(r => r.guest_unique_id === guestUniqueId);
+                
+                // If guestUniqueId is provided and not empty, try to find by it
+                if (guestUniqueId && guestUniqueId.trim() !== '') {
+                    room = rooms.find(r => r.guest_unique_id === guestUniqueId);
+                    console.log('🔍 Searched by guest_unique_id:', guestUniqueId, 'Found:', !!room);
+                }
+                
+                // If not found and we have room_number and checkin_date, try to find by them
+                if (!room && roomNumber && checkinDate) {
+                    room = rooms.find(r => r.room_number === roomNumber && r.checkin_date === checkinDate);
+                    console.log('🔍 Searched by room_number + checkin_date:', roomNumber, checkinDate, 'Found:', !!room);
+                }
             } catch (error) {
                 console.error('Error loading room details:', error);
             }
             
+            // If room not found, show error
             if (!room) {
                 showAlert('Misafir bilgisi bulunamadı', 'error');
                 return;
+            }
+            
+            // If room found but guest_unique_id is missing, generate it
+            if (room && (!room.guest_unique_id || room.guest_unique_id.trim() === '')) {
+                console.log('🔧 Room found but guest_unique_id is missing, generating...');
+                if (room.guest_name && room.checkin_date && room.checkout_date) {
+                    actualGuestUniqueId = await generateGuestUniqueId(
+                        room.guest_name, 
+                        room.guest_surname, 
+                        room.checkin_date, 
+                        room.checkout_date
+                    );
+                    console.log('✅ Generated guest_unique_id:', actualGuestUniqueId);
+                    
+                    // Update room object
+                    room.guest_unique_id = actualGuestUniqueId;
+                    
+                    // Note: guest_unique_id will be updated in backend when assignment is saved
+                } else {
+                    console.error('❌ Cannot generate guest_unique_id: missing required info', {
+                        guest_name: room.guest_name,
+                        checkin_date: room.checkin_date,
+                        checkout_date: room.checkout_date
+                    });
+                    showAlert('Misafir bilgisi eksik. Unique ID oluşturulamadı.', 'error');
+                    return;
+                }
+            }
+            
+            // Store selected guest unique id
+            const guestUniqueIdEl = document.getElementById('assignment-selected-guest-unique-id');
+            if (guestUniqueIdEl) {
+                guestUniqueIdEl.value = actualGuestUniqueId || room.guest_unique_id || '';
             }
             
             // Store room info for saveAssignment
@@ -1583,21 +1693,21 @@
             const displayGuestSurname = room.guest_surname || '';
             const displayCheckinDate = room.checkin_date || '';
             const displayCheckoutDate = room.checkout_date || '';
-            const displayUniqueId = room.guest_unique_id || '';
+            const displayUniqueId = actualGuestUniqueId || room.guest_unique_id || '';
             
-            // Show room info
-            const roomDetailsEl = document.getElementById('assignment-room-details');
-            roomDetailsEl.innerHTML = `
+                    // Show room info
+                    const roomDetailsEl = document.getElementById('assignment-room-details');
+                    roomDetailsEl.innerHTML = `
                 <div><strong>Unique ID:</strong> ${displayUniqueId}</div>
                 <div><strong>Oda No:</strong> ${displayRoomNumber}</div>
                 <div><strong>Misafir:</strong> ${displayGuestName} ${displayGuestSurname}</div>
                 <div><strong>Check-in:</strong> ${displayCheckinDate ? formatDate(displayCheckinDate) : '-'}</div>
                 ${displayCheckoutDate ? `<div><strong>Check-out:</strong> ${formatDate(displayCheckoutDate)}</div>` : ''}
-                ${room.adult_count ? `<div><strong>Yetişkin:</strong> ${room.adult_count}</div>` : ''}
-                ${room.child_count ? `<div><strong>Çocuk:</strong> ${room.child_count}</div>` : ''}
-                ${room.country ? `<div><strong>Ülke:</strong> ${room.country}</div>` : ''}
-                ${room.agency ? `<div><strong>Acente:</strong> ${room.agency}</div>` : ''}
-            `;
+                        ${room.adult_count ? `<div><strong>Yetişkin:</strong> ${room.adult_count}</div>` : ''}
+                        ${room.child_count ? `<div><strong>Çocuk:</strong> ${room.child_count}</div>` : ''}
+                        ${room.country ? `<div><strong>Ülke:</strong> ${room.country}</div>` : ''}
+                        ${room.agency ? `<div><strong>Acente:</strong> ${room.agency}</div>` : ''}
+                    `;
             
             // Hide dropdown, show team cards
             document.getElementById('assignment-team').style.display = 'none';
@@ -1607,7 +1717,7 @@
             await loadTeamsForAssignment();
             
             // Show modal
-            document.getElementById('assignmentModal').style.display = 'flex';
+            document.getElementById('assignment-modal').classList.add('active');
         }
 
         // Open assignment modal for specific room (legacy function, kept for backward compatibility)
@@ -1630,8 +1740,8 @@
                     const roomsRes = await fetch(roomsUrl);
                     const rooms = await roomsRes.json();
                     room = rooms.find(r => r.room_number === roomNumber && r.checkin_date === checkinDate);
-                } catch (error) {
-                    console.error('Error loading room details:', error);
+            } catch (error) {
+                console.error('Error loading room details:', error);
                 }
             }
             
@@ -1877,7 +1987,7 @@
                 }
                 
                 if (room) {
-                    selectedGuests = [{ 
+                selectedGuests = [{ 
                         guest_unique_id: selectedGuestUniqueId,
                         room_number: room.room_number || null, 
                         checkin_date: room.checkin_date || null,
@@ -2222,7 +2332,7 @@
                                 </thead>
                                 <tbody>
                                     ${dateRooms.map(r => `
-                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}')">
+                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}', '${r.room_number || ''}', '${r.checkin_date || ''}')">
                                             <td style="font-family: monospace; font-size: 11px;"><strong>${r.guest_unique_id || '-'}</strong></td>
                                             <td>
                                                 ${r.profile_photo ? `
@@ -2239,7 +2349,7 @@
                                             <td>${r.country || '-'}</td>
                                             <td>${r.agency || '-'}</td>
                                             <td>
-                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
+                                                <button class="btn btn-primary" onclick="event.stopPropagation(); openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}', '${r.room_number || ''}', '${r.checkin_date || ''}')" style="padding: 6px 12px; font-size: 12px;">Eşleştir</button>
                                             </td>
                                         </tr>
                                     `).join('')}
@@ -2258,53 +2368,6 @@
             }
         }
 
-        // Team QR Code Functions
-        async function generateTeamQR(teamId) {
-            try {
-                const response = await fetch(`/api/teams/${teamId}/invite`, {
-                    method: 'GET'
-                });
-                
-                if (!response.ok) {
-                    throw new Error('QR kod oluşturulamadı');
-                }
-                
-                const qrData = await response.json();
-                showTeamQRModal(teamId, null, qrData);
-                loadTeams(); // Refresh list to show QR
-            } catch (error) {
-                console.error('Error generating team QR:', error);
-                showAlert('QR kod oluşturulurken hata oluştu', 'error');
-            }
-        }
-
-        async function showTeamQRModal(teamId, teamName, qrData = null) {
-            if (!qrData) {
-                try {
-                    const response = await fetch(`/api/teams/${teamId}/invite`);
-                    if (!response.ok) {
-                        throw new Error('QR kod yüklenemedi');
-                    }
-                    qrData = await response.json();
-                } catch (error) {
-                    console.error('Error loading QR:', error);
-                    showAlert('QR kod yüklenirken hata oluştu', 'error');
-                    return;
-                }
-            }
-            
-            document.getElementById('team-qr-code-image').src = qrData.qrCodeUrl;
-            document.getElementById('team-qr-link').textContent = qrData.inviteLink;
-            
-            const title = teamName ? `${teamName} - QR Kod` : 'Takım QR Kodu';
-            document.getElementById('team-qr-modal-title').textContent = title;
-            
-            document.getElementById('team-qr-modal').classList.add('active');
-        }
-
-        function closeTeamQRModal() {
-            document.getElementById('team-qr-modal').classList.remove('active');
-        }
 
         function showAlert(message, type) {
             const alert = document.createElement('div');

@@ -328,12 +328,12 @@ io.on('connection', (socket) => {
     if (!actualCheckinDate) {
       // Try to get from room_number if provided
       if (roomNumber) {
-        const roomResult = await pool.query(
-          'SELECT checkin_date FROM rooms WHERE room_number = $1',
-          [roomNumber]
-        );
-        if (roomResult.rows.length > 0) {
-          actualCheckinDate = roomResult.rows[0].checkin_date;
+      const roomResult = await pool.query(
+        'SELECT checkin_date FROM rooms WHERE room_number = $1',
+        [roomNumber]
+      );
+      if (roomResult.rows.length > 0) {
+        actualCheckinDate = roomResult.rows[0].checkin_date;
           logDebug('🔵 Check-in date from room:', actualCheckinDate);
         }
       }
@@ -728,7 +728,7 @@ io.on('connection', (socket) => {
           logDebug('📤 Using guest_unique_id for roomId:', roomId);
         } else {
           // Fallback to old format
-          const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
+        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
           roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
           logDebug('📤 Using fallback roomId format:', roomId);
         }
@@ -793,7 +793,7 @@ io.on('connection', (socket) => {
           logDebug('📤 Using guest_unique_id for roomId:', roomId);
         } else {
           // Fallback to old format
-          const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
+        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
           roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
           logDebug('📤 Using fallback roomId format:', roomId);
         }
@@ -928,7 +928,7 @@ app.post('/api/rooms', async (req, res) => {
         guest_name = EXCLUDED.guest_name, 
         guest_surname = EXCLUDED.guest_surname,
         checkin_date = EXCLUDED.checkin_date, 
-        checkout_date = EXCLUDED.checkout_date,
+        checkout_date = EXCLUDED.checkout_date, 
         guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, rooms.guest_unique_id),
         is_active = true
     `, [roomNumber, guestName, guestSurname, checkinDate, checkoutDate, guest_unique_id]);
@@ -1641,9 +1641,9 @@ app.post('/api/team-assignments', async (req, res) => {
           assignmentResult = await pool.query(
             `INSERT INTO team_room_assignments (team_id, room_number, checkin_date, guest_unique_id)
              VALUES ($1, $2, $3, $4)
-             ON CONFLICT (team_id, room_number, checkin_date) 
+         ON CONFLICT (team_id, room_number, checkin_date) 
              DO UPDATE SET is_active = true, guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, team_room_assignments.guest_unique_id)
-             RETURNING *`,
+         RETURNING *`,
             [team_id, room_number || null, checkin_date || null, guest_unique_id]
           );
         } catch (conflictError) {
@@ -1676,27 +1676,43 @@ app.post('/api/team-assignments', async (req, res) => {
       
       createdAssignments.push(assignmentResult.rows[0]);
       
+      // Update room table with guest_unique_id if it was generated
+      if (guest_unique_id && room_number && checkin_date) {
+        try {
+          await pool.query(
+            `UPDATE rooms 
+             SET guest_unique_id = COALESCE(guest_unique_id, $1)
+             WHERE room_number = $2 AND checkin_date = $3 AND (guest_unique_id IS NULL OR guest_unique_id = '')`,
+            [guest_unique_id, room_number, checkin_date]
+          );
+          console.log('✅ Updated room table with guest_unique_id:', guest_unique_id);
+        } catch (error) {
+          console.error('Error updating room table with guest_unique_id:', error);
+          // Don't fail the assignment if room update fails
+        }
+      }
+      
       // Auto-assign all team assistants to the room (if room_number exists)
       if (room_number) {
-        for (const assistantId of assistantIds) {
-          await pool.query(
-            `INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
-             VALUES ($1, $2, true)
-             ON CONFLICT (assistant_id, room_number) 
-             DO UPDATE SET is_active = true`,
-            [assistantId, room_number]
-          );
+      for (const assistantId of assistantIds) {
+        await pool.query(
+          `INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
+           VALUES ($1, $2, true)
+           ON CONFLICT (assistant_id, room_number) 
+           DO UPDATE SET is_active = true`,
+          [assistantId, room_number]
+        );
         }
       }
       
       // Notify all team assistants to join the room via Socket.IO (if room_number exists)
       if (room_number && checkin_date) {
-        io.emit('auto_join_room', {
-          roomNumber: room_number,
-          checkinDate: checkin_date,
-          teamId: team_id,
-          assistantIds: assistantIds
-        });
+      io.emit('auto_join_room', {
+        roomNumber: room_number,
+        checkinDate: checkin_date,
+        teamId: team_id,
+        assistantIds: assistantIds
+      });
       }
     }
     
@@ -1772,7 +1788,7 @@ app.post('/api/admin/update-checkin-dates', async (req, res) => {
     for (const room of roomsToUpdate.rows) {
       const guest_unique_id = generateGuestUniqueId(room.guest_name, room.guest_surname, todayStr, room.checkout_date);
       await pool.query(
-        `UPDATE rooms 
+      `UPDATE rooms 
          SET checkin_date = $1::date,
              guest_unique_id = $2
          WHERE room_number = $3 AND checkin_date = $4::date`,
@@ -1847,74 +1863,74 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
     // 3. Use whichever is later
     const result = await pool.query(`
       WITH room_messages AS (
-        SELECT 
-          r.id,
-          r.room_number,
-          r.guest_name,
-          r.guest_surname,
-          r.checkin_date,
-          r.checkout_date,
+      SELECT 
+        r.id,
+        r.room_number,
+        r.guest_name,
+        r.guest_surname,
+        r.checkin_date,
+        r.checkout_date,
           r.guest_unique_id,
-          r.is_active,
-          r.adult_count,
-          r.child_count,
-          r.country,
-          r.agency,
-          MAX(tra.assigned_at) as assigned_at,
-          (
-            SELECT m.message 
-            FROM messages m 
-            WHERE m.room_number = r.room_number 
-              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-            ORDER BY m.timestamp DESC 
-            LIMIT 1
-          ) as last_message,
+        r.is_active,
+        r.adult_count,
+        r.child_count,
+        r.country,
+        r.agency,
+        MAX(tra.assigned_at) as assigned_at,
+        (
+          SELECT m.message 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          ORDER BY m.timestamp DESC 
+          LIMIT 1
+        ) as last_message,
+        (
+          SELECT m.timestamp 
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          ORDER BY m.timestamp DESC 
+          LIMIT 1
+        ) as last_message_time,
           (
             SELECT m.timestamp 
-            FROM messages m 
-            WHERE m.room_number = r.room_number 
-              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-            ORDER BY m.timestamp DESC 
-            LIMIT 1
-          ) as last_message_time,
-          (
-            SELECT m.timestamp 
-            FROM messages m 
-            WHERE m.room_number = r.room_number 
-              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
               AND m.sender_type = 'guest'
             ORDER BY m.timestamp DESC 
             LIMIT 1
           ) as last_guest_message_time,
-          COALESCE((
+        COALESCE((
             SELECT COUNT(*)::INTEGER
-            FROM messages m 
-            WHERE m.room_number = r.room_number 
-              AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          FROM messages m 
+          WHERE m.room_number = r.room_number 
+            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
               AND m.sender_type NOT IN ('assistant', 'staff')
               AND m.read_at IS NULL
           ), 0) as unread_count
-        FROM rooms r
-        INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
-          AND r.checkin_date = tra.checkin_date
-        INNER JOIN assistant_teams at ON tra.team_id = at.team_id
-        WHERE at.assistant_id = $1 
-          AND at.is_active = true
-          AND tra.is_active = true
-          AND r.is_active = true
-        GROUP BY 
-          r.id,
-          r.room_number,
-          r.guest_name,
-          r.guest_surname,
-          r.checkin_date,
-          r.checkout_date,
+      FROM rooms r
+      INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
+        AND r.checkin_date = tra.checkin_date
+      INNER JOIN assistant_teams at ON tra.team_id = at.team_id
+      WHERE at.assistant_id = $1 
+        AND at.is_active = true
+        AND tra.is_active = true
+        AND r.is_active = true
+      GROUP BY 
+        r.id,
+        r.room_number,
+        r.guest_name,
+        r.guest_surname,
+        r.checkin_date,
+        r.checkout_date,
           r.guest_unique_id,
-          r.is_active,
-          r.adult_count,
-          r.child_count,
-          r.country,
-          r.agency
+        r.is_active,
+        r.adult_count,
+        r.child_count,
+        r.country,
+        r.agency
       )
       SELECT 
         *,
@@ -2061,15 +2077,15 @@ async function initializeTestData() {
         const checkoutDateStr = checkoutDate.toISOString().split('T')[0];
         
         inserts.push({
-          roomNumber,
-          firstName,
-          lastName,
-          checkinDateStr,
-          checkoutDateStr,
-          adultCount,
-          childCount,
-          agency,
-          country
+            roomNumber,
+            firstName,
+            lastName,
+            checkinDateStr,
+            checkoutDateStr,
+            adultCount,
+            childCount,
+            agency,
+            country
         });
       }
     }
@@ -2105,7 +2121,7 @@ async function initializeTestData() {
         `, params);
         
         totalInserted += result.rowCount || 0;
-      } catch (error) {
+        } catch (error) {
         console.error(`⚠️ Error inserting chunk ${i / chunkSize + 1}:`, error.message);
       }
     }
