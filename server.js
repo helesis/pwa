@@ -1915,7 +1915,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
 });
 
 
-// Initialize test data: 6 assistants, 2 teams, 75 guests (5 per day for 15 days)
+// Initialize test data: 15 assistants, 5 teams (3 assistants each), 32 guests (4 per day for 8 days: Jan 3-10)
 async function initializeTestData() {
   try {
     // Skip if ENABLE_TEST_DATA is not set to 'true'
@@ -1926,20 +1926,29 @@ async function initializeTestData() {
     
     console.log('🔄 Starting test data initialization...');
     
-    // 6 Assistants with unique names
+    // 15 Assistants with unique names and different languages
     const assistants = [
       { name: 'Ahmet', surname: 'Yıldız', spoken_languages: 'Türkçe, İngilizce, Almanca' },
       { name: 'Elif', surname: 'Kaya', spoken_languages: 'Türkçe, İngilizce, Fransızca' },
       { name: 'Mehmet', surname: 'Demir', spoken_languages: 'Türkçe, İngilizce, Rusça' },
       { name: 'Zeynep', surname: 'Şahin', spoken_languages: 'Türkçe, İngilizce, İspanyolca' },
       { name: 'Can', surname: 'Özkan', spoken_languages: 'Türkçe, İngilizce, İtalyanca' },
-      { name: 'Lena', surname: 'Podorozhna', spoken_languages: 'Türkçe, İngilizce, Ukraynaca' }
+      { name: 'Lena', surname: 'Podorozhna', spoken_languages: 'Türkçe, İngilizce, Ukraynaca' },
+      { name: 'Ayşe', surname: 'Çelik', spoken_languages: 'Türkçe, İngilizce, Arapça' },
+      { name: 'Fatma', surname: 'Arslan', spoken_languages: 'Türkçe, İngilizce, Farsça' },
+      { name: 'Mustafa', surname: 'Doğan', spoken_languages: 'Türkçe, İngilizce, Yunanca' },
+      { name: 'Hatice', surname: 'Şimşek', spoken_languages: 'Türkçe, İngilizce, Bulgarca' },
+      { name: 'İbrahim', surname: 'Yılmaz', spoken_languages: 'Türkçe, İngilizce, Romence' },
+      { name: 'Zeliha', surname: 'Kurt', spoken_languages: 'Türkçe, İngilizce, Sırpça' },
+      { name: 'Hasan', surname: 'Özdemir', spoken_languages: 'Türkçe, İngilizce, Hırvatça' },
+      { name: 'Emine', surname: 'Aydın', spoken_languages: 'Türkçe, İngilizce, Macarca' },
+      { name: 'Osman', surname: 'Koç', spoken_languages: 'Türkçe, İngilizce, Çekçe' }
     ];
     
     // Create assistants
     const assistantIds = [];
     for (const assistant of assistants) {
-    const result = await pool.query(`
+      const result = await pool.query(`
         INSERT INTO assistants (name, surname, spoken_languages, is_active)
         VALUES ($1, $2, $3, true)
         RETURNING id
@@ -1948,15 +1957,18 @@ async function initializeTestData() {
       console.log(`✅ Created assistant: ${assistant.name} ${assistant.surname} (ID: ${result.rows[0].id})`);
     }
     
-    // Create 2 teams
+    // Create 5 teams
     const teams = [
       { name: 'Reception Team', description: 'Front desk and guest services' },
-      { name: 'Concierge Team', description: 'Guest assistance and recommendations' }
+      { name: 'Concierge Team', description: 'Guest assistance and recommendations' },
+      { name: 'VIP Services Team', description: 'Premium guest services' },
+      { name: 'Event Coordination Team', description: 'Event and activity management' },
+      { name: 'Guest Relations Team', description: 'Guest satisfaction and feedback' }
     ];
     
     const teamIds = [];
     for (const team of teams) {
-    const result = await pool.query(`
+      const result = await pool.query(`
         INSERT INTO teams (name, description, is_active)
         VALUES ($1, $2, true)
         RETURNING id
@@ -1965,20 +1977,22 @@ async function initializeTestData() {
       console.log(`✅ Created team: ${team.name} (ID: ${result.rows[0].id})`);
     }
     
-    // Assign assistants to teams (first 3 to team 1, last 3 to team 2)
-    for (let i = 0; i < 3; i++) {
-      await pool.query(`
-        INSERT INTO assistant_teams (assistant_id, team_id, is_active)
-        VALUES ($1, $2, true)
-      `, [assistantIds[i], teamIds[0]]);
+    // Assign assistants to teams (3 assistants per team)
+    // Team 1: assistants 0-2
+    // Team 2: assistants 3-5
+    // Team 3: assistants 6-8
+    // Team 4: assistants 9-11
+    // Team 5: assistants 12-14
+    for (let teamIndex = 0; teamIndex < 5; teamIndex++) {
+      for (let i = 0; i < 3; i++) {
+        const assistantIndex = teamIndex * 3 + i;
+        await pool.query(`
+          INSERT INTO assistant_teams (assistant_id, team_id, is_active)
+          VALUES ($1, $2, true)
+        `, [assistantIds[assistantIndex], teamIds[teamIndex]]);
+      }
+      console.log(`✅ Assigned assistants ${teamIndex * 3}-${teamIndex * 3 + 2} to team ${teamIndex + 1}`);
     }
-    for (let i = 3; i < 6; i++) {
-      await pool.query(`
-        INSERT INTO assistant_teams (assistant_id, team_id, is_active)
-        VALUES ($1, $2, true)
-      `, [assistantIds[i], teamIds[1]]);
-    }
-    console.log('✅ Assigned assistants to teams');
     
     // Guest names (different from assistant names)
     const guestFirstNames = [
@@ -2099,16 +2113,16 @@ async function initializeTestData() {
       }
     }
     
-    // Assign rooms to teams (alternating)
+    // Assign rooms to teams (distribute evenly across 5 teams)
     const roomsResult = await pool.query(`
       SELECT guest_unique_id FROM rooms 
-      WHERE checkin_date >= CURRENT_DATE 
-        AND checkin_date <= CURRENT_DATE + INTERVAL '15 days'
+      WHERE checkin_date >= '2026-01-03'::date
+        AND checkin_date <= '2026-01-10'::date
       ORDER BY checkin_date, guest_unique_id
     `);
     
     for (let i = 0; i < roomsResult.rows.length; i++) {
-      const teamId = teamIds[i % 2]; // Alternate between teams
+      const teamId = teamIds[i % 5]; // Distribute across 5 teams
       await pool.query(`
         INSERT INTO team_room_assignments (team_id, guest_unique_id, is_active)
         VALUES ($1, $2, true)
@@ -2118,8 +2132,8 @@ async function initializeTestData() {
     
     console.log(`✅ Test data initialization completed:`);
     console.log(`   - ${assistantIds.length} assistants created`);
-    console.log(`   - ${teamIds.length} teams created`);
-    console.log(`   - ${totalInserted} guests created (5 per day for 15 days)`);
+    console.log(`   - ${teamIds.length} teams created (3 assistants each)`);
+    console.log(`   - ${totalInserted} guests created (4 per day for Jan 3-10, 2026)`);
     console.log(`   - Rooms assigned to teams`);
   } catch (error) {
     console.error('❌ Error initializing test data:', error);
