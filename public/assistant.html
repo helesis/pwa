@@ -1568,30 +1568,22 @@
             console.log('📬 ========== ASSISTANT RECEIVED MESSAGE ==========');
             console.log('📬 Message data:', {
                 id: data.id,
-                roomNumber: data.roomNumber,
-                checkinDate: data.checkinDate,
+                guestUniqueId: data.guestUniqueId,
                 senderType: data.senderType,
                 senderName: data.senderName,
                 message: data.message?.substring(0, 50) + (data.message?.length > 50 ? '...' : ''),
                 timestamp: data.timestamp
             });
             console.log('📬 Current selected room:', {
-                roomNumber: currentRoomNumber,
-                checkinDate: currentCheckinDate,
                 guestUniqueId: currentGuestUniqueId
             });
             console.log('📬 Time:', new Date().toISOString());
             
-            // Check if this message belongs to the currently selected room
-            const isCurrentRoom = (
-                data.roomNumber === currentRoomNumber &&
-                (data.checkinDate === currentCheckinDate || 
-                 (data.checkinDate && currentCheckinDate && 
-                  new Date(data.checkinDate).toISOString().split('T')[0] === new Date(currentCheckinDate).toISOString().split('T')[0]))
-            );
+            // Check if this message belongs to the currently selected room using guestUniqueId
+            const isCurrentRoom = data.guestUniqueId === currentGuestUniqueId;
             
             if (!isCurrentRoom) {
-                console.log('📬 Message is not for current room, skipping display. Message room:', data.roomNumber, 'Current room:', currentRoomNumber);
+                console.log('📬 Message is not for current room, skipping display. Message guestUniqueId:', data.guestUniqueId, 'Current guestUniqueId:', currentGuestUniqueId);
                 // Don't display but still update unread count if needed
                 return;
             }
