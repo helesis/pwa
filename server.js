@@ -2076,8 +2076,8 @@ async function initializeTestData() {
 
 // Initialize database and start server
 initializeDatabase().then(() => {
-  // Server will start immediately, test data will initialize in background
   console.log('✅ Database initialized, starting server...');
+  console.log('ℹ️ Test verisi oluşturmak için: /test-data.html sayfasını ziyaret edin');
 }).catch(console.error);
 
 // Health check
@@ -2401,14 +2401,8 @@ httpServer.listen(PORT, () => {
   console.log('');
   console.log('🏨 ════════════════════════════════════════════');
   console.log('');
-  
-  // Initialize test data in background (non-blocking, after server starts)
-  // This prevents blocking Render deploy
-  setTimeout(() => {
-    initializeTestData().catch(err => {
-      console.error('⚠️ Test data initialization failed (non-critical):', err.message);
-    });
-  }, 3000); // Wait 3 seconds after server starts
+  console.log('ℹ️ Test verisi oluşturmak için: /test-data.html sayfasını ziyaret edin');
+  console.log('');
 });
 
 // Graceful shutdown
