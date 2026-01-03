@@ -828,7 +828,7 @@
                     </div>
                     <div class="assistant-info-header">
                         <div class="assistant-name-header" id="assistantNameHeader">Asistan</div>
-                        <div class="assistant-role-header">Voyage Assistant</div>
+                        <div class="assistant-role-header" id="assistantTeamHeader">Voyage Assistant</div>
                     </div>
                 </div>
             </div>
@@ -887,6 +887,8 @@
         let ASSISTANT_ID = null; // Will be set after login
         let ASSISTANT_AVATAR = null; // Assistant avatar for chat messages
         let ASSISTANT_NAME = null; // Assistant name
+        let ASSISTANT_SURNAME = null; // Assistant surname
+        let ASSISTANT_TEAM_NAME = null; // Assistant team name
         const SERVER_URL = window.location.origin;
 
         // Check authentication on page load
@@ -902,11 +904,13 @@
                         // User is logged in
                         ASSISTANT_ID = data.assistant.id;
                         ASSISTANT_NAME = data.assistant.name;
+                        ASSISTANT_SURNAME = data.assistant.surname || null;
                         ASSISTANT_AVATAR = data.assistant.avatar || null;
                         
                         console.log('✅ Assistant authenticated:', {
                             id: ASSISTANT_ID,
                             name: ASSISTANT_NAME,
+                            surname: ASSISTANT_SURNAME,
                             avatar: ASSISTANT_AVATAR ? `${ASSISTANT_AVATAR.substring(0, 50)}...` : 'null'
                         });
                         
@@ -969,11 +973,13 @@
                     // Login successful
                     ASSISTANT_ID = data.assistant.id;
                     ASSISTANT_NAME = data.assistant.name;
+                    ASSISTANT_SURNAME = data.assistant.surname || null;
                     ASSISTANT_AVATAR = data.assistant.avatar || null;
                     
                     console.log('✅ Assistant logged in:', {
                         id: ASSISTANT_ID,
                         name: ASSISTANT_NAME,
+                        surname: ASSISTANT_SURNAME,
                         avatar: ASSISTANT_AVATAR ? `${ASSISTANT_AVATAR.substring(0, 50)}...` : 'null'
                     });
                     
@@ -1002,15 +1008,18 @@
             }
         }
 
-        // Update assistant header with avatar and name
+        // Update assistant header with avatar, name, surname, and team
         function updateAssistantHeader() {
             const avatarHeader = document.getElementById('assistantAvatarHeader');
             const avatarPlaceholder = document.getElementById('assistantAvatarPlaceholder');
             const nameHeader = document.getElementById('assistantNameHeader');
+            const teamHeader = document.getElementById('assistantTeamHeader');
             
             console.log('🔄 Updating assistant header:', {
                 ASSISTANT_AVATAR: ASSISTANT_AVATAR ? `${ASSISTANT_AVATAR.substring(0, 50)}...` : 'null',
-                ASSISTANT_NAME: ASSISTANT_NAME
+                ASSISTANT_NAME: ASSISTANT_NAME,
+                ASSISTANT_SURNAME: ASSISTANT_SURNAME,
+                ASSISTANT_TEAM_NAME: ASSISTANT_TEAM_NAME
             });
             
             // Check if avatar exists and is not empty
@@ -1019,7 +1028,7 @@
                 let img = avatarHeader.querySelector('img');
                 if (!img) {
                     img = document.createElement('img');
-                    img.alt = ASSISTANT_NAME || 'Asistan';
+                    img.alt = `${ASSISTANT_NAME || ''} ${ASSISTANT_SURNAME || ''}`.trim() || 'Asistan';
                     avatarHeader.appendChild(img);
                 }
                 img.src = ASSISTANT_AVATAR;
@@ -1036,8 +1045,19 @@
                 console.log('ℹ️ No assistant avatar, showing placeholder');
             }
             
-            if (ASSISTANT_NAME) {
-                nameHeader.textContent = ASSISTANT_NAME;
+            // Update name header with name and surname
+            if (ASSISTANT_NAME || ASSISTANT_SURNAME) {
+                const fullName = `${ASSISTANT_NAME || ''} ${ASSISTANT_SURNAME || ''}`.trim();
+                nameHeader.textContent = fullName || 'Asistan';
+            } else {
+                nameHeader.textContent = 'Asistan';
+            }
+            
+            // Update team header
+            if (ASSISTANT_TEAM_NAME) {
+                teamHeader.textContent = ASSISTANT_TEAM_NAME;
+            } else {
+                teamHeader.textContent = 'Voyage Assistant';
             }
         }
 
