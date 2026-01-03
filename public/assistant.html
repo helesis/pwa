@@ -1542,6 +1542,23 @@
 
         // New message
         socket.on('new_message', (data) => {
+            console.log('📬 ========== ASSISTANT RECEIVED MESSAGE ==========');
+            console.log('📬 Message data:', {
+                id: data.id,
+                roomNumber: data.roomNumber,
+                checkinDate: data.checkinDate,
+                senderType: data.senderType,
+                senderName: data.senderName,
+                message: data.message?.substring(0, 50) + (data.message?.length > 50 ? '...' : ''),
+                timestamp: data.timestamp
+            });
+            console.log('📬 Current selected room:', {
+                roomNumber: selectedRoomNumber,
+                checkinDate: selectedCheckinDate,
+                guestUniqueId: selectedGuestUniqueId
+            });
+            console.log('📬 Time:', new Date().toISOString());
+            
             const isSent = data.senderType === 'assistant' || data.senderType === 'staff';
             
             // Check if this message already exists (optimistic update)
@@ -1575,6 +1592,7 @@
                     }
                     
                     // Don't mark as delivered here - this is our own message
+                    console.log('📬 Message already shown optimistically, skipping');
                     return; // Don't add duplicate message
                 }
             }
@@ -1587,8 +1605,13 @@
                     socket.emit('message_delivered', { messageId: data.id });
                 }
                 
+                console.log('📬 Displaying message in UI');
                 displayMessage(data, isSent);
+            } else {
+                console.log('📬 Message already exists, skipping');
             }
+            
+            console.log('📬 ========== MESSAGE HANDLING COMPLETE ==========');
         });
         
         // Message sent confirmation

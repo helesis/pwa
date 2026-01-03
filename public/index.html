@@ -2344,6 +2344,13 @@
             }
             
             // Send to server
+            console.log('📤 ========== GUEST SENDING MESSAGE ==========');
+            console.log('📤 GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
+            console.log('📤 CHECKIN_DATE:', CHECKIN_DATE);
+            console.log('📤 GUEST_NAME:', GUEST_NAME);
+            console.log('📤 Message:', message);
+            console.log('📤 Time:', new Date().toISOString());
+            
             socket.emit('send_message', {
                 guestUniqueId: GUEST_UNIQUE_ID,
                 checkinDate: CHECKIN_DATE,
@@ -2351,6 +2358,8 @@
                 senderName: GUEST_NAME,
                 message: message
             });
+            
+            console.log('📤 send_message event emitted');
             
             // When real message arrives, replace the temporary one
             const replaceTempMessage = (realMessage) => {
