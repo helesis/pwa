@@ -1285,19 +1285,55 @@ app.post('/api/assistants', async (req, res) => {
 app.put('/api/assistants/:id', async (req, res) => {
   try {
     const { name, surname, spoken_languages, avatar } = req.body;
-    // Always update avatar - if empty string or null, set to null
-    const avatarValue = avatar || null;
+    
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    
+    // Handle avatar - limit size to prevent database issues
+    let avatarValue = null;
+    if (avatar) {
+      // Check if avatar is base64 string and limit size (max 500KB base64 = ~375KB image)
+      if (typeof avatar === 'string' && avatar.length > 0) {
+        // Base64 string can be up to ~670KB for TEXT field, but we'll limit to 500KB for safety
+        if (avatar.length > 500000) {
+          console.warn('Avatar too large, truncating or rejecting');
+          return res.status(400).json({ error: 'Avatar image is too large. Please use an image smaller than 375KB' });
+        }
+        avatarValue = avatar;
+      } else {
+        avatarValue = null;
+      }
+    }
+    
+    console.log('Updating assistant:', {
+      id: req.params.id,
+      name,
+      surname,
+      spoken_languages,
+      avatarLength: avatarValue ? avatarValue.length : 0
+    });
+    
     const result = await pool.query(
       'UPDATE assistants SET name = $1, surname = $2, spoken_languages = $3, avatar = $4 WHERE id = $5 RETURNING *',
       [name, surname || null, spoken_languages || null, avatarValue, req.params.id]
     );
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Assistant not found' });
     }
+    
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating assistant:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint
+    });
+    res.status(500).json({ error: 'Database error', message: error.message });
   }
 });
 
