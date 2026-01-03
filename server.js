@@ -2082,6 +2082,31 @@ initializeDatabase().then(() => {
 
 // Health check
 
+// Get database status
+app.get('/api/test-data/status', async (req, res) => {
+  try {
+    const assistants = await pool.query('SELECT COUNT(*) as count FROM assistants');
+    const teams = await pool.query('SELECT COUNT(*) as count FROM teams');
+    const guests = await pool.query('SELECT COUNT(*) as count FROM rooms WHERE is_active = true');
+    const messages = await pool.query('SELECT COUNT(*) as count FROM messages');
+    const assignments = await pool.query('SELECT COUNT(*) as count FROM team_room_assignments WHERE is_active = true');
+    
+    res.json({
+      success: true,
+      counts: {
+        assistants: parseInt(assistants.rows[0].count),
+        teams: parseInt(teams.rows[0].count),
+        guests: parseInt(guests.rows[0].count),
+        messages: parseInt(messages.rows[0].count),
+        assignments: parseInt(assignments.rows[0].count)
+      }
+    });
+  } catch (error) {
+    console.error('Error getting database status:', error);
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
 // Test data initialization endpoint (manual trigger)
 app.post('/api/test-data/initialize', async (req, res) => {
   try {
@@ -2091,6 +2116,24 @@ app.post('/api/test-data/initialize', async (req, res) => {
   } catch (error) {
     console.error('❌ Error initializing test data:', error);
     res.status(500).json({ error: 'Failed to initialize test data', message: error.message });
+  }
+});
+
+// Clear all test data (optional - for reset)
+app.post('/api/test-data/clear', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM messages');
+    await pool.query('DELETE FROM team_room_assignments');
+    await pool.query('DELETE FROM assistant_assignments');
+    await pool.query('DELETE FROM assistant_teams');
+    await pool.query('DELETE FROM rooms');
+    await pool.query('DELETE FROM assistants');
+    await pool.query('DELETE FROM teams');
+    
+    res.json({ success: true, message: 'Tüm test verileri temizlendi' });
+  } catch (error) {
+    console.error('Error clearing test data:', error);
+    res.status(500).json({ error: 'Failed to clear test data', message: error.message });
   }
 });
 
