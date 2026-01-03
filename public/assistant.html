@@ -1746,9 +1746,13 @@
             }
             
             // Avatar HTML - use assistant avatar if available, otherwise emoji
+            // For guest messages, try to get profile photo from current room
             let avatarHTML = '';
             if (isSent && ASSISTANT_AVATAR) {
                 avatarHTML = `<img src="${ASSISTANT_AVATAR}" alt="Assistant" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            } else if (!isSent && currentRoom && currentRoom.profilePhoto) {
+                // Guest message with profile photo
+                avatarHTML = `<img src="${currentRoom.profilePhoto}" alt="Guest" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
             } else {
                 avatarHTML = isSent ? '👤' : '🏨';
             }
