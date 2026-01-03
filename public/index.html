@@ -146,15 +146,6 @@
             flex-wrap: wrap;
         }
 
-        .version-badge {
-            font-size: 11px;
-            opacity: 0.8;
-            background: rgba(255,255,255,0.15);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-weight: 500;
-        }
 
         .connection-status {
             display: inline-block;
@@ -901,18 +892,17 @@
                     <div class="header-subtitle">
                         <span class="connection-status" id="connectionStatus"></span>
                         <span id="statusText">Bağlanıyor...</span>
-                        <span class="version-badge" id="versionBadge">v3</span>
                     </div>
                 </div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="notification-btn" onclick="requestNotificationPermission()">
-                    🔔
-                    <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
-                </button>
+            <button class="notification-btn" onclick="requestNotificationPermission()">
+                🔔
+                <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+            </button>
                 <button class="logout-btn" onclick="handleGuestLogout()" title="Çıkış Yap">
                     🚪
-                </button>
+            </button>
             </div>
         </div>
 
@@ -1114,8 +1104,8 @@
                     loginError.classList.add('show');
                     loginBtn.disabled = false;
                     loginBtn.textContent = 'Giriş Yap';
-                }
-            } catch (error) {
+                        }
+                    } catch (error) {
                 console.error('Login error:', error);
                 loginError.textContent = 'Bir hata oluştu. Lütfen tekrar deneyin.';
                 loginError.classList.add('show');
@@ -1408,7 +1398,7 @@
                 avatar.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width:100%;height:100%;object-fit:cover;">`;
             });
         }
-        
+
         // Update profile photo display in header and messages
         function updateProfilePhotoDisplay() {
             const headerPhoto = document.getElementById('headerProfilePhoto');
@@ -2079,17 +2069,17 @@
                 if (teamAvatar) {
                     avatarHTML = `<div class="message-avatar"><img src="${teamAvatar}" alt="Takım" style="width:100%;height:100%;object-fit:cover;"></div>`;
                 } else {
-                    avatarHTML = `<div class="message-avatar">
-                        <div class="voyage-logo">
-                            <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
-                                <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
-                                <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
-                                <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
-                                <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
-                            </svg>
-                        </div>
-                    </div>`;
+                avatarHTML = `<div class="message-avatar">
+                    <div class="voyage-logo">
+                        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                            <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                            <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                            <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                            <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                        </svg>
+                    </div>
+                </div>`;
                 }
             }
             
@@ -2355,7 +2345,7 @@
                     } else {
                         console.error('❌ Failed to generate GUEST_UNIQUE_ID');
                         alert('Misafir bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
-                        return;
+                return;
                     }
                 } else {
                     console.error('❌ Guest unique ID not available and cannot generate:', {
@@ -2707,8 +2697,6 @@
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'SW_UPDATED') {
                     console.log('🔄 Service worker updated:', event.data.version);
-                    // Update version display
-                    updateVersionDisplay();
                     if (!refreshing) {
                         refreshing = true;
                         // Auto-reload after 1 second
@@ -2728,41 +2716,10 @@
                             registration.update();
                         }
                     });
-                    // Update version display when page becomes visible
-                    updateVersionDisplay();
                 }
             });
         }
 
-        // Update version display from cache
-        async function updateVersionDisplay() {
-            try {
-                if ('caches' in window) {
-                    const cacheNames = await caches.keys();
-                    // Find the latest voyage-chat cache (support both v4 and v4.1 formats)
-                    const voyageCaches = cacheNames.filter(name => name.startsWith('voyage-chat-'));
-                    if (voyageCaches.length > 0) {
-                        // Sort to get the latest version
-                        voyageCaches.sort();
-                        const latestCache = voyageCaches[voyageCaches.length - 1];
-                        const version = latestCache.replace('voyage-chat-', '');
-                        const versionBadge = document.getElementById('versionBadge');
-                        if (versionBadge) {
-                            versionBadge.textContent = version;
-                            console.log('✅ Version displayed:', version);
-                        }
-                    } else {
-                        // Fallback to default version
-                        const versionBadge = document.getElementById('versionBadge');
-                        if (versionBadge) {
-                            versionBadge.textContent = 'v4.1';
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error getting version:', error);
-            }
-        }
 
         // PWA Fullscreen Support - Hide Safari UI
         function setupPWAFullscreen() {
@@ -2868,7 +2825,6 @@
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
             loadProfilePhoto();
-            updateVersionDisplay();
             
             // Setup file input event listeners
             const cameraInput = document.getElementById('cameraInput');
