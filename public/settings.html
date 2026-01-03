@@ -1975,13 +1975,21 @@
                 // Single room assignment by guest_unique_id
                 console.log('🏨 Single room assignment by guest_unique_id:', selectedGuestUniqueId);
                 
-                // Load room data by guest_unique_id
+                // Load room data - try by guest_unique_id first, then by room_number + checkin_date
                 let room = null;
                 try {
                     const roomsUrl = '/api/rooms';
                     const roomsRes = await fetch(roomsUrl);
                     const rooms = await roomsRes.json();
+                    
+                    // Try to find by guest_unique_id first
                     room = rooms.find(r => r.guest_unique_id === selectedGuestUniqueId);
+                    
+                    // If not found, try to find by room_number + checkin_date (in case guest_unique_id not yet updated in backend)
+                    if (!room && selectedRoomNumber && selectedCheckinDate) {
+                        room = rooms.find(r => r.room_number === selectedRoomNumber && r.checkin_date === selectedCheckinDate);
+                        console.log('🔍 Room not found by guest_unique_id, trying room_number + checkin_date:', !!room);
+                    }
                 } catch (error) {
                     console.error('Error loading room by guest_unique_id:', error);
                 }
@@ -1989,11 +1997,13 @@
                 if (room) {
                 selectedGuests = [{ 
                         guest_unique_id: selectedGuestUniqueId,
-                        room_number: room.room_number || null, 
-                        checkin_date: room.checkin_date || null,
+                        room_number: room.room_number || selectedRoomNumber || null, 
+                        checkin_date: room.checkin_date || selectedCheckinDate || null,
+                        checkout_date: room.checkout_date || null,
                         guest_name: room.guest_name || '',
                         guest_surname: room.guest_surname || ''
                     }];
+                    console.log('✅ Selected guest data:', selectedGuests[0]);
                 } else {
                     showAlert('Misafir bilgisi bulunamadı', 'error');
                     return;
@@ -2083,8 +2093,16 @@
                     const result = await response.json();
                     console.log('✅ Assignment saved successfully:', result);
                     closeAssignmentModal();
-                    loadAssignments();
-                    loadUnassignedRooms(); // Yenile
+                    
+                    // Wait a bit for backend to update room table
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Reload both lists
+                    await Promise.all([
+                        loadAssignments(),
+                        loadUnassignedRooms()
+                    ]);
+                    
                     showAlert('Eşleştirme başarıyla yapıldı', 'success');
                 } else {
                     const errorText = await response.text();
