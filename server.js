@@ -1079,6 +1079,55 @@ app.post('/api/guest/logout', async (req, res) => {
   res.json({ success: true });
 });
 
+// Get current guest info (for session check)
+app.get('/api/guest/me', async (req, res) => {
+  try {
+    const guestUniqueId = req.cookies?.guest_unique_id;
+    
+    if (!guestUniqueId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Find guest by unique_id
+    const result = await pool.query(`
+      SELECT 
+        r.*,
+        tra.team_id,
+        t.name as team_name
+      FROM rooms r
+      LEFT JOIN team_room_assignments tra ON r.guest_unique_id = tra.guest_unique_id AND tra.is_active = true
+      LEFT JOIN teams t ON tra.team_id = t.id AND t.is_active = true
+      WHERE r.guest_unique_id = $1
+        AND r.is_active = true
+      LIMIT 1
+    `, [guestUniqueId]);
+    
+    if (result.rows.length === 0) {
+      res.clearCookie('guest_unique_id');
+      return res.status(404).json({ success: false, error: 'Guest not found' });
+    }
+    
+    const guest = result.rows[0];
+    
+    res.json({
+      success: true,
+      guest: {
+        guest_unique_id: guest.guest_unique_id,
+        guest_name: guest.guest_name,
+        guest_surname: guest.guest_surname,
+        checkin_date: guest.checkin_date,
+        checkout_date: guest.checkout_date,
+        room_number: guest.room_number,
+        team_id: guest.team_id || null,
+        team_name: guest.team_name || null
+      }
+    });
+  } catch (error) {
+    console.error('Error getting guest info:', error);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
 // Guest Login Endpoint
 app.post('/api/guest/login', async (req, res) => {
   try {
