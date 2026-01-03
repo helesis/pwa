@@ -328,34 +328,20 @@ io.on('connection', (socket) => {
     
     try {
       logDebug('📊 Fetching chat history for room:', actualRoomNumber, 'check-in:', actualCheckinDate, 'guest_unique_id:', guestUniqueId);
-      // Send chat history (last 50 messages) filtered by guest_unique_id or room_number + checkin_date
+      // Send chat history (last 50 messages) filtered by guest_unique_id
       let result;
       if (guestUniqueId) {
-        // Use guest_unique_id to find room and messages
+        // Use guest_unique_id to find messages
         result = await pool.query(`
-          SELECT m.* FROM messages m
-          INNER JOIN rooms r ON m.room_number = r.room_number AND m.checkin_date = r.checkin_date
-          WHERE r.guest_unique_id = $1
+          SELECT m.*, a.name as assistant_name, a.surname as assistant_surname
+          FROM messages m
+          LEFT JOIN assistants a ON m.assistant_id = a.id
+          WHERE m.guest_unique_id = $1
           ORDER BY m.timestamp DESC 
           LIMIT 50
         `, [guestUniqueId]);
-      } else if (actualCheckinDate && actualRoomNumber) {
-        result = await pool.query(`
-          SELECT * FROM messages 
-          WHERE room_number = $1 AND checkin_date = $2
-          ORDER BY timestamp DESC 
-          LIMIT 50
-        `, [actualRoomNumber, actualCheckinDate]);
-      } else if (actualRoomNumber) {
-        // Fallback: if no checkin_date, use only room_number (for backward compatibility)
-        result = await pool.query(`
-        SELECT * FROM messages 
-        WHERE room_number = $1 
-        ORDER BY timestamp DESC 
-        LIMIT 50
-      `, [actualRoomNumber]);
       } else {
-        logDebug('⚠️ Cannot fetch chat history: missing room info');
+        logDebug('⚠️ Cannot fetch chat history: missing guest_unique_id');
         socket.emit('chat_history', []);
         return;
       }
@@ -372,12 +358,18 @@ io.on('connection', (socket) => {
           status = 'delivered';
         }
         
+        // Get sender name: if assistant, use assistant name, otherwise use sender_name
+        let senderName = row.sender_name;
+        if (row.assistant_id && row.assistant_name) {
+          senderName = `${row.assistant_name} ${row.assistant_surname || ''}`.trim();
+        }
+        
         return {
           id: row.id,
-          roomNumber: row.room_number,
-          checkinDate: row.checkin_date,
+          guestUniqueId: row.guest_unique_id,
           senderType: row.sender_type,
-          senderName: row.sender_name,
+          senderName: senderName,
+          assistantId: row.assistant_id,
           message: row.message,
           timestamp: row.timestamp,
           status: status,
@@ -398,29 +390,23 @@ io.on('connection', (socket) => {
 
   // Load older messages
   socket.on('load_older_messages', async (data) => {
-    const { roomNumber, checkinDate, beforeTimestamp, limit = 50 } = data;
+    const { guestUniqueId, beforeTimestamp, limit = 50 } = data;
     
     try {
-      let result;
-      if (checkinDate) {
-        result = await pool.query(`
-          SELECT * FROM messages 
-          WHERE room_number = $1 
-          AND checkin_date = $2
-          AND timestamp < $3
-          ORDER BY timestamp DESC 
-          LIMIT $4
-        `, [roomNumber, checkinDate, beforeTimestamp, limit]);
-      } else {
-        // Fallback for backward compatibility
-        result = await pool.query(`
-        SELECT * FROM messages 
-        WHERE room_number = $1 
-        AND timestamp < $2
-        ORDER BY timestamp DESC 
-        LIMIT $3
-      `, [roomNumber, beforeTimestamp, limit]);
+      if (!guestUniqueId) {
+        socket.emit('older_messages', []);
+        return;
       }
+      
+      const result = await pool.query(`
+        SELECT m.*, a.name as assistant_name, a.surname as assistant_surname
+        FROM messages m
+        LEFT JOIN assistants a ON m.assistant_id = a.id
+        WHERE m.guest_unique_id = $1 
+        AND m.timestamp < $2
+        ORDER BY m.timestamp DESC 
+        LIMIT $3
+      `, [guestUniqueId, beforeTimestamp, limit]);
       
       // Map database column names (snake_case) to frontend format (camelCase)
       const messages = result.rows.reverse().map(row => {
@@ -432,12 +418,18 @@ io.on('connection', (socket) => {
           status = 'delivered';
         }
         
+        // Get sender name: if assistant, use assistant name, otherwise use sender_name
+        let senderName = row.sender_name;
+        if (row.assistant_id && row.assistant_name) {
+          senderName = `${row.assistant_name} ${row.assistant_surname || ''}`.trim();
+        }
+        
         return {
           id: row.id,
-          roomNumber: row.room_number,
-          checkinDate: row.checkin_date,
+          guestUniqueId: row.guest_unique_id,
           senderType: row.sender_type,
-          senderName: row.sender_name,
+          senderName: senderName,
+          assistantId: row.assistant_id,
           message: row.message,
           timestamp: row.timestamp,
           status: status,
@@ -460,7 +452,7 @@ io.on('connection', (socket) => {
     console.log('📨 Raw data:', JSON.stringify(data, null, 2));
     console.log('📨 Time:', new Date().toISOString());
     
-    const { roomNumber, checkinDate, guestUniqueId, senderType, senderName, message } = data;
+    const { roomNumber, checkinDate, guestUniqueId, senderType, senderName, message, assistantId } = data;
     
     console.log('📨 Parsed data:', {
       roomNumber,
@@ -468,67 +460,70 @@ io.on('connection', (socket) => {
       guestUniqueId,
       senderType,
       senderName,
+      assistantId,
       messageLength: message?.length
     });
     
-    // Get room_number and checkin_date from guest_unique_id if provided
-    let actualRoomNumber = roomNumber;
-    let actualCheckinDate = checkinDate;
-    
-    if (guestUniqueId) {
-      console.log('🔍 Looking up room info for guestUniqueId:', guestUniqueId);
-      const guestResult = await pool.query(
-        'SELECT room_number, checkin_date FROM rooms WHERE guest_unique_id = $1',
-        [guestUniqueId]
-      );
-      console.log('🔍 Query result rows:', guestResult.rows.length);
-      if (guestResult.rows.length > 0) {
-        actualRoomNumber = guestResult.rows[0].room_number;
-        actualCheckinDate = guestResult.rows[0].checkin_date;
-        console.log('✅ Room info found:', { roomNumber: actualRoomNumber, checkinDate: actualCheckinDate });
-      } else {
-        console.error('❌ No room found for guestUniqueId:', guestUniqueId);
-      }
-    } else {
-      console.warn('⚠️ guestUniqueId is null or undefined');
-    }
-    
-    // Get checkin_date if not provided but we have room_number
-    if (!actualCheckinDate && actualRoomNumber) {
-      console.log('🔍 Looking up checkin_date for room_number:', actualRoomNumber);
-      const roomResult = await pool.query(
-        'SELECT checkin_date FROM rooms WHERE room_number = $1',
-        [actualRoomNumber]
-      );
-      if (roomResult.rows.length > 0) {
-        actualCheckinDate = roomResult.rows[0].checkin_date;
-        console.log('✅ Checkin date found:', actualCheckinDate);
-      }
-    }
-    
-    if (!actualCheckinDate || !actualRoomNumber) {
+    // Validate guest_unique_id
+    if (!guestUniqueId) {
       console.error('❌ ========== CANNOT SAVE MESSAGE ==========');
-      console.error('❌ Missing room info:', { 
-        roomNumber: actualRoomNumber, 
-        checkinDate: actualCheckinDate, 
-        guestUniqueId 
-      });
-      socket.emit('error', { message: 'Oda bilgisi bulunamadı' });
+      console.error('❌ Missing guest_unique_id');
+      socket.emit('error', { message: 'Guest unique ID bulunamadı' });
       return;
+    }
+    
+    // Verify room exists
+      const roomResult = await pool.query(
+      'SELECT room_number, checkin_date FROM rooms WHERE guest_unique_id = $1',
+      [guestUniqueId]
+    );
+    
+    if (roomResult.rows.length === 0) {
+      console.error('❌ ========== CANNOT SAVE MESSAGE ==========');
+      console.error('❌ Room not found for guest_unique_id:', guestUniqueId);
+      socket.emit('error', { message: 'Oda bulunamadı' });
+      return;
+    }
+    
+    const actualRoomNumber = roomResult.rows[0].room_number;
+    const actualCheckinDate = roomResult.rows[0].checkin_date;
+    
+    // Get assistant_id from cookie if sender is assistant
+    let actualAssistantId = assistantId || null;
+    if (senderType === 'assistant' && !actualAssistantId) {
+      // Try to get from socket handshake cookies
+      const cookies = socket.handshake.headers.cookie;
+      if (cookies) {
+        const assistantIdMatch = cookies.match(/assistant_id=(\d+)/);
+        if (assistantIdMatch) {
+          actualAssistantId = parseInt(assistantIdMatch[1]);
+        }
+      }
+    }
+    
+    // Get assistant name if assistant_id is provided
+    let actualSenderName = senderName;
+    if (actualAssistantId && senderType === 'assistant') {
+      const assistantResult = await pool.query(
+        'SELECT name, surname FROM assistants WHERE id = $1',
+        [actualAssistantId]
+      );
+      if (assistantResult.rows.length > 0) {
+        actualSenderName = `${assistantResult.rows[0].name} ${assistantResult.rows[0].surname || ''}`.trim();
+      }
     }
     
     try {
       console.log('💾 Saving message to database...');
-      // Save to database with checkin_date
+      // Save to database with guest_unique_id and assistant_id
       const result = await pool.query(`
-        INSERT INTO messages (room_number, checkin_date, sender_type, sender_name, message)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO messages (guest_unique_id, sender_type, assistant_id, message)
+        VALUES ($1, $2, $3, $4)
         RETURNING id, timestamp
       `, [
-        actualRoomNumber,
-        actualCheckinDate,
+        guestUniqueId,
         senderType,
-        senderName,
+        actualAssistantId,
         message
       ]);
       
@@ -536,17 +531,11 @@ io.on('connection', (socket) => {
       const timestamp = result.rows[0].timestamp;
       console.log('✅ Message saved to database:', { messageId, timestamp });
       
-      // Use guest_unique_id if available, otherwise use room_number + checkin_date
-      let roomId;
-      if (guestUniqueId) {
-        roomId = `guest_${guestUniqueId}`;
-      } else {
-        roomId = `${actualRoomNumber}_${actualCheckinDate}`;
-      }
+      // Use guest_unique_id for room ID
+      const roomId = `guest_${guestUniqueId}`;
       
       console.log('📡 ========== BROADCASTING MESSAGE ==========');
       console.log('📡 Room ID:', roomId);
-      console.log('📡 Room ID format:', guestUniqueId ? 'guest_${guestUniqueId}' : '${roomNumber}_${checkinDate}');
       
       // Check how many clients are in this room
       const room = io.sockets.adapter.rooms.get(roomId);
@@ -559,10 +548,10 @@ io.on('connection', (socket) => {
       // Broadcast message with status
       const messageData = {
         id: messageId,
-        roomNumber: actualRoomNumber,
-        checkinDate: actualCheckinDate,
+        guestUniqueId: guestUniqueId,
         senderType,
-        senderName,
+        senderName: actualSenderName,
+        assistantId: actualAssistantId,
         message,
         timestamp: timestamp.toISOString(),
         status: 'sent', // Initial status: sent
@@ -572,9 +561,10 @@ io.on('connection', (socket) => {
       
       console.log('📡 Message data to broadcast:', {
         id: messageData.id,
-        roomNumber: messageData.roomNumber,
+        guestUniqueId: messageData.guestUniqueId,
         senderType: messageData.senderType,
         senderName: messageData.senderName,
+        assistantId: messageData.assistantId,
         messageLength: messageData.message?.length
       });
       
@@ -657,41 +647,27 @@ io.on('connection', (socket) => {
       
       // Get message info to broadcast status update
       const messageResult = await pool.query(
-        'SELECT room_number, checkin_date FROM messages WHERE id = $1',
+        'SELECT guest_unique_id FROM messages WHERE id = $1',
         [messageId]
       );
       
       if (messageResult.rows.length > 0) {
-        const { room_number, checkin_date } = messageResult.rows[0];
+        const { guest_unique_id } = messageResult.rows[0];
         
-        // Try to get guest_unique_id from rooms table
-        let roomId;
-        const roomResult = await pool.query(
-          'SELECT guest_unique_id FROM rooms WHERE room_number = $1 AND checkin_date = $2',
-          [room_number, checkin_date]
-        );
-        
-        if (roomResult.rows.length > 0 && roomResult.rows[0].guest_unique_id) {
-          // Use guest_unique_id format (same as send_message handler)
-          roomId = `guest_${roomResult.rows[0].guest_unique_id}`;
+        if (guest_unique_id) {
+          // Use guest_unique_id format
+          const roomId = `guest_${guest_unique_id}`;
           logDebug('📤 Using guest_unique_id for roomId:', roomId);
-        } else {
-          // Fallback to old format
-        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
-          roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
-          logDebug('📤 Using fallback roomId format:', roomId);
-        }
-        
-        logDebug('📤 Broadcasting message_status_update to room:', roomId, { 
+          
+          logDebug('📤 Broadcasting message_status_update to room:', roomId, { 
           messageId, 
           status: 'delivered',
-          room_number,
-          checkin_date: checkin_date ? checkin_date.toISOString().split('T')[0] : null
+            guest_unique_id
         });
         
         // Get all sockets in this room for debugging
         const roomSockets = await io.in(roomId).fetchSockets();
-        logDebug(`📊 Room ${roomId} has ${roomSockets.length} connected clients`);
+          logDebug(`📊 Room ${roomId} has ${roomSockets.length} connected clients`);
         
         // Broadcast status update to room (sender will see delivered tick)
         io.to(roomId).emit('message_status_update', { 
@@ -699,7 +675,10 @@ io.on('connection', (socket) => {
           status: 'delivered' 
         });
         
-        logDebug('✅ message_status_update broadcasted to room:', roomId);
+          logDebug('✅ message_status_update broadcasted to room:', roomId);
+      } else {
+          logDebug('⚠️ message_delivered: guest_unique_id not found for messageId:', messageId);
+        }
       } else {
         logDebug('⚠️ message_delivered: Message info not found for messageId:', messageId);
       }
@@ -722,36 +701,22 @@ io.on('connection', (socket) => {
       
       // Get first message info to broadcast status update
       const messageResult = await pool.query(
-        'SELECT room_number, checkin_date FROM messages WHERE id = $1',
+        'SELECT guest_unique_id FROM messages WHERE id = $1',
         [messageIds[0]]
       );
       
       if (messageResult.rows.length > 0) {
-        const { room_number, checkin_date } = messageResult.rows[0];
+        const { guest_unique_id } = messageResult.rows[0];
         
-        // Try to get guest_unique_id from rooms table
-        let roomId;
-        const roomResult = await pool.query(
-          'SELECT guest_unique_id FROM rooms WHERE room_number = $1 AND checkin_date = $2',
-          [room_number, checkin_date]
-        );
-        
-        if (roomResult.rows.length > 0 && roomResult.rows[0].guest_unique_id) {
-          // Use guest_unique_id format (same as send_message handler)
-          roomId = `guest_${roomResult.rows[0].guest_unique_id}`;
+        if (guest_unique_id) {
+          // Use guest_unique_id format
+          const roomId = `guest_${guest_unique_id}`;
           logDebug('📤 Using guest_unique_id for roomId:', roomId);
-        } else {
-          // Fallback to old format
-        const checkinDateStr = checkin_date ? checkin_date.toISOString().split('T')[0] : null;
-          roomId = checkinDateStr ? `${room_number}_${checkinDateStr}` : room_number;
-          logDebug('📤 Using fallback roomId format:', roomId);
-        }
-        
-        logDebug('📤 Broadcasting message_status_update (read) to room:', roomId, { 
+          
+          logDebug('📤 Broadcasting message_status_update (read) to room:', roomId, { 
           messageIds, 
           status: 'read',
-          room_number,
-          checkin_date: checkin_date ? checkin_date.toISOString().split('T')[0] : null
+            guest_unique_id
         });
         
         // Broadcast status update to room (sender will see read ticks)
@@ -760,7 +725,12 @@ io.on('connection', (socket) => {
           status: 'read' 
         });
         
-        logDebug('✅ message_status_update (read) broadcasted to room:', roomId);
+          logDebug('✅ message_status_update (read) broadcasted to room:', roomId);
+        } else {
+          logDebug('⚠️ message_read: guest_unique_id not found for messageIds:', messageIds);
+        }
+      } else {
+        logDebug('⚠️ message_read: Message info not found for messageIds:', messageIds);
       }
     } catch (error) {
       console.error('Error updating read status:', error);
@@ -1840,39 +1810,34 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
         (
           SELECT m.message 
           FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          WHERE m.guest_unique_id = r.guest_unique_id
           ORDER BY m.timestamp DESC 
           LIMIT 1
         ) as last_message,
         (
           SELECT m.timestamp 
           FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          WHERE m.guest_unique_id = r.guest_unique_id
           ORDER BY m.timestamp DESC 
           LIMIT 1
         ) as last_message_time,
           (
             SELECT m.timestamp 
           FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
+          WHERE m.guest_unique_id = r.guest_unique_id
               AND m.sender_type = 'guest'
             ORDER BY m.timestamp DESC 
             LIMIT 1
           ) as last_guest_message_time,
         COALESCE((
-            SELECT COUNT(*)::INTEGER
+          SELECT COUNT(*)::INTEGER
           FROM messages m 
-          WHERE m.room_number = r.room_number 
-            AND (m.checkin_date = r.checkin_date OR (m.checkin_date IS NULL AND r.checkin_date IS NULL))
-              AND m.sender_type NOT IN ('assistant', 'staff')
-              AND m.read_at IS NULL
+          WHERE m.guest_unique_id = r.guest_unique_id
+            AND m.sender_type NOT IN ('assistant', 'staff')
+            AND m.read_at IS NULL
           ), 0) as unread_count
       FROM rooms r
-      INNER JOIN team_room_assignments tra ON r.room_number = tra.room_number 
-        AND r.checkin_date = tra.checkin_date
+      INNER JOIN team_room_assignments tra ON r.guest_unique_id = tra.guest_unique_id
       INNER JOIN assistant_teams at ON tra.team_id = at.team_id
       WHERE at.assistant_id = $1 
         AND at.is_active = true
@@ -1974,7 +1939,7 @@ async function initializeTestData() {
     // Create assistants
     const assistantIds = [];
     for (const assistant of assistants) {
-      const result = await pool.query(`
+    const result = await pool.query(`
         INSERT INTO assistants (name, surname, spoken_languages, is_active)
         VALUES ($1, $2, $3, true)
         RETURNING id
@@ -1991,7 +1956,7 @@ async function initializeTestData() {
     
     const teamIds = [];
     for (const team of teams) {
-      const result = await pool.query(`
+    const result = await pool.query(`
         INSERT INTO teams (name, description, is_active)
         VALUES ($1, $2, true)
         RETURNING id
@@ -2087,14 +2052,14 @@ async function initializeTestData() {
         const guest_unique_id = generateGuestUniqueId(firstName, lastName, checkinDateStr, checkoutDateStr);
         
         inserts.push({
-          roomNumber,
-          firstName,
-          lastName,
-          checkinDateStr,
-          checkoutDateStr,
-          adultCount,
-          childCount,
-          agency,
+            roomNumber,
+            firstName,
+            lastName,
+            checkinDateStr,
+            checkoutDateStr,
+            adultCount,
+            childCount,
+            agency,
           country,
           guest_unique_id
         });
@@ -2129,7 +2094,7 @@ async function initializeTestData() {
         `, params);
         
         totalInserted += result.rowCount || 0;
-      } catch (error) {
+        } catch (error) {
         console.error(`⚠️ Error inserting chunk ${i / chunkSize + 1}:`, error.message);
       }
     }
