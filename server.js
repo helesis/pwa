@@ -1029,7 +1029,7 @@ app.post('/api/assistant/login', async (req, res) => {
       assistant: {
         id: assistant.id,
         name: assistant.name,
-        email: assistant.email,
+        surname: assistant.surname,
         avatar: assistant.avatar,
         is_active: assistant.is_active
       }
@@ -1049,7 +1049,7 @@ app.get('/api/assistant/me', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
-    const result = await pool.query('SELECT id, name, email, avatar, is_active FROM assistants WHERE id = $1 AND is_active = true', [assistantId]);
+    const result = await pool.query('SELECT id, name, surname, avatar, is_active FROM assistants WHERE id = $1 AND is_active = true', [assistantId]);
     
     if (result.rows.length === 0) {
       // Clear invalid cookie
@@ -1224,12 +1224,12 @@ app.post('/api/assistants', async (req, res) => {
 // Update assistant
 app.put('/api/assistants/:id', async (req, res) => {
   try {
-    const { name, email, avatar } = req.body;
+    const { name, surname, spoken_languages, avatar } = req.body;
     // Always update avatar - if empty string or null, set to null
     const avatarValue = avatar || null;
     const result = await pool.query(
-      'UPDATE assistants SET name = $1, email = $2, avatar = $3 WHERE id = $4 RETURNING *',
-      [name, email || null, avatarValue, req.params.id]
+      'UPDATE assistants SET name = $1, surname = $2, spoken_languages = $3, avatar = $4 WHERE id = $5 RETURNING *',
+      [name, surname || null, spoken_languages || null, avatarValue, req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Assistant not found' });
