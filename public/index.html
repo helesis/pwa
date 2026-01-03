@@ -1242,6 +1242,7 @@
             const hotelName = document.querySelector('.hotel-name');
             const statusText = document.getElementById('statusText');
             const headerPhoto = document.getElementById('headerProfilePhoto');
+            const headerHotelIcon = document.querySelector('.header-left .hotel-icon'); // New: Select the hotel icon
             
             if (hotelName) {
                 hotelName.textContent = `${GUEST_NAME} ${GUEST_SURNAME || ''}`.trim() || 'Misafir';
@@ -1249,6 +1250,15 @@
             
             if (statusText) {
                 statusText.textContent = GUEST_UNIQUE_ID ? `ID: ${GUEST_UNIQUE_ID.substring(0, 16)}...` : 'Bağlanıyor...';
+            }
+            
+            // Update header hotel icon with team avatar if available
+            if (teamAvatar && headerHotelIcon) {
+                headerHotelIcon.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                headerHotelIcon.style.background = 'transparent'; // Remove default background
+            } else if (headerHotelIcon) {
+                headerHotelIcon.innerHTML = '🏨'; // Default icon
+                headerHotelIcon.style.background = ''; // Restore default background
             }
             
             // Update header with team avatar (not guest profile photo)
@@ -1407,6 +1417,9 @@
                 if (team.avatar) {
                     teamAvatar = team.avatar;
                     console.log('✅ Team avatar loaded:', teamAvatar);
+                    
+                    // Update header with team avatar
+                    updateGuestHeader();
                     
                     // Update all received message avatars
                     updateTeamAvatarDisplay();
