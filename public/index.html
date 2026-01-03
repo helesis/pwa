@@ -2239,20 +2239,23 @@
                         const messageId = messageEl.getAttribute('data-message-id');
                         const isSent = messageEl.getAttribute('data-is-sent') === 'true';
                         
-                        // Only track read status for messages we sent
+                        // On guest side: Track messages we SENT (isSent=true) to see when assistant reads them
+                        // This updates the read status on our sent messages
                         if (isSent && messageId && !messageId.startsWith('temp_')) {
                             const statusEl = messageEl.querySelector('.message-status');
                             const isRead = statusEl && statusEl.classList.contains('read');
                             
                             if (!isRead && !unreadMessageIds.includes(messageId)) {
                                 unreadMessageIds.push(messageId);
+                                console.log('📖 Guest: Message we sent marked as read:', messageId);
                             }
                         }
                     }
                 });
                 
-                // Send read status for all unread messages
+                // Send read status for all unread messages we sent
                 if (unreadMessageIds.length > 0) {
+                    console.log('📤 Guest side: Emitting message_read for', unreadMessageIds.length, 'messages we sent:', unreadMessageIds);
                     socket.emit('message_read', { messageIds: unreadMessageIds });
                 }
             }, observerOptions);
