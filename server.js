@@ -1876,7 +1876,7 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
           END
         ) >= $2::date
       ORDER BY 
-        sort_timestamp DESC,
+        last_message_time DESC NULLS LAST,
         room_number ASC
     `, [assistantId, todayStr]);
     
