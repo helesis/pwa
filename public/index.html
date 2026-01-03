@@ -2101,10 +2101,15 @@
                     avatarHTML = '<div class="message-avatar">👤</div>';
                 }
             } else {
-                // Not sent - it's from hotel/staff - use team avatar if available, otherwise VOYAGE HOTELS logo
-                if (teamAvatar) {
+                // Not sent - it's from hotel/staff - prioritize assistant avatar, then team avatar, then VOYAGE HOTELS logo
+                if (data.assistantAvatar) {
+                    // Use assistant's specific avatar if provided
+                    avatarHTML = `<div class="message-avatar"><img src="${data.assistantAvatar}" alt="Asistan" style="width:100%;height:100%;object-fit:cover;"></div>`;
+                } else if (teamAvatar) {
+                    // Fallback to team avatar if assistant avatar not available
                     avatarHTML = `<div class="message-avatar"><img src="${teamAvatar}" alt="Takım" style="width:100%;height:100%;object-fit:cover;"></div>`;
                 } else {
+                    // Final fallback to VOYAGE HOTELS logo
                 avatarHTML = `<div class="message-avatar">
                     <div class="voyage-logo">
                         <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
