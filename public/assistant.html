@@ -1625,15 +1625,24 @@
         
         // Message status update (delivered/read)
         socket.on('message_status_update', (data) => {
+            console.log('📬 ========== ASSISTANT: message_status_update received ==========');
+            console.log('📬 Full data:', JSON.stringify(data, null, 2));
+            
             if (data.messageIds && Array.isArray(data.messageIds)) {
                 // Multiple messages (read status)
+                console.log('📬 Assistant: Updating multiple messages to read:', data.messageIds);
                 data.messageIds.forEach(msgId => {
                     updateMessageStatus(msgId, data.status);
                 });
             } else if (data.messageId) {
                 // Single message (delivered status)
+                console.log('📬 Assistant: Updating single message to delivered:', data.messageId);
                 updateMessageStatus(data.messageId, data.status);
+            } else {
+                console.error('⚠️ Assistant: message_status_update: No messageId or messageIds found:', data);
             }
+            
+            console.log('📬 ========== ASSISTANT: message_status_update handling complete ==========');
         });
 
         // Display message
@@ -1690,17 +1699,58 @@
         }
         
         // Update message status
-        function updateMessageStatus(messageId, status) {
-            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
-            if (!messageEl) return;
+        function updateMessageStatus(messageId, status, retryCount = 0) {
+            console.log('🔄 Assistant: Updating message status:', { messageId, status, retryCount });
+            
+            // Önce chat container içinde ara
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) {
+                console.error('❌ Chat container not found');
+                return;
+            }
+            
+            const messageEl = chatContainer.querySelector(`[data-message-id="${messageId}"]`);
+            if (!messageEl) {
+                if (retryCount < 10) { // Retry sayısını artır
+                    console.log(`⏳ Assistant: Message element not found, retrying... (${retryCount + 1}/10)`);
+                    setTimeout(() => {
+                        updateMessageStatus(messageId, status, retryCount + 1);
+                    }, 300); // Delay'i biraz artır
+                } else {
+                    console.error('⚠️ Assistant: Message element not found for ID after retries:', messageId);
+                    // Tüm mesajları listele debug için
+                    const allMessages = chatContainer.querySelectorAll('.message[data-message-id]');
+                    console.log('📋 Assistant: Available message IDs:', Array.from(allMessages).map(m => m.getAttribute('data-message-id')));
+                }
+                return;
+            }
             
             const statusEl = messageEl.querySelector('.message-status');
-            if (!statusEl) return;
+            if (!statusEl) {
+                console.warn('⚠️ Assistant: Status element not found for message:', messageId);
+                // Eğer status elementi yoksa, mesaj gönderilmiş bir mesaj mı kontrol et
+                const isSent = messageEl.getAttribute('data-is-sent') === 'true';
+                if (isSent) {
+                    console.log('🔧 Assistant: Status element missing for sent message, creating it...');
+                    // Status elementi yoksa oluştur
+                    const messageTime = messageEl.querySelector('.message-time');
+                    if (messageTime) {
+                        const newStatusEl = document.createElement('span');
+                        newStatusEl.className = `message-status ${status}`;
+                        newStatusEl.innerHTML = '<span class="message-status-icon"></span>';
+                        messageTime.appendChild(newStatusEl);
+                        console.log('✅ Assistant: Status element created');
+                        return;
+                    }
+                }
+                return;
+            }
             
             // Remove old status classes
             statusEl.classList.remove('sent', 'delivered', 'read');
             // Add new status class
             statusEl.classList.add(status);
+            console.log('✅ Assistant: Status updated to:', status, 'Classes:', statusEl.className);
         }
         
         // Intersection Observer for read status

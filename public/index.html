@@ -1812,9 +1812,10 @@
                             senderType: msg.senderType,
                             normalized: senderType,
                             isSent: isSent,
+                            status: msg.status,
                             preview: msg.message.substring(0, 20)
                         });
-                        displayMessage(msg, false);
+                        displayMessage(msg, isSent);
                     });
                     
                     // Set oldest message timestamp for pagination
@@ -1918,7 +1919,9 @@
             
             // Message status update (delivered/read)
             socket.on('message_status_update', (data) => {
-                console.log('📬 message_status_update received:', data);
+                console.log('📬 ========== message_status_update received ==========');
+                console.log('📬 Full data:', JSON.stringify(data, null, 2));
+                
                 if (data.messageIds && Array.isArray(data.messageIds)) {
                     // Multiple messages (read status)
                     console.log('📬 Updating multiple messages to read:', data.messageIds);
@@ -1930,8 +1933,10 @@
                     console.log('📬 Updating single message to delivered:', data.messageId);
                     updateMessageStatus(data.messageId, data.status);
                 } else {
-                    console.log('⚠️ message_status_update: No messageId or messageIds found:', data);
+                    console.error('⚠️ message_status_update: No messageId or messageIds found:', data);
                 }
+                
+                console.log('📬 ========== message_status_update handling complete ==========');
             });
 
             // Typing indicators
@@ -2190,23 +2195,49 @@
         // Update message status
         function updateMessageStatus(messageId, status, retryCount = 0) {
             console.log('🔄 Updating message status:', { messageId, status, retryCount });
-            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            
+            // Önce chat container içinde ara
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) {
+                console.error('❌ Chat container not found');
+                return;
+            }
+            
+            const messageEl = chatContainer.querySelector(`[data-message-id="${messageId}"]`);
             if (!messageEl) {
-                if (retryCount < 5) {
+                if (retryCount < 10) { // Retry sayısını artır
                     // Retry after a short delay (message might not be in DOM yet)
-                    console.log(`⏳ Message element not found, retrying... (${retryCount + 1}/5)`);
+                    console.log(`⏳ Message element not found, retrying... (${retryCount + 1}/10)`);
                     setTimeout(() => {
                         updateMessageStatus(messageId, status, retryCount + 1);
-                    }, 200);
+                    }, 300); // Delay'i biraz artır
                 } else {
-                    console.log('⚠️ Message element not found for ID after retries:', messageId);
+                    console.error('⚠️ Message element not found for ID after retries:', messageId);
+                    // Tüm mesajları listele debug için
+                    const allMessages = chatContainer.querySelectorAll('.message[data-message-id]');
+                    console.log('📋 Available message IDs:', Array.from(allMessages).map(m => m.getAttribute('data-message-id')));
                 }
                 return;
             }
             
             const statusEl = messageEl.querySelector('.message-status');
             if (!statusEl) {
-                console.log('⚠️ Status element not found for message:', messageId);
+                console.warn('⚠️ Status element not found for message:', messageId);
+                // Eğer status elementi yoksa, mesaj gönderilmiş bir mesaj mı kontrol et
+                const isSent = messageEl.getAttribute('data-is-sent') === 'true';
+                if (isSent) {
+                    console.log('🔧 Status element missing for sent message, creating it...');
+                    // Status elementi yoksa oluştur
+                    const messageTime = messageEl.querySelector('.message-time');
+                    if (messageTime) {
+                        const newStatusEl = document.createElement('span');
+                        newStatusEl.className = `message-status ${status}`;
+                        newStatusEl.innerHTML = '<span class="message-status-icon"></span>';
+                        messageTime.appendChild(newStatusEl);
+                        console.log('✅ Status element created');
+                        return;
+                    }
+                }
                 return;
             }
             
