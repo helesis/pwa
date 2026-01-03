@@ -1147,6 +1147,14 @@ app.post('/api/guest/login', async (req, res) => {
       return res.status(500).json({ error: 'Misafir bilgileri eksik. Lütfen yönetici ile iletişime geçin.' });
     }
     
+    // Set cookie for session management
+    res.cookie('guest_unique_id', guest_unique_id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+    
     // Return guest info
     res.json({
       success: true,
