@@ -1263,24 +1263,32 @@
             
             // Update header profile photo: prioritize guest profile photo, fallback to team avatar
             if (headerPhoto) {
+                // Remove existing click listeners
+                const newHeaderPhoto = headerPhoto.cloneNode(true);
+                headerPhoto.parentNode.replaceChild(newHeaderPhoto, headerPhoto);
+                const updatedHeaderPhoto = document.getElementById('headerProfilePhoto');
+                
                 if (guestProfilePhoto) {
                     // Show guest's own profile photo
-                    headerPhoto.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                    headerPhoto.classList.add('has-photo');
-                    headerPhoto.onclick = showPhotoModal; // Enable profile photo change
-                    headerPhoto.title = 'Profil fotoğrafı değiştir';
+                    updatedHeaderPhoto.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    updatedHeaderPhoto.classList.add('has-photo');
+                    updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
+                    updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
+                    updatedHeaderPhoto.style.cursor = 'pointer';
                 } else if (teamAvatar) {
                     // Fallback to team avatar if guest has no profile photo
-                    headerPhoto.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                    headerPhoto.classList.add('has-photo');
-                    headerPhoto.onclick = showPhotoModal; // Enable profile photo change
-                    headerPhoto.title = 'Profil fotoğrafı değiştir';
+                    updatedHeaderPhoto.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    updatedHeaderPhoto.classList.add('has-photo');
+                    updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
+                    updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
+                    updatedHeaderPhoto.style.cursor = 'pointer';
                 } else {
                     // Default icon
-                    headerPhoto.innerHTML = '👤';
-                    headerPhoto.classList.remove('has-photo');
-                    headerPhoto.onclick = showPhotoModal; // Enable profile photo change
-                    headerPhoto.title = 'Profil fotoğrafı değiştir';
+                    updatedHeaderPhoto.innerHTML = '👤';
+                    updatedHeaderPhoto.classList.remove('has-photo');
+                    updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
+                    updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
+                    updatedHeaderPhoto.style.cursor = 'pointer';
                 }
             }
         }
@@ -1433,7 +1441,7 @@
                     
                     // Update all received message avatars
                     updateTeamAvatarDisplay();
-                } else {
+            } else {
                     console.log('ℹ️ Team has no avatar');
                 }
             } catch (error) {
