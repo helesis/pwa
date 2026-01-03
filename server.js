@@ -1322,10 +1322,9 @@ app.get('/api/teams', async (req, res) => {
       SELECT 
         t.*,
         COALESCE((
-          SELECT COUNT(DISTINCT tra.room_number || '_' || tra.checkin_date)
+          SELECT COUNT(DISTINCT tra.guest_unique_id)
           FROM team_room_assignments tra
-          INNER JOIN rooms r ON tra.room_number = r.room_number 
-            AND tra.checkin_date = r.checkin_date
+          INNER JOIN rooms r ON tra.guest_unique_id = r.guest_unique_id
           WHERE tra.team_id = t.id
             AND tra.is_active = true
             AND r.is_active = true
@@ -1470,28 +1469,27 @@ app.get('/api/team-assignments', async (req, res) => {
     let query = `
       SELECT 
         tra.id,
-        tra.room_number,
-        tra.checkin_date,
         tra.guest_unique_id,
         t.name as team_name,
+        r.room_number,
+        r.checkin_date,
         r.guest_name,
         r.guest_surname,
         r.profile_photo
       FROM team_room_assignments tra
       INNER JOIN teams t ON tra.team_id = t.id
-      LEFT JOIN rooms r ON (tra.room_number = r.room_number AND tra.checkin_date = r.checkin_date) 
-                        OR (tra.guest_unique_id IS NOT NULL AND tra.guest_unique_id = r.guest_unique_id)
+      LEFT JOIN rooms r ON tra.guest_unique_id = r.guest_unique_id
       WHERE tra.is_active = true
     `;
     const params = [];
     
     if (checkin_date) {
       console.log('🔍 Filtering by checkin_date:', checkin_date);
-      query += ' AND tra.checkin_date = $1';
+      query += ' AND r.checkin_date = $1';
       params.push(checkin_date);
     }
     
-    query += ' ORDER BY tra.checkin_date DESC, tra.room_number';
+    query += ' ORDER BY r.checkin_date DESC, r.room_number';
     
     logDebug('📊 Executing query:', query);
     logDebug('📊 Query params:', params);
@@ -1555,64 +1553,37 @@ app.post('/api/team-assignments', async (req, res) => {
         guest_unique_id = generateGuestUniqueId(guest_name, guest_surname, checkin_date, checkoutDate);
       }
       
-      // If room_number is not provided but guest_unique_id is, we can still create assignment
-      // This allows pre-assignment before room is assigned
-      if (!room_number && !guest_unique_id) {
-        return res.status(400).json({ error: 'Either room_number or guest_name+checkin_date is required' });
+      // guest_unique_id is required
+      if (!guest_unique_id) {
+        return res.status(400).json({ error: 'guest_unique_id is required. Provide guest_name, guest_surname, checkin_date, and checkout_date to generate it.' });
       }
       
-      // Create team-room assignment
-      // Use guest_unique_id if available, otherwise use room_number + checkin_date
+      // Create team-room assignment using guest_unique_id
       let assignmentResult;
-      if (guest_unique_id) {
-        // Try to insert with guest_unique_id first (using partial unique index)
-        try {
-          assignmentResult = await pool.query(
-            `INSERT INTO team_room_assignments (team_id, room_number, checkin_date, guest_unique_id)
-             VALUES ($1, $2, $3, $4)
-         ON CONFLICT (team_id, room_number, checkin_date) 
-             DO UPDATE SET is_active = true, guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, team_room_assignments.guest_unique_id)
-         RETURNING *`,
-            [team_id, room_number || null, checkin_date || null, guest_unique_id]
-          );
-        } catch (conflictError) {
-          // If conflict on guest_unique_id (partial unique index), update existing
-          if (conflictError.code === '23505' && conflictError.constraint?.includes('guest_unique')) {
-            assignmentResult = await pool.query(
-              `UPDATE team_room_assignments 
-               SET is_active = true, 
-                   room_number = COALESCE($2, room_number), 
-                   checkin_date = COALESCE($3, checkin_date)
-               WHERE team_id = $1 AND guest_unique_id = $4
-               RETURNING *`,
-              [team_id, room_number || null, checkin_date || null, guest_unique_id]
-            );
-          } else {
-            throw conflictError;
-          }
-        }
-      } else {
-        // Fallback to room_number + checkin_date
+      try {
         assignmentResult = await pool.query(
-          `INSERT INTO team_room_assignments (team_id, room_number, checkin_date, guest_unique_id)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (team_id, room_number, checkin_date) 
-           DO UPDATE SET is_active = true, guest_unique_id = COALESCE(EXCLUDED.guest_unique_id, team_room_assignments.guest_unique_id)
+          `INSERT INTO team_room_assignments (team_id, guest_unique_id)
+           VALUES ($1, $2)
+           ON CONFLICT (team_id, guest_unique_id) 
+           DO UPDATE SET is_active = true
            RETURNING *`,
-          [team_id, room_number, checkin_date, guest_unique_id]
+          [team_id, guest_unique_id]
         );
+      } catch (error) {
+        console.error('Error creating team assignment:', error);
+        throw error;
       }
       
       createdAssignments.push(assignmentResult.rows[0]);
       
       // Update room table with guest_unique_id if it was generated
-      if (guest_unique_id && room_number && checkin_date) {
+      if (guest_unique_id) {
         try {
           await pool.query(
             `UPDATE rooms 
              SET guest_unique_id = COALESCE(guest_unique_id, $1)
-             WHERE room_number = $2 AND checkin_date = $3 AND (guest_unique_id IS NULL OR guest_unique_id = '')`,
-            [guest_unique_id, room_number, checkin_date]
+             WHERE guest_unique_id = $1 OR (room_number = $2 AND checkin_date = $3 AND (guest_unique_id IS NULL OR guest_unique_id = ''))`,
+            [guest_unique_id, room_number || null, checkin_date || null]
           );
           console.log('✅ Updated room table with guest_unique_id:', guest_unique_id);
         } catch (error) {
@@ -1621,27 +1592,35 @@ app.post('/api/team-assignments', async (req, res) => {
         }
       }
       
-      // Auto-assign all team assistants to the room (if room_number exists)
-      if (room_number) {
-      for (const assistantId of assistantIds) {
-        await pool.query(
-          `INSERT INTO assistant_assignments (assistant_id, room_number, is_active)
-           VALUES ($1, $2, true)
-           ON CONFLICT (assistant_id, room_number) 
-           DO UPDATE SET is_active = true`,
-          [assistantId, room_number]
-        );
+      // Auto-assign all team assistants to the room (using guest_unique_id)
+      if (guest_unique_id) {
+        for (const assistantId of assistantIds) {
+          await pool.query(
+            `INSERT INTO assistant_assignments (assistant_id, guest_unique_id, is_active)
+             VALUES ($1, $2, true)
+             ON CONFLICT (assistant_id, guest_unique_id) 
+             DO UPDATE SET is_active = true`,
+            [assistantId, guest_unique_id]
+          );
         }
       }
       
-      // Notify all team assistants to join the room via Socket.IO (if room_number exists)
-      if (room_number && checkin_date) {
-      io.emit('auto_join_room', {
-        roomNumber: room_number,
-        checkinDate: checkin_date,
-        teamId: team_id,
-        assistantIds: assistantIds
-      });
+      // Notify all team assistants to join the room via Socket.IO (using guest_unique_id)
+      if (guest_unique_id) {
+        // Get room_number and checkin_date from rooms table for notification
+        const roomInfo = await pool.query(
+          'SELECT room_number, checkin_date FROM rooms WHERE guest_unique_id = $1 LIMIT 1',
+          [guest_unique_id]
+        );
+        if (roomInfo.rows.length > 0) {
+          io.emit('auto_join_room', {
+            roomNumber: roomInfo.rows[0].room_number,
+            checkinDate: roomInfo.rows[0].checkin_date,
+            guestUniqueId: guest_unique_id,
+            teamId: team_id,
+            assistantIds: assistantIds
+          });
+        }
       }
     }
     
