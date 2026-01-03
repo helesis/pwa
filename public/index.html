@@ -1617,16 +1617,14 @@
         // Initialize socket after guest info is loaded
         async function initializeSocket() {
             console.log('🚀 ========== SOCKET INITIALIZATION START ==========');
-            console.log('📋 Step 1: Checking guest authentication...');
             
-            // Check if guest is logged in
-            const isAuthenticated = await checkGuestAuth();
-            if (!isAuthenticated) {
-                console.log('ℹ️ Guest not authenticated, waiting for login...');
+            // Ensure guest is authenticated
+            if (!GUEST_UNIQUE_ID) {
+                console.log('ℹ️ Guest not authenticated, cannot initialize socket');
                 return;
             }
             
-            console.log('📋 Step 2: Guest info loaded');
+            console.log('📋 Step 1: Guest info loaded');
             console.log('📋 Guest Unique ID:', GUEST_UNIQUE_ID);
             console.log('📋 Room Number:', ROOM_NUMBER);
             console.log('📋 Guest Name:', GUEST_NAME);
