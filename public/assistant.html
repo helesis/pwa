@@ -2206,6 +2206,43 @@
             return div.innerHTML;
         }
 
+        // Handle assistant logout
+        async function handleAssistantLogout() {
+            if (!confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+                return;
+            }
+            
+            try {
+                // Call logout endpoint
+                await fetch('/api/assistant/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            
+            // Clear all assistant data
+            ASSISTANT_ID = null;
+            ASSISTANT_NAME = null;
+            ASSISTANT_SURNAME = null;
+            ASSISTANT_AVATAR = null;
+            ASSISTANT_TEAM_NAME = null;
+            
+            // Show login, hide dashboard
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('dashboardContainer').style.display = 'none';
+            
+            // Clear login form
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.reset();
+            }
+        }
+
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', async () => {
             // Check authentication
