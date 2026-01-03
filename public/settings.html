@@ -779,10 +779,9 @@
                         </thead>
                         <tbody>
                             ${assistants.map(a => {
-                                // Split name into first name and last name
-                                const nameParts = (a.name || '').split(' ');
-                                const firstName = nameParts[0] || '';
-                                const lastName = nameParts.slice(1).join(' ') || '';
+                                // Use name and surname directly from database
+                                const firstName = a.name || '';
+                                const lastName = a.surname || '';
                                 
                                 return `
                                 <tr>
