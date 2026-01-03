@@ -2843,6 +2843,11 @@
         }
 
         // Initialize on load
+        // Check authentication on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await checkGuestAuth();
+        });
+
         window.addEventListener('load', async () => {
             console.log('🚀 Voyage Sorgun Chat initialized');
             
