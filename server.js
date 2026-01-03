@@ -1272,7 +1272,7 @@ app.post('/api/assistants', async (req, res) => {
     const { name, surname, spoken_languages, avatar } = req.body;
     const result = await pool.query(
       'INSERT INTO assistants (name, surname, spoken_languages, avatar) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, surname || null, spoken_languages || null, avatar || null]
+      [name, surname || '', spoken_languages || null, avatar || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -1317,7 +1317,7 @@ app.put('/api/assistants/:id', async (req, res) => {
     
     const result = await pool.query(
       'UPDATE assistants SET name = $1, surname = $2, spoken_languages = $3, avatar = $4 WHERE id = $5 RETURNING *',
-      [name, surname || null, spoken_languages || null, avatarValue, req.params.id]
+      [name, surname || '', spoken_languages || null, avatarValue, req.params.id]
     );
     
     if (result.rows.length === 0) {

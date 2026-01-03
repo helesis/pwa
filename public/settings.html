@@ -607,6 +607,10 @@
                     <input type="text" id="assistant-name" class="form-input" required>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Assistant Soyadı *</label>
+                    <input type="text" id="assistant-surname" class="form-input" required>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Email (Opsiyonel)</label>
                     <input type="email" id="assistant-email" class="form-input">
                 </div>
@@ -1321,7 +1325,8 @@
                 fetch(`/api/assistants/${id}`)
                     .then(res => res.json())
                     .then(data => {
-                        document.getElementById('assistant-name').value = data.name;
+                        document.getElementById('assistant-name').value = data.name || '';
+                        document.getElementById('assistant-surname').value = data.surname || '';
                         document.getElementById('assistant-email').value = data.email || '';
                         const preview = document.getElementById('assistant-avatar-preview');
                         if (data.avatar) {
@@ -1352,24 +1357,33 @@
             
             try {
                 const nameInput = document.getElementById('assistant-name');
+                const surnameInput = document.getElementById('assistant-surname');
                 const emailInput = document.getElementById('assistant-email');
                 const avatarDataInput = document.getElementById('assistant-avatar-data');
                 
-                if (!nameInput || !avatarDataInput) {
+                if (!nameInput || !surnameInput || !avatarDataInput) {
                     console.error('❌ Form elements not found');
                     showAlert('Form elemanları bulunamadı', 'error');
                     return;
                 }
                 
                 const name = nameInput.value.trim();
+                const surname = surnameInput.value.trim();
+                
                 if (!name) {
                     showAlert('Assistant adı gereklidir', 'error');
+                    return;
+                }
+                
+                if (!surname) {
+                    showAlert('Assistant soyadı gereklidir', 'error');
                     return;
                 }
                 
                 const avatarData = avatarDataInput.value || null;
             const data = {
                     name: name,
+                    surname: surname,
                     email: emailInput ? (emailInput.value.trim() || null) : null,
                     avatar: avatarData || null
                 };
