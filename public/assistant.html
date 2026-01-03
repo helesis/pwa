@@ -1537,11 +1537,25 @@
                 timestamp: data.timestamp
             });
             console.log('📬 Current selected room:', {
-                roomNumber: selectedRoomNumber,
-                checkinDate: selectedCheckinDate,
-                guestUniqueId: selectedGuestUniqueId
+                roomNumber: currentRoomNumber,
+                checkinDate: currentCheckinDate,
+                guestUniqueId: currentGuestUniqueId
             });
             console.log('📬 Time:', new Date().toISOString());
+            
+            // Check if this message belongs to the currently selected room
+            const isCurrentRoom = (
+                data.roomNumber === currentRoomNumber &&
+                (data.checkinDate === currentCheckinDate || 
+                 (data.checkinDate && currentCheckinDate && 
+                  new Date(data.checkinDate).toISOString().split('T')[0] === new Date(currentCheckinDate).toISOString().split('T')[0]))
+            );
+            
+            if (!isCurrentRoom) {
+                console.log('📬 Message is not for current room, skipping display. Message room:', data.roomNumber, 'Current room:', currentRoomNumber);
+                // Don't display but still update unread count if needed
+                return;
+            }
             
             const isSent = data.senderType === 'assistant' || data.senderType === 'staff';
             
@@ -1591,6 +1605,12 @@
                 
                 console.log('📬 Displaying message in UI');
                 displayMessage(data, isSent);
+                
+                // Scroll to bottom after displaying
+                const chatContainer = document.getElementById('chatContainer');
+                if (chatContainer) {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
             } else {
                 console.log('📬 Message already exists, skipping');
             }
