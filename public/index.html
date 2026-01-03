@@ -1454,31 +1454,8 @@
 
         // Update profile photo display in header and messages
         function updateProfilePhotoDisplay() {
-            const headerPhoto = document.getElementById('headerProfilePhoto');
-            if (!headerPhoto) {
-                console.warn('Header profile photo element not found');
-                return;
-            }
-            
-            if (guestProfilePhoto) {
-                // Clear and add image
-                headerPhoto.innerHTML = '';
-                const img = document.createElement('img');
-                img.src = guestProfilePhoto;
-                img.alt = 'Profil';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '50%';
-                img.style.display = 'block';
-                headerPhoto.appendChild(img);
-                headerPhoto.classList.add('has-photo');
-                
-                console.log('✅ Profile photo updated in header');
-            } else {
-                headerPhoto.innerHTML = '👤';
-                headerPhoto.classList.remove('has-photo');
-            }
+            // Update header using updateGuestHeader which handles both guest photo and team avatar
+            updateGuestHeader();
             
             // Update all sent message avatars
             const sentAvatars = document.querySelectorAll('.message.sent .message-avatar');
@@ -1489,6 +1466,8 @@
                     avatar.innerHTML = '👤';
                 }
             });
+            
+            console.log('✅ Profile photo display updated');
         }
 
         // Show photo selection modal
