@@ -1105,6 +1105,9 @@
                     
                     // Load guest info and initialize
                     await loadGuestInfo();
+                    
+                    // Initialize socket connection after guest info is loaded
+                    await initializeSocket();
                 } else {
                     // Login failed
                     loginError.textContent = data.error || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.';
