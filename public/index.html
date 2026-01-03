@@ -1690,8 +1690,6 @@
                 console.log('📤 Room Number:', ROOM_NUMBER);
                 console.log('📤 Check-in Date:', CHECKIN_DATE);
                 socket.emit('join_room', {
-                    roomNumber: ROOM_NUMBER,
-                    checkinDate: CHECKIN_DATE,
                     guestUniqueId: GUEST_UNIQUE_ID
                 });
                 console.log('📤 join_room event emitted');
@@ -1748,8 +1746,6 @@
                     statusText.textContent = 'Çevrimiçi';
                 }
                 socket.emit('join_room', {
-                    roomNumber: ROOM_NUMBER,
-                    checkinDate: CHECKIN_DATE,
                     guestUniqueId: GUEST_UNIQUE_ID
                 });
             });
@@ -2428,7 +2424,6 @@
             
             socket.emit('send_message', {
                 guestUniqueId: GUEST_UNIQUE_ID,
-                checkinDate: CHECKIN_DATE,
                 senderType: 'guest',
                 senderName: GUEST_NAME,
                 message: message

@@ -1409,11 +1409,15 @@
                 }
             }
             
-            // Join room and load chat with guest_unique_id if available, otherwise use room_number + checkin_date
+            // Join room using guest_unique_id
+            if (!guestUniqueId) {
+                console.error('❌ Cannot join room: guestUniqueId is missing');
+                alert('Oda bilgisi eksik. Lütfen odayı tekrar seçin.');
+                return;
+            }
+            
             const joinRoomData = {
-                roomNumber: roomNumber,
-                checkinDate: checkinDate,
-                guestUniqueId: guestUniqueId || null
+                guestUniqueId: guestUniqueId
             };
             console.log('🔵 Joining room with data:', joinRoomData);
             socket.emit('join_room', joinRoomData);
@@ -1446,17 +1450,10 @@
         // Go back to list view
         function goBackToList() {
             showListView();
-            // Leave room socket
+            // Leave room socket - sadece guestUniqueId kullan
             if (currentGuestUniqueId) {
                 socket.emit('leave_room', {
-                    roomNumber: currentRoomNumber,
-                    checkinDate: currentCheckinDate,
                     guestUniqueId: currentGuestUniqueId
-                });
-            } else if (currentRoomNumber && currentCheckinDate) {
-                socket.emit('leave_room', {
-                    roomNumber: currentRoomNumber,
-                    checkinDate: currentCheckinDate
                 });
             }
             // Clear current room

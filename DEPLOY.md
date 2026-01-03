@@ -191,3 +191,4 @@ Render, GitHub'a push yaptığınızda otomatik olarak deploy yapar. Manuel depl
 
 
 
+

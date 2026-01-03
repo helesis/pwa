@@ -452,11 +452,9 @@ io.on('connection', (socket) => {
     console.log('📨 Raw data:', JSON.stringify(data, null, 2));
     console.log('📨 Time:', new Date().toISOString());
     
-    const { roomNumber, checkinDate, guestUniqueId, senderType, senderName, message, assistantId } = data;
+    const { guestUniqueId, senderType, senderName, message, assistantId } = data;
     
     console.log('📨 Parsed data:', {
-      roomNumber,
-      checkinDate,
       guestUniqueId,
       senderType,
       senderName,
@@ -473,7 +471,7 @@ io.on('connection', (socket) => {
     }
     
     // Verify room exists
-      const roomResult = await pool.query(
+    const roomResult = await pool.query(
       'SELECT room_number, checkin_date FROM rooms WHERE guest_unique_id = $1',
       [guestUniqueId]
     );
