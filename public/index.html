@@ -2253,16 +2253,31 @@
                 const isSent = messageEl.getAttribute('data-is-sent') === 'true';
                 if (isSent) {
                     console.log('🔧 Status element missing for sent message, creating it...');
-                    // Status elementi yoksa oluştur
-                    const messageTime = messageEl.querySelector('.message-time');
-                    if (messageTime) {
-                        const newStatusEl = document.createElement('span');
-                        newStatusEl.className = `message-status ${status}`;
-                        newStatusEl.innerHTML = '<span class="message-status-icon"></span>';
-                        messageTime.appendChild(newStatusEl);
-                        console.log('✅ Status element created');
+                    const messageBubble = messageEl.querySelector('.message-bubble');
+                    if (!messageBubble) {
+                        console.error('⚠️ message-bubble not found');
                         return;
                     }
+                    
+                    // Status elementi yoksa oluştur
+                    let messageTime = messageBubble.querySelector('.message-time');
+                    if (!messageTime) {
+                        // Create message-time if it doesn't exist
+                        console.log('🔧 message-time missing, creating it...');
+                        const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                        messageTime = document.createElement('div');
+                        messageTime.className = 'message-time';
+                        messageTime.textContent = time;
+                        messageBubble.appendChild(messageTime);
+                    }
+                    
+                    // Create status element
+                    const newStatusEl = document.createElement('span');
+                    newStatusEl.className = `message-status ${status}`;
+                    newStatusEl.innerHTML = '<span class="message-status-icon"></span>';
+                    messageTime.appendChild(newStatusEl);
+                    console.log('✅ Status element created');
+                    return;
                 }
                 return;
             }
