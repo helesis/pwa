@@ -1934,15 +1934,20 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
         ) as expiry_date
       FROM room_messages
       WHERE 
-        -- Show if checkout_date + 1 day >= today OR last_guest_message_time + 2 days >= today
-        (
-          checkout_date IS NULL 
-          OR (checkout_date + INTERVAL '1 day')::date >= $2::date
-        )
-        OR (
-          last_guest_message_time IS NOT NULL 
-          AND (last_guest_message_time::date + INTERVAL '2 days')::date >= $2::date
-        )
+        -- Show if expiry_date >= today
+        -- expiry_date is the maximum of (checkout_date + 1 day) and (last_guest_message_time + 2 days)
+        GREATEST(
+          CASE 
+            WHEN checkout_date IS NOT NULL 
+            THEN (checkout_date + INTERVAL '1 day')::date
+            ELSE NULL
+          END,
+          CASE 
+            WHEN last_guest_message_time IS NOT NULL 
+            THEN (last_guest_message_time::date + INTERVAL '2 days')::date
+            ELSE NULL
+          END
+        ) >= $2::date
       ORDER BY 
         sort_timestamp DESC,
         room_number ASC
