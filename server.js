@@ -295,7 +295,7 @@ io.on('connection', (socket) => {
         LEFT JOIN assistants a ON m.assistant_id = a.id
         WHERE m.guest_unique_id = $1
         ORDER BY m.timestamp DESC 
-        LIMIT 50
+          LIMIT 50
       `, [guestUniqueId]);
       
       logDebug('📊 Messages found:', result.rows.length);
@@ -322,6 +322,7 @@ io.on('connection', (socket) => {
           senderType: row.sender_type,
           senderName: senderName,
           assistantId: row.assistant_id,
+          assistantAvatar: row.assistant_avatar,
           message: row.message,
           timestamp: row.timestamp,
           status: status,
@@ -424,7 +425,7 @@ io.on('connection', (socket) => {
     }
     
     // Verify room exists
-    const roomResult = await pool.query(
+      const roomResult = await pool.query(
       'SELECT room_number, checkin_date FROM rooms WHERE guest_unique_id = $1',
       [guestUniqueId]
     );
@@ -1510,10 +1511,10 @@ app.post('/api/team-assignments', async (req, res) => {
           `INSERT INTO team_room_assignments (team_id, guest_unique_id)
            VALUES ($1, $2)
            ON CONFLICT (team_id, guest_unique_id) 
-           DO UPDATE SET is_active = true
-           RETURNING *`,
+         DO UPDATE SET is_active = true
+         RETURNING *`,
           [team_id, guest_unique_id]
-        );
+      );
       } catch (error) {
         console.error('Error creating team assignment:', error);
         throw error;
@@ -1539,12 +1540,12 @@ app.post('/api/team-assignments', async (req, res) => {
       
       // Auto-assign all team assistants to the room (using guest_unique_id)
       if (guest_unique_id) {
-        for (const assistantId of assistantIds) {
-          await pool.query(
+      for (const assistantId of assistantIds) {
+        await pool.query(
             `INSERT INTO assistant_assignments (assistant_id, guest_unique_id, is_active)
-             VALUES ($1, $2, true)
+           VALUES ($1, $2, true)
              ON CONFLICT (assistant_id, guest_unique_id) 
-             DO UPDATE SET is_active = true`,
+           DO UPDATE SET is_active = true`,
             [assistantId, guest_unique_id]
           );
         }
@@ -1558,13 +1559,13 @@ app.post('/api/team-assignments', async (req, res) => {
           [guest_unique_id]
         );
         if (roomInfo.rows.length > 0) {
-          io.emit('auto_join_room', {
+      io.emit('auto_join_room', {
             roomNumber: roomInfo.rows[0].room_number,
             checkinDate: roomInfo.rows[0].checkin_date,
             guestUniqueId: guest_unique_id,
-            teamId: team_id,
-            assistantIds: assistantIds
-          });
+        teamId: team_id,
+        assistantIds: assistantIds
+      });
         }
       }
     }
@@ -1873,7 +1874,7 @@ async function initializeTestData() {
     // Create assistants
     const assistantIds = [];
     for (const assistant of assistants) {
-      const result = await pool.query(`
+    const result = await pool.query(`
         INSERT INTO assistants (name, surname, spoken_languages, is_active)
         VALUES ($1, $2, $3, true)
         RETURNING id
@@ -1893,7 +1894,7 @@ async function initializeTestData() {
     
     const teamIds = [];
     for (const team of teams) {
-      const result = await pool.query(`
+    const result = await pool.query(`
         INSERT INTO teams (name, description, is_active)
         VALUES ($1, $2, true)
         RETURNING id
