@@ -1360,6 +1360,90 @@
             }
         }
 
+        // Format time for room list
+        function formatRoomTime(timestamp) {
+            if (!timestamp) return '';
+            const msgTime = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - msgTime;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) {
+                return 'Şimdi';
+            } else if (diffMins < 60) {
+                return `${diffMins} dk`;
+            } else if (diffHours < 24) {
+                return `${diffHours} sa`;
+            } else if (diffDays < 7) {
+                return `${diffDays} g`;
+            } else {
+                return msgTime.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+            }
+        }
+
+        // Update room in list when new message arrives
+        function updateRoomInList(guestUniqueId, message, timestamp, isFromGuest = false) {
+            if (!guestUniqueId) return;
+            
+            const roomsList = document.getElementById('roomsList');
+            if (!roomsList) return;
+            
+            // Find room element by guest_unique_id
+            const roomElement = roomsList.querySelector(`[data-guest-unique-id="${guestUniqueId}"]`);
+            if (!roomElement) {
+                // Room not in list, reload rooms
+                console.log('📬 Room not found in list, reloading rooms...');
+                loadRooms();
+                return;
+            }
+            
+            // Update last message
+            const lastMessageEl = roomElement.querySelector('.room-last-message');
+            if (lastMessageEl) {
+                let displayMessage = message || '';
+                if (displayMessage.length > 40) {
+                    displayMessage = displayMessage.substring(0, 40) + '...';
+                }
+                lastMessageEl.textContent = displayMessage || 'Henüz mesaj yok';
+            }
+            
+            // Update time
+            const timeEl = roomElement.querySelector('.room-time');
+            if (timeEl && timestamp) {
+                timeEl.textContent = formatRoomTime(timestamp);
+            }
+            
+            // Update unread count if message is from guest
+            if (isFromGuest) {
+                const unreadBadge = roomElement.querySelector('.unread-badge');
+                const currentUnread = unreadBadge ? parseInt(unreadBadge.textContent) || 0 : 0;
+                const newUnread = currentUnread + 1;
+                
+                if (newUnread > 0) {
+                    if (unreadBadge) {
+                        unreadBadge.textContent = newUnread;
+                    } else {
+                        // Create unread badge
+                        const roomInfo = roomElement.querySelector('.room-info');
+                        if (roomInfo) {
+                            const badge = document.createElement('span');
+                            badge.className = 'unread-badge';
+                            badge.textContent = newUnread;
+                            const lastMessageContainer = roomInfo.querySelector('.room-last-message').parentElement;
+                            lastMessageContainer.appendChild(badge);
+                        }
+                    }
+                }
+            }
+            
+            // Move room to top of list (most recent message first)
+            roomsList.insertBefore(roomElement, roomsList.firstChild);
+            
+            console.log('✅ Room list updated for:', guestUniqueId);
+        }
+
         // Select room and load chat
         function selectRoom(roomNumber, guestName, guestSurname, checkinDate, guestUniqueId, element) {
             console.log('📂 selectRoom called:', { 
@@ -1606,9 +1690,13 @@
             // Check if this message belongs to the currently selected room using guestUniqueId
             const isCurrentRoom = data.guestUniqueId === currentGuestUniqueId;
             
+            // Update room list regardless of whether it's the current room
+            const isFromGuest = data.senderType === 'guest';
+            updateRoomInList(data.guestUniqueId, data.message, data.timestamp, isFromGuest);
+            
             if (!isCurrentRoom) {
                 console.log('📬 Message is not for current room, skipping display. Message guestUniqueId:', data.guestUniqueId, 'Current guestUniqueId:', currentGuestUniqueId);
-                // Don't display but still update unread count if needed
+                // Don't display but room list is already updated above
                 return;
             }
             
