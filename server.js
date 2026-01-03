@@ -1918,9 +1918,10 @@ app.get('/api/assistant/:assistantId/rooms', async (req, res) => {
 // Initialize test data: 15 assistants, 5 teams (3 assistants each), 32 guests (4 per day for 8 days: Jan 3-10)
 async function initializeTestData() {
   try {
-    // Skip if ENABLE_TEST_DATA is not set to 'true'
-    if (process.env.ENABLE_TEST_DATA !== 'true') {
-      console.log('ℹ️ Test data initialization skipped (ENABLE_TEST_DATA not set to "true")');
+    // Check if already initialized (optional - can be removed if you want to allow re-initialization)
+    const existingAssistants = await pool.query('SELECT COUNT(*) as count FROM assistants');
+    if (parseInt(existingAssistants.rows[0].count) >= 15) {
+      console.log('ℹ️ Test data already exists. Use /api/test-data/initialize to re-initialize.');
       return;
     }
     
