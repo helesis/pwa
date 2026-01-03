@@ -983,35 +983,46 @@
         let TEAM_ID = null;
         const SERVER_URL = window.location.origin;
 
-        // Check if guest is already logged in
+        // Check guest authentication
         async function checkGuestAuth() {
             try {
-                const guestUniqueId = localStorage.getItem('guest_unique_id');
-                const guestName = localStorage.getItem('guest_name');
-                const guestSurname = localStorage.getItem('guest_surname');
-                const checkinDate = localStorage.getItem('checkin_date');
-                const checkoutDate = localStorage.getItem('checkout_date');
-                const teamId = localStorage.getItem('team_id');
+                const response = await fetch('/api/guest/me', {
+                    credentials: 'include'
+                });
                 
-                if (guestUniqueId && guestName && checkinDate) {
-                    // Guest is logged in
-                    GUEST_UNIQUE_ID = guestUniqueId;
-                    GUEST_NAME = guestName;
-                    GUEST_SURNAME = guestSurname;
-                    CHECKIN_DATE = checkinDate;
-                    CHECKOUT_DATE = checkoutDate;
-                    TEAM_ID = teamId;
-                    
-                    // Hide login, show app
-                    document.getElementById('guestLoginContainer').style.display = 'none';
-                    document.getElementById('appContainer').style.display = 'flex';
-                    
-                    // Load guest info and initialize
-                    await loadGuestInfo();
-                    return true;
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.guest) {
+                        // Guest is logged in
+                        GUEST_UNIQUE_ID = data.guest.guest_unique_id;
+                        GUEST_NAME = data.guest.guest_name;
+                        GUEST_SURNAME = data.guest.guest_surname;
+                        CHECKIN_DATE = data.guest.checkin_date;
+                        CHECKOUT_DATE = data.guest.checkout_date;
+                        ROOM_NUMBER = data.guest.room_number;
+                        TEAM_ID = data.guest.team_id;
+                        
+                        // Save to localStorage as backup
+                        localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
+                        localStorage.setItem('guest_name', GUEST_NAME);
+                        localStorage.setItem('guest_surname', GUEST_SURNAME);
+                        localStorage.setItem('checkin_date', CHECKIN_DATE);
+                        localStorage.setItem('checkout_date', CHECKOUT_DATE);
+                        if (ROOM_NUMBER) localStorage.setItem('room_number', ROOM_NUMBER);
+                        if (TEAM_ID) localStorage.setItem('team_id', TEAM_ID);
+                        
+                        // Hide login, show app
+                        document.getElementById('guestLoginContainer').style.display = 'none';
+                        document.getElementById('appContainer').style.display = 'flex';
+                        
+                        // Load guest info and initialize
+                        await loadGuestInfo();
+                        await initializeSocket();
+                        return true;
+                    }
                 }
                 
-                // Not logged in
+                // Not logged in (silently fail - this is expected on first load)
                 document.getElementById('guestLoginContainer').style.display = 'flex';
                 document.getElementById('appContainer').style.display = 'none';
                 return false;
