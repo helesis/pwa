@@ -2815,6 +2815,11 @@
             localStorage.removeItem('checkout_date');
             localStorage.removeItem('room_number');
             localStorage.removeItem('team_id');
+            // Remove guest-specific profile photo from localStorage
+            if (GUEST_UNIQUE_ID) {
+                localStorage.removeItem(`guestProfilePhoto_${GUEST_UNIQUE_ID}`);
+            }
+            // Also remove old global key for backward compatibility
             localStorage.removeItem('guestProfilePhoto');
             
             // Disconnect socket if connected
