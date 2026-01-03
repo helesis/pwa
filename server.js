@@ -2147,6 +2147,19 @@ initializeDatabase().then(() => {
 }).catch(console.error);
 
 // Health check
+
+// Test data initialization endpoint (manual trigger)
+app.post('/api/test-data/initialize', async (req, res) => {
+  try {
+    console.log('🔄 Manual test data initialization triggered...');
+    await initializeTestData();
+    res.json({ success: true, message: 'Test data initialized successfully' });
+  } catch (error) {
+    console.error('❌ Error initializing test data:', error);
+    res.status(500).json({ error: 'Failed to initialize test data', message: error.message });
+  }
+});
+
 // Migration endpoint: Update all existing guests with new guest_unique_id algorithm
 app.post('/api/migrate/update-guest-unique-ids', async (req, res) => {
   try {
