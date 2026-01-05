@@ -238,6 +238,7 @@
             overflow-y: auto;
             padding: 16px 8px;
             padding-top: calc(16px + env(safe-area-inset-top) + 60px); /* Header height + safe area */
+            padding-bottom: 16px; /* Space before input container */
             background: #efeae2;
             scroll-behavior: smooth;
             display: flex;
@@ -659,11 +660,15 @@
 
         .input-container {
             padding: 10px 16px;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
             background: #f0f2f5;
             border-top: 1px solid rgba(0, 0, 0, 0.08);
             display: flex;
             gap: 8px;
             align-items: flex-end;
+            position: sticky;
+            bottom: calc(60px + env(safe-area-inset-bottom)); /* Bottom nav height + safe area */
+            z-index: 100;
         }
 
         .input-wrapper {
@@ -848,6 +853,194 @@
         .hidden-input {
             display: none;
         }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e4e6e9;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #667781;
+            text-decoration: none;
+            border: none;
+            background: none;
+            font-size: 12px;
+            gap: 4px;
+        }
+
+        .nav-item:hover {
+            background: #f0f2f5;
+        }
+
+        .nav-item.active {
+            color: #008069;
+        }
+
+        .nav-item-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .nav-item-label {
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        /* Content sections */
+        .content-section {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            padding-bottom: calc(80px + env(safe-area-inset-bottom)); /* Bottom nav height + safe area */
+            position: relative;
+        }
+        
+        #chatSection {
+            padding: 0;
+            padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-section.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Info Section */
+        .info-section {
+            gap: 16px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .info-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #111b21;
+        }
+
+        .info-card-content {
+            font-size: 14px;
+            color: #667781;
+            line-height: 1.5;
+        }
+
+        /* Profile Section */
+        .profile-section {
+            gap: 16px;
+        }
+
+        .profile-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 24px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .profile-avatar-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #dfd5c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            overflow: hidden;
+        }
+
+        .profile-avatar-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #111b21;
+        }
+
+        .profile-info {
+            font-size: 14px;
+            color: #667781;
+        }
+
+        /* Settings Section */
+        .settings-section {
+            gap: 16px;
+        }
+
+        .settings-item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .settings-item:hover {
+            background: #f0f2f5;
+        }
+
+        .settings-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-item-icon {
+            font-size: 20px;
+        }
+
+        .settings-item-label {
+            font-size: 16px;
+            font-weight: 500;
+            color: #111b21;
+        }
+
+        .settings-item-right {
+            color: #667781;
+            font-size: 20px;
+        }
+
     </style>
 </head>
 <body>
@@ -906,9 +1099,7 @@
             </div>
         </div>
 
-        <div class="chat-container" id="chatContainer">
-            <!-- Messages will be loaded here -->
-        </div>
+        <!-- Chat container moved to chatSection -->
 
         <div class="typing-indicator" id="typingIndicator">
             <div class="message-avatar">
@@ -929,23 +1120,129 @@
             </div>
         </div>
 
-        <div class="input-container">
-            <div class="input-wrapper">
-                <textarea 
-                    id="messageInput" 
-                    placeholder="Mesajınızı yazın..."
-                    rows="1"
-                    onkeypress="handleKeyPress(event)"
-                    oninput="handleInputChange()"
-                ></textarea>
+        <!-- Content Sections -->
+        <div class="content-section active" id="chatSection">
+            <div class="chat-container" id="chatContainer">
+                <!-- Messages will be loaded here -->
             </div>
-            <div class="action-buttons">
-                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                    </svg>
-                </button>
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Mesajınızı yazın..."
+                        rows="1"
+                        onkeypress="handleKeyPress(event)"
+                        oninput="handleInputChange()"
+                    ></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
+        </div>
+
+        <div class="content-section" id="infoSection">
+            <div class="info-section">
+                <div class="info-card">
+                    <div class="info-card-title">🏨 Voyage Sorgun</div>
+                    <div class="info-card-content">
+                        Hoş geldiniz! Size nasıl yardımcı olabiliriz? Herhangi bir sorunuz veya isteğiniz varsa lütfen bizimle iletişime geçin.
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title">📍 Konum</div>
+                    <div class="info-card-content">
+                        Voyage Sorgun Hotel<br>
+                        Sorgun, Antalya, Türkiye
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title">📞 İletişim</div>
+                    <div class="info-card-content">
+                        Telefon: +90 242 XXX XX XX<br>
+                        E-posta: info@voyagesorgun.com
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title">🕐 Çalışma Saatleri</div>
+                    <div class="info-card-content">
+                        7/24 Hizmetinizdeyiz
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="profileSection">
+            <div class="profile-section">
+                <div class="profile-header">
+                    <div class="profile-avatar-large" id="profileAvatarLarge">
+                        👤
+                    </div>
+                    <div>
+                        <div class="profile-name" id="profileName">Misafir</div>
+                        <div class="profile-info" id="profileInfo">Oda bilgisi yükleniyor...</div>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title">Kişisel Bilgiler</div>
+                    <div class="info-card-content">
+                        <div style="margin-bottom: 8px;"><strong>Ad:</strong> <span id="profileGuestName">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong>Soyad:</strong> <span id="profileGuestSurname">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong>Oda:</strong> <span id="profileRoomNumber">-</span></div>
+                        <div><strong>Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="settingsSection">
+            <div class="settings-section">
+                <div class="settings-item" onclick="showPhotoModal()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon">📷</div>
+                        <div class="settings-item-label">Profil Fotoğrafı Değiştir</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+                <div class="settings-item" onclick="requestNotificationPermission()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon">🔔</div>
+                        <div class="settings-item-label">Bildirimler</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+                <div class="settings-item" onclick="handleGuestLogout()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon">🚪</div>
+                        <div class="settings-item-label">Çıkış Yap</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="switchSection('chat')" data-section="chat">
+                <div class="nav-item-icon">💬</div>
+                <div class="nav-item-label">Chat</div>
+            </button>
+            <button class="nav-item" onclick="switchSection('info')" data-section="info">
+                <div class="nav-item-icon">ℹ️</div>
+                <div class="nav-item-label">Info</div>
+            </button>
+            <button class="nav-item" onclick="switchSection('profile')" data-section="profile">
+                <div class="nav-item-icon">👤</div>
+                <div class="nav-item-label">Profile</div>
+            </button>
+            <button class="nav-item" onclick="switchSection('settings')" data-section="settings">
+                <div class="nav-item-icon">⚙️</div>
+                <div class="nav-item-label">Settings</div>
+            </button>
         </div>
 
     </div>
@@ -1474,6 +1771,16 @@
                     avatar.innerHTML = '👤';
                 }
             });
+            
+            // Update profile section avatar
+            const profileAvatarLargeEl = document.getElementById('profileAvatarLarge');
+            if (profileAvatarLargeEl) {
+                if (guestProfilePhoto) {
+                    profileAvatarLargeEl.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                } else {
+                    profileAvatarLargeEl.textContent = '👤';
+                }
+            }
             
             console.log('✅ Profile photo display updated');
         }
@@ -2876,6 +3183,88 @@
 
         // Initialize on load
         // Check authentication on page load
+        // Navigation functions
+        function switchSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected section
+            const sectionEl = document.getElementById(section + 'Section');
+            if (sectionEl) {
+                sectionEl.classList.add('active');
+            }
+            
+            // Add active class to selected nav item
+            const navItem = document.querySelector(`[data-section="${section}"]`);
+            if (navItem) {
+                navItem.classList.add('active');
+            }
+            
+            // Update profile info when switching to profile section
+            if (section === 'profile') {
+                updateProfileInfo();
+            }
+            
+            // Scroll to top when switching sections
+            if (sectionEl) {
+                sectionEl.scrollTop = 0;
+            }
+        }
+
+        // Update profile information
+        function updateProfileInfo() {
+            const profileNameEl = document.getElementById('profileName');
+            const profileInfoEl = document.getElementById('profileInfo');
+            const profileGuestNameEl = document.getElementById('profileGuestName');
+            const profileGuestSurnameEl = document.getElementById('profileGuestSurname');
+            const profileRoomNumberEl = document.getElementById('profileRoomNumber');
+            const profileCheckinDateEl = document.getElementById('profileCheckinDate');
+            const profileAvatarLargeEl = document.getElementById('profileAvatarLarge');
+            
+            if (profileNameEl && GUEST_NAME) {
+                profileNameEl.textContent = `${GUEST_NAME} ${GUEST_SURNAME || ''}`.trim();
+            }
+            
+            if (profileInfoEl && ROOM_NUMBER) {
+                profileInfoEl.textContent = `Oda ${ROOM_NUMBER}`;
+            }
+            
+            if (profileGuestNameEl) {
+                profileGuestNameEl.textContent = GUEST_NAME || '-';
+            }
+            
+            if (profileGuestSurnameEl) {
+                profileGuestSurnameEl.textContent = GUEST_SURNAME || '-';
+            }
+            
+            if (profileRoomNumberEl) {
+                profileRoomNumberEl.textContent = ROOM_NUMBER || '-';
+            }
+            
+            if (profileCheckinDateEl && CHECKIN_DATE) {
+                const date = new Date(CHECKIN_DATE);
+                profileCheckinDateEl.textContent = date.toLocaleDateString('tr-TR', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+            }
+            
+            // Update profile avatar
+            if (profileAvatarLargeEl && guestProfilePhoto) {
+                profileAvatarLargeEl.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            } else if (profileAvatarLargeEl) {
+                profileAvatarLargeEl.textContent = '👤';
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
             await checkGuestAuth();
         });
