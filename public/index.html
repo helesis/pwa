@@ -942,7 +942,8 @@
 
         /* Info Section */
         .info-section {
-            gap: 16px;
+            gap: 0;
+            padding: 0;
         }
 
         /* Instagram Story Tray Style Activity Notifications */
@@ -1031,6 +1032,149 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        /* Instagram Post Format */
+        .info-posts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 0 16px 16px;
+        }
+
+        .info-post {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+            border-bottom: 1px solid #efefef;
+        }
+
+        .post-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+        }
+
+        .post-avatar-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .post-header-info {
+            flex: 1;
+        }
+
+        .post-username {
+            font-size: 14px;
+            font-weight: 600;
+            color: #262626;
+        }
+
+        .post-location {
+            font-size: 12px;
+            color: #8e8e8e;
+        }
+
+        .post-more {
+            font-size: 20px;
+            color: #262626;
+            cursor: pointer;
+        }
+
+        .post-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #efefef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .post-image img,
+        .post-image video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .post-image-placeholder {
+            font-size: 48px;
+            color: #dbdbdb;
+        }
+
+        .post-actions {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 16px;
+        }
+
+        .post-action {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .post-action:active {
+            transform: scale(0.9);
+        }
+
+        .post-action.save {
+            margin-left: auto;
+        }
+
+        .post-likes {
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #262626;
+            margin-bottom: 8px;
+        }
+
+        .post-caption {
+            padding: 0 16px;
+            font-size: 14px;
+            color: #262626;
+            margin-bottom: 8px;
+        }
+
+        .post-caption-username {
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .post-comments {
+            padding: 0 16px 12px;
+            font-size: 14px;
+            color: #8e8e8e;
+        }
+
+        .post-time {
+            padding: 0 16px 16px;
+            font-size: 10px;
+            color: #8e8e8e;
+            text-transform: uppercase;
         }
 
         .info-card {
@@ -1389,30 +1533,216 @@
                     </div>
                 </div>
                 
-                <div class="info-card">
-                    <div class="info-card-title">🏨 Voyage Sorgun</div>
-                    <div class="info-card-content">
-                        Hoş geldiniz! Size nasıl yardımcı olabiliriz? Herhangi bir sorunuz veya isteğiniz varsa lütfen bizimle iletişime geçin.
+                <!-- Instagram Post Format Sections -->
+                <div class="info-posts-container">
+                    <!-- Restoranlar -->
+                    <div class="info-post" data-post-id="restaurants">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">🍽️</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Restoranlar</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">🍽️</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Restoranlar</span>
+                            Lezzet dolu bir yolculuk sizi bekliyor! 🍽️
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
                     </div>
-                </div>
-                <div class="info-card">
-                    <div class="info-card-title">📍 Konum</div>
-                    <div class="info-card-content">
-                        Voyage Sorgun Hotel<br>
-                        Sorgun, Antalya, Türkiye
+
+                    <!-- Plaj ve Havuzlar -->
+                    <div class="info-post" data-post-id="beach-pools">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">🏖️</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Plaj ve Havuzlar</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">🏖️</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Plaj ve Havuzlar</span>
+                            Serin sular ve altın kumlar sizi bekliyor! 🏖️
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
                     </div>
-                </div>
-                <div class="info-card">
-                    <div class="info-card-title">📞 İletişim</div>
-                    <div class="info-card-content">
-                        Telefon: +90 242 XXX XX XX<br>
-                        E-posta: info@voyagesorgun.com
+
+                    <!-- Sağlıklı Yaşam -->
+                    <div class="info-post" data-post-id="wellness">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">💪</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Sağlıklı Yaşam</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">💪</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Sağlıklı Yaşam</span>
+                            Sağlıklı yaşam için tesislerimiz sizlerle! 💪
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
                     </div>
-                </div>
-                <div class="info-card">
-                    <div class="info-card-title">🕐 Çalışma Saatleri</div>
-                    <div class="info-card-content">
-                        7/24 Hizmetinizdeyiz
+
+                    <!-- Sense Spa -->
+                    <div class="info-post" data-post-id="sense-spa">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">💆</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Sense Spa</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">💆</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Sense Spa</span>
+                            Ruhunuzu ve bedeninizi yenileyin! 💆
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
+                    </div>
+
+                    <!-- Çocuklar -->
+                    <div class="info-post" data-post-id="kids">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">👶</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Çocuklar</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">👶</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Çocuklar</span>
+                            Çocuklarınız için eğlence dolu aktiviteler! 👶
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
+                    </div>
+
+                    <!-- Voyage Asistan -->
+                    <div class="info-post" data-post-id="voyage-assistant">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">🤖</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Voyage Asistan</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">🤖</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Voyage Asistan</span>
+                            Size yardımcı olmak için buradayız! 🤖
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
+                    </div>
+
+                    <!-- Ödüller -->
+                    <div class="info-post" data-post-id="rewards">
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner">🏆</div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">Ödüller</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            <div class="post-image-placeholder">🏆</div>
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action">❤️</div>
+                            <div class="post-action">💬</div>
+                            <div class="post-action">📤</div>
+                            <div class="post-action save">🔖</div>
+                        </div>
+                        <div class="post-likes">Beğenmeler yükleniyor...</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">Ödüller</span>
+                            Ödüllerinizi keşfedin ve kazanın! 🏆
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
                     </div>
                 </div>
             </div>
