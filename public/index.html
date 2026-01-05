@@ -2310,7 +2310,7 @@
             };
             
             messageObserver = new IntersectionObserver((entries) => {
-                const unreadMessageIds = [];
+                const assistantMessageIds = []; // Assistant messages we read (to notify assistant)
                 
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -2318,22 +2318,26 @@
                         const messageId = messageEl.getAttribute('data-message-id');
                         const isSent = messageEl.getAttribute('data-is-sent') === 'true';
                         
-                        // On guest side: Track messages from ASSISTANT (isSent=false) that we read
-                        // This notifies assistant that we read their messages
+                        // Track messages from ASSISTANT (isSent=false) that we read
+                        // This notifies assistant that we read their messages (so they see blue ticks)
                         if (!isSent && messageId && !messageId.startsWith('temp_')) {
-                            // Check if this assistant message has been marked as read by us
-                            if (!unreadMessageIds.includes(messageId)) {
-                                unreadMessageIds.push(messageId);
+                            if (!assistantMessageIds.includes(messageId)) {
+                                assistantMessageIds.push(messageId);
                                 console.log('📖 Guest: Assistant message we read:', messageId);
                             }
                         }
+                        
+                        // Note: We don't track our own sent messages here because
+                        // the read status for our messages comes from server via message_status_update
+                        // when assistant reads our messages
                     }
                 });
                 
                 // Send read status for assistant messages we read
-                if (unreadMessageIds.length > 0) {
-                    console.log('📤 Guest side: Emitting message_read for', unreadMessageIds.length, 'assistant messages we read:', unreadMessageIds);
-                    socket.emit('message_read', { messageIds: unreadMessageIds });
+                // This will make assistant see blue ticks on their messages
+                if (assistantMessageIds.length > 0) {
+                    console.log('📤 Guest side: Emitting message_read for', assistantMessageIds.length, 'assistant messages we read:', assistantMessageIds);
+                    socket.emit('message_read', { messageIds: assistantMessageIds });
                 }
             }, observerOptions);
             

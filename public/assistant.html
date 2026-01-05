@@ -2033,7 +2033,6 @@
             };
             
             messageObserver = new IntersectionObserver((entries) => {
-                const unreadMessageIds = [];
                 const guestMessageIds = []; // Messages from guest that we read
                 
                 entries.forEach(entry => {
@@ -2042,21 +2041,13 @@
                         const messageId = messageEl.getAttribute('data-message-id');
                         const isSent = messageEl.getAttribute('data-is-sent') === 'true';
                         
-                        // Track read status for messages we sent (to see when guest reads them)
-                        if (isSent && messageId && !messageId.startsWith('temp_')) {
-                            const statusEl = messageEl.querySelector('.message-status');
-                            const isRead = statusEl && statusEl.classList.contains('read');
-                            
-                            if (!isRead && !unreadMessageIds.includes(messageId)) {
-                                unreadMessageIds.push(messageId);
-                                console.log('📖 Assistant: Message we sent marked as read:', messageId);
-                            }
-                        }
+                        // Note: We don't track our own sent messages here because
+                        // the read status for our messages comes from server via message_status_update
+                        // when guest reads our messages (guest sends message_read event)
                         
                         // Track messages from guest that we read (to notify guest)
+                        // This will make guest see blue ticks on their messages
                         if (!isSent && messageId && !messageId.startsWith('temp_')) {
-                            // Check if this guest message has been marked as read by us
-                            // We need to send message_read to notify guest that we read their message
                             if (!guestMessageIds.includes(messageId)) {
                                 guestMessageIds.push(messageId);
                                 console.log('📖 Assistant: Guest message we read:', messageId);
@@ -2065,13 +2056,8 @@
                     }
                 });
                 
-                // Send read status for messages we sent (when guest reads them)
-                if (unreadMessageIds.length > 0) {
-                    console.log('📤 Assistant: Emitting message_read for', unreadMessageIds.length, 'messages we sent:', unreadMessageIds);
-                    socket.emit('message_read', { messageIds: unreadMessageIds });
-                }
-                
                 // Send read status for guest messages we read (to notify guest)
+                // This will make guest see blue ticks on their messages
                 if (guestMessageIds.length > 0) {
                     console.log('📤 Assistant: Emitting message_read for', guestMessageIds.length, 'guest messages we read:', guestMessageIds);
                     socket.emit('message_read', { messageIds: guestMessageIds });
