@@ -1779,14 +1779,9 @@
                     // Update the temp message with real ID
                     tempMessageEl.setAttribute('data-message-id', data.id);
                     
-                    // Update status
-                    if (data.status) {
-                        const statusEl = tempMessageEl.querySelector('.message-status');
-                        if (statusEl) {
-                            statusEl.classList.remove('sent', 'delivered', 'read');
-                            statusEl.classList.add(data.status);
-                        }
-                    }
+                    // Don't update status here - let message_status_update events handle it
+                    // Status will be updated by message_status_update events (delivered, read)
+                    // Optimistic update already shows 'sent' status
                     
                     // Don't mark as delivered here - this is our own message
                     console.log('📬 Message already shown optimistically, skipping');
@@ -1817,10 +1812,12 @@
             console.log('📬 ========== MESSAGE HANDLING COMPLETE ==========');
         });
         
-        // Message sent confirmation
-        socket.on('message_sent', (data) => {
-            updateMessageStatus(data.messageId, 'sent');
-        });
+        // Message sent confirmation - REMOVED
+        // Status is already set to 'sent' in optimistic update
+        // Status updates will come from message_status_update events (delivered, read)
+        // socket.on('message_sent', (data) => {
+        //     updateMessageStatus(data.messageId, 'sent');
+        // });
         
         // Listen for profile photo updates
         socket.on('profile_photo_updated', (data) => {
@@ -2119,14 +2116,9 @@
                         // Update the message ID
                         tempMessageEl.setAttribute('data-message-id', realMessage.id);
                         
-                        // Update status if needed
-                        if (realMessage.status) {
-                            const statusEl = tempMessageEl.querySelector('.message-status');
-                            if (statusEl) {
-                                statusEl.classList.remove('sent', 'delivered', 'read');
-                                statusEl.classList.add(realMessage.status);
-                            }
-                        }
+                        // Don't update status here - let message_status_update events handle it
+                        // Status will be updated by message_status_update events (delivered, read)
+                        // Optimistic update already shows 'sent' status
                     }
                 }
             });
