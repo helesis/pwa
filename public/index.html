@@ -1107,9 +1107,6 @@
                     🔔
                     <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
                 </button>
-                    <button class="logout-btn" onclick="handleGuestLogout()" title="Çıkış Yap">
-                        🚪
-                </button>
                 </div>
             </div>
 
@@ -1207,8 +1204,15 @@
                         <div style="margin-bottom: 8px;"><strong>Ad:</strong> <span id="profileGuestName">-</span></div>
                         <div style="margin-bottom: 8px;"><strong>Soyad:</strong> <span id="profileGuestSurname">-</span></div>
                         <div style="margin-bottom: 8px;"><strong>Oda:</strong> <span id="profileRoomNumber">-</span></div>
-                        <div><strong>Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+                        <div style="margin-bottom: 16px;"><strong>Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
                     </div>
+                </div>
+                <div class="settings-item" onclick="handleGuestLogout()" style="margin-top: 8px;">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon">🚪</div>
+                        <div class="settings-item-label">Çıkış Yap</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
                 </div>
             </div>
         </div>
@@ -1226,13 +1230,6 @@
                     <div class="settings-item-left">
                         <div class="settings-item-icon">🔔</div>
                         <div class="settings-item-label">Bildirimler</div>
-                    </div>
-                    <div class="settings-item-right">›</div>
-                </div>
-                <div class="settings-item" onclick="handleGuestLogout()">
-                    <div class="settings-item-left">
-                        <div class="settings-item-icon">🚪</div>
-                        <div class="settings-item-label">Çıkış Yap</div>
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
