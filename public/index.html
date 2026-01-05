@@ -945,6 +945,94 @@
             gap: 16px;
         }
 
+        /* Instagram Story Tray Style Activity Notifications */
+        .activity-stories-tray {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            padding-bottom: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        .activity-stories-tray::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .activity-story {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 70px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .activity-story:active {
+            transform: scale(0.95);
+        }
+
+        .story-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 3px;
+        }
+
+        .story-avatar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        }
+
+        .story-video {
+            width: calc(100% - 6px);
+            height: calc(100% - 6px);
+            object-fit: cover;
+            border-radius: 50%;
+            display: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .story-video.active {
+            display: block;
+        }
+
+        .story-avatar-placeholder {
+            width: calc(100% - 6px);
+            height: calc(100% - 6px);
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .story-label {
+            font-size: 11px;
+            color: #111b21;
+            text-align: center;
+            font-weight: 500;
+            max-width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .info-card {
             background: white;
             border-radius: 12px;
@@ -1224,8 +1312,26 @@
                         <div style="margin-bottom: 12px;">
                             <strong>Çocuk Sayısı:</strong> <span id="reservationChildCount">-</span>
                         </div>
-                        <div>
+                        <div style="margin-bottom: 20px;">
                             <strong>Acenta:</strong> <span id="reservationAgency">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-card-title">🍽️ A'la Carte Restoran Rezervasyonları</div>
+                    <div class="info-card-content" id="restaurantReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Henüz restoran rezervasyonunuz bulunmamaktadır.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-card-title">💆 Spa Rezervasyonları</div>
+                    <div class="info-card-content" id="spaReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Henüz spa rezervasyonunuz bulunmamaktadır.
                         </div>
                     </div>
                 </div>
@@ -1234,6 +1340,55 @@
 
         <div class="content-section" id="infoSection">
             <div class="info-section">
+                <!-- Instagram Story Tray Style Activity Notifications -->
+                <div class="activity-stories-tray">
+                    <div class="activity-story" onclick="openActivityStory(1)">
+                        <div class="story-avatar">
+                            <video class="story-video" muted loop>
+                                <source src="" type="video/mp4">
+                            </video>
+                            <div class="story-avatar-placeholder">🏊</div>
+                        </div>
+                        <div class="story-label">Yüzme Havuzu</div>
+                    </div>
+                    <div class="activity-story" onclick="openActivityStory(2)">
+                        <div class="story-avatar">
+                            <video class="story-video" muted loop>
+                                <source src="" type="video/mp4">
+                            </video>
+                            <div class="story-avatar-placeholder">🏖️</div>
+                        </div>
+                        <div class="story-label">Plaj</div>
+                    </div>
+                    <div class="activity-story" onclick="openActivityStory(3)">
+                        <div class="story-avatar">
+                            <video class="story-video" muted loop>
+                                <source src="" type="video/mp4">
+                            </video>
+                            <div class="story-avatar-placeholder">🍽️</div>
+                        </div>
+                        <div class="story-label">Restoran</div>
+                    </div>
+                    <div class="activity-story" onclick="openActivityStory(4)">
+                        <div class="story-avatar">
+                            <video class="story-video" muted loop>
+                                <source src="" type="video/mp4">
+                            </video>
+                            <div class="story-avatar-placeholder">💆</div>
+                        </div>
+                        <div class="story-label">Spa</div>
+                    </div>
+                    <div class="activity-story" onclick="openActivityStory(5)">
+                        <div class="story-avatar">
+                            <video class="story-video" muted loop>
+                                <source src="" type="video/mp4">
+                            </video>
+                            <div class="story-avatar-placeholder">🎉</div>
+                        </div>
+                        <div class="story-label">Aktiviteler</div>
+                    </div>
+                </div>
+                
                 <div class="info-card">
                     <div class="info-card-title">🏨 Voyage Sorgun</div>
                     <div class="info-card-content">
@@ -3318,6 +3473,11 @@
                 updateReservationsInfo();
             }
             
+            // Load activity stories when switching to info section
+            if (section === 'info') {
+                loadActivityStories();
+            }
+            
             // Update notification toggle when switching to settings section
             if (section === 'settings') {
                 updateNotificationToggle();
@@ -3365,6 +3525,32 @@
 
             toggle.checked = notificationsEnabled && permissionGranted;
             toggle.disabled = Notification.permission === 'denied';
+        }
+
+        // Open activity story
+        function openActivityStory(activityId) {
+            // TODO: Implement story viewer modal
+            console.log('Opening activity story:', activityId);
+            // For now, just show an alert
+            const activityNames = {
+                1: 'Yüzme Havuzu',
+                2: 'Plaj',
+                3: 'Restoran',
+                4: 'Spa',
+                5: 'Aktiviteler'
+            };
+            alert(`${activityNames[activityId]} aktivitesi açılıyor...`);
+        }
+
+        // Load activity story videos
+        function loadActivityStories() {
+            // TODO: Load videos from backend or static files
+            const storyVideos = document.querySelectorAll('.story-video');
+            storyVideos.forEach((video, index) => {
+                // For now, videos are empty - will be loaded from backend
+                // video.src = `/videos/activity-${index + 1}.mp4`;
+                // video.load();
+            });
         }
 
         // Update reservations information
