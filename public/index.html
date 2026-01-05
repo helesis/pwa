@@ -1050,6 +1050,59 @@
         .settings-item-right {
             color: #667781;
             font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #008069;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-switch input:disabled + .toggle-slider {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
     </style>
@@ -1102,12 +1155,7 @@
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="notification-btn" onclick="requestNotificationPermission()">
-                    🔔
-                    <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
-                </button>
-                </div>
+                <!-- Notification button moved to Settings section -->
             </div>
 
             <!-- Chat Container -->
@@ -1152,6 +1200,34 @@
                             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
                         </svg>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="reservationsSection">
+            <div class="info-section">
+                <div class="info-card">
+                    <div class="info-card-title">📅 Rezervasyonlarım</div>
+                    <div class="info-card-content">
+                        <div style="margin-bottom: 12px;">
+                            <strong>Oda:</strong> <span id="reservationRoomNumber">-</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong>Giriş Tarihi:</strong> <span id="reservationCheckinDate">-</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong>Çıkış Tarihi:</strong> <span id="reservationCheckoutDate">-</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong>Yetişkin Sayısı:</strong> <span id="reservationAdultCount">-</span>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong>Çocuk Sayısı:</strong> <span id="reservationChildCount">-</span>
+                        </div>
+                        <div>
+                            <strong>Acenta:</strong> <span id="reservationAgency">-</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1226,25 +1302,34 @@
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
-                <div class="settings-item" onclick="requestNotificationPermission()">
+                <div class="settings-item" onclick="toggleNotifications()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon">🔔</div>
                         <div class="settings-item-label">Bildirimler</div>
                     </div>
-                    <div class="settings-item-right">›</div>
+                    <div class="settings-item-right">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notificationToggle" onchange="handleNotificationToggle()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
-            <button class="nav-item active" onclick="switchSection('chat')" data-section="chat">
-                <div class="nav-item-icon">💬</div>
-                <div class="nav-item-label">Chat</div>
-            </button>
             <button class="nav-item" onclick="switchSection('info')" data-section="info">
                 <div class="nav-item-icon">ℹ️</div>
                 <div class="nav-item-label">Info</div>
+            </button>
+            <button class="nav-item" onclick="switchSection('reservations')" data-section="reservations">
+                <div class="nav-item-icon">📅</div>
+                <div class="nav-item-label">Reservations</div>
+            </button>
+            <button class="nav-item active" onclick="switchSection('chat')" data-section="chat">
+                <div class="nav-item-icon">💬</div>
+                <div class="nav-item-label">Chat</div>
             </button>
             <button class="nav-item" onclick="switchSection('profile')" data-section="profile">
                 <div class="nav-item-icon">👤</div>
@@ -2904,20 +2989,20 @@
             if (isIOS()) {
                 if (!isStandalone()) {
                     alert('iOS\'ta bildirimler için uygulamayı ana ekrana eklemeniz gerekiyor.\n\n📱 Adımlar:\n1. Safari menüsünden "Ana Ekrana Ekle" seçin\n2. Uygulamayı ana ekrandan açın\n3. Tekrar bildirim butonuna tıklayın\n\n💡 PWA olarak açıldığında bildirimler çalışacaktır.');
-                    return;
+                    return 'denied';
                 }
                 
                 // iOS 16.4+ kontrolü (bildirim desteği için)
                 const iOSVersion = parseFloat((navigator.userAgent.match(/OS (\d+)_(\d+)/) || [0, 0, 0]).slice(1).join('.'));
                 if (iOSVersion < 16.4) {
                     alert('Bildirimler iOS 16.4 ve üzeri sürümlerde çalışır.\n\nLütfen iOS\'unuzu güncelleyin.');
-                    return;
+                    return 'denied';
                 }
             }
             
             if (!('Notification' in window)) {
                 alert('Bu tarayıcı bildirim desteklemiyor');
-                return;
+                return 'denied';
             }
             
             const permission = await Notification.requestPermission();
@@ -2929,10 +3014,15 @@
                     badge: '/icon-192.png'
                 });
                 
-                document.getElementById('notificationBadge').style.display = 'none';
+                // Update toggle
+                updateNotificationToggle();
             } else if (permission === 'denied') {
                 alert('Bildirim izni reddedildi. Tarayıcı ayarlarından izin verebilirsiniz.');
+                // Update toggle
+                updateNotificationToggle();
             }
+            
+            return permission;
         }
         
         // Check if page becomes visible/hidden
@@ -3223,9 +3313,102 @@
                 updateProfileInfo();
             }
             
+            // Update reservations info when switching to reservations section
+            if (section === 'reservations') {
+                updateReservationsInfo();
+            }
+            
+            // Update notification toggle when switching to settings section
+            if (section === 'settings') {
+                updateNotificationToggle();
+            }
+            
             // Scroll to top when switching sections
             if (sectionEl) {
                 sectionEl.scrollTop = 0;
+            }
+        }
+
+        // Toggle notifications
+        function toggleNotifications() {
+            // Just prevent default click behavior, toggle is handled by checkbox
+        }
+
+        // Handle notification toggle
+        async function handleNotificationToggle() {
+            const toggle = document.getElementById('notificationToggle');
+            if (!toggle) return;
+
+            if (toggle.checked) {
+                // Request permission
+                const permission = await requestNotificationPermission();
+                if (permission !== 'granted') {
+                    toggle.checked = false;
+                } else {
+                    // Save preference
+                    localStorage.setItem('notificationsEnabled', 'true');
+                }
+            } else {
+                // Disable notifications (just save preference, can't revoke permission)
+                localStorage.setItem('notificationsEnabled', 'false');
+            }
+        }
+
+        // Update notification toggle state
+        function updateNotificationToggle() {
+            const toggle = document.getElementById('notificationToggle');
+            if (!toggle) return;
+
+            // Check if notifications are enabled in localStorage
+            const notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+            const permissionGranted = Notification.permission === 'granted';
+
+            toggle.checked = notificationsEnabled && permissionGranted;
+            toggle.disabled = Notification.permission === 'denied';
+        }
+
+        // Update reservations information
+        function updateReservationsInfo() {
+            const reservationRoomNumberEl = document.getElementById('reservationRoomNumber');
+            const reservationCheckinDateEl = document.getElementById('reservationCheckinDate');
+            const reservationCheckoutDateEl = document.getElementById('reservationCheckoutDate');
+            const reservationAdultCountEl = document.getElementById('reservationAdultCount');
+            const reservationChildCountEl = document.getElementById('reservationChildCount');
+            const reservationAgencyEl = document.getElementById('reservationAgency');
+
+            if (reservationRoomNumberEl) {
+                reservationRoomNumberEl.textContent = ROOM_NUMBER || '-';
+            }
+
+            if (reservationCheckinDateEl && CHECKIN_DATE) {
+                const date = new Date(CHECKIN_DATE);
+                reservationCheckinDateEl.textContent = date.toLocaleDateString('tr-TR', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+            }
+
+            if (reservationCheckoutDateEl && CHECKOUT_DATE) {
+                const date = new Date(CHECKOUT_DATE);
+                reservationCheckoutDateEl.textContent = date.toLocaleDateString('tr-TR', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+            }
+
+            // TODO: Get adult_count, child_count, agency from backend
+            if (reservationAdultCountEl) {
+                reservationAdultCountEl.textContent = '1'; // Default, will be updated from backend
+            }
+
+            if (reservationChildCountEl) {
+                reservationChildCountEl.textContent = '0'; // Default, will be updated from backend
+            }
+
+            if (reservationAgencyEl) {
+                reservationAgencyEl.textContent = '-'; // Default, will be updated from backend
             }
         }
 
@@ -3294,6 +3477,9 @@
             console.log('Room:', ROOM_NUMBER);
             console.log('Guest:', GUEST_NAME);
             loadProfilePhoto();
+            
+            // Initialize notification toggle
+            updateNotificationToggle();
             
             // Setup file input event listeners
             const cameraInput = document.getElementById('cameraInput');
