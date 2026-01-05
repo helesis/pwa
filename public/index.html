@@ -2318,23 +2318,21 @@
                         const messageId = messageEl.getAttribute('data-message-id');
                         const isSent = messageEl.getAttribute('data-is-sent') === 'true';
                         
-                        // On guest side: Track messages we SENT (isSent=true) to see when assistant reads them
-                        // This updates the read status on our sent messages
-                        if (isSent && messageId && !messageId.startsWith('temp_')) {
-                            const statusEl = messageEl.querySelector('.message-status');
-                            const isRead = statusEl && statusEl.classList.contains('read');
-                            
-                            if (!isRead && !unreadMessageIds.includes(messageId)) {
+                        // On guest side: Track messages from ASSISTANT (isSent=false) that we read
+                        // This notifies assistant that we read their messages
+                        if (!isSent && messageId && !messageId.startsWith('temp_')) {
+                            // Check if this assistant message has been marked as read by us
+                            if (!unreadMessageIds.includes(messageId)) {
                                 unreadMessageIds.push(messageId);
-                                console.log('📖 Guest: Message we sent marked as read:', messageId);
+                                console.log('📖 Guest: Assistant message we read:', messageId);
                             }
                         }
                     }
                 });
                 
-                // Send read status for all unread messages we sent
+                // Send read status for assistant messages we read
                 if (unreadMessageIds.length > 0) {
-                    console.log('📤 Guest side: Emitting message_read for', unreadMessageIds.length, 'messages we sent:', unreadMessageIds);
+                    console.log('📤 Guest side: Emitting message_read for', unreadMessageIds.length, 'assistant messages we read:', unreadMessageIds);
                     socket.emit('message_read', { messageIds: unreadMessageIds });
                 }
             }, observerOptions);
