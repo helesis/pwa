@@ -456,27 +456,6 @@
         .message-status.read {
             color: #34B7F1; /* Blue double tick - WhatsApp blue */
         }
-
-        /* WhatsApp style tick icons */
-        .message-status {
-            display: inline-flex;
-            align-items: center;
-            margin-left: 4px;
-            font-size: 14px;
-            line-height: 1;
-        }
-        
-        .message-status.sent {
-            color: #667781; /* Grey */
-        }
-        
-        .message-status.delivered {
-            color: #667781; /* Grey */
-        }
-        
-        .message-status.read {
-            color: #34B7F1; /* WhatsApp blue */
-        }
         
         .message-status-icon {
             display: inline-block;
@@ -490,6 +469,11 @@
         }
 
         /* Single tick (sent) */
+        .message-status.sent .message-status-icon::before {
+            content: '';
+            display: none;
+        }
+        
         .message-status.sent .message-status-icon::after {
             content: '✓';
             position: absolute;
