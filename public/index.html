@@ -17,6 +17,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     
     <style>
@@ -51,16 +52,48 @@
             padding-bottom: env(safe-area-inset-bottom);
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
+            position: relative;
+        }
+
+        /* Safe area dışındaki üst alanı header rengiyle renklendir */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: env(safe-area-inset-top);
+            background: #008069;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        /* Safe area dışındaki alt alanı bottom nav rengiyle renklendir */
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: env(safe-area-inset-bottom);
+            background: white;
+            z-index: 9999;
+            pointer-events: none;
         }
 
         .app-container {
-            height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for mobile browsers */
+            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
             background: white;
             max-width: 100%;
+            width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right));
             margin: 0 auto;
+            margin-top: env(safe-area-inset-top);
+            margin-bottom: env(safe-area-inset-bottom);
+            margin-left: env(safe-area-inset-left);
+            margin-right: env(safe-area-inset-right);
             position: relative;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
@@ -69,7 +102,9 @@
             background: #008069;
             color: white;
             padding: 10px 16px;
-            padding-top: calc(10px + env(safe-area-inset-top));
+            padding-top: 10px;
+            padding-left: calc(16px + env(safe-area-inset-left));
+            padding-right: calc(16px + env(safe-area-inset-right));
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -96,6 +131,35 @@
             align-items: center;
             justify-content: center;
             font-size: 20px;
+        }
+
+        /* Lucide Icons Styling */
+        .icon {
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .icon-sm {
+            width: 16px;
+            height: 16px;
+        }
+
+        .icon-md {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-lg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .icon-xl {
+            width: 32px;
+            height: 32px;
         }
 
         .guest-profile-photo {
@@ -237,14 +301,20 @@
         .chat-container {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 16px 8px;
-            padding-top: 16px; /* Header is now inside chat section, no need for extra padding */
-            padding-bottom: 16px; /* Space before input container */
+            padding-left: calc(8px + env(safe-area-inset-left));
+            padding-right: calc(8px + env(safe-area-inset-right));
+            padding-top: 16px;
+            padding-bottom: calc(120px + env(safe-area-inset-bottom)); /* Input container max height (100px textarea + 20px padding) + bottom nav (60px) + safe area + extra spacing */
             background: #efeae2;
             scroll-behavior: smooth;
             display: flex;
             flex-direction: column;
             min-height: 0; /* Allow flex shrinking */
+            /* Dinamik yükseklik: header ve input-container arasındaki alan */
+            max-height: 100%;
+            box-sizing: border-box;
         }
 
         .chat-container::-webkit-scrollbar {
@@ -662,7 +732,9 @@
 
         .input-container {
             padding: 10px 16px;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            padding-left: calc(16px + env(safe-area-inset-left));
+            padding-right: calc(16px + env(safe-area-inset-right));
+            padding-bottom: 10px;
             background: #f0f2f5;
             border-top: 1px solid rgba(0, 0, 0, 0.08);
             display: flex;
@@ -671,6 +743,8 @@
             position: sticky;
             bottom: calc(60px + env(safe-area-inset-bottom)); /* Bottom nav height + safe area */
             z-index: 100;
+            flex-shrink: 0;
+            width: 100%;
         }
 
         .input-wrapper {
@@ -749,8 +823,10 @@
         @media (min-width: 768px) {
             .app-container {
                 max-width: 480px;
-                height: 90vh;
-                margin: 5vh auto;
+                height: calc(90vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                margin: calc(5vh + env(safe-area-inset-top)) auto calc(5vh + env(safe-area-inset-bottom));
+                margin-left: max(env(safe-area-inset-left), auto);
+                margin-right: max(env(safe-area-inset-right), auto);
                 border-radius: 20px;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.15);
                 overflow: hidden;
@@ -758,6 +834,12 @@
 
             .header {
                 border-radius: 20px 20px 0 0;
+            }
+
+            /* Desktop'ta safe area pseudo-elementlerini gizle */
+            body::before,
+            body::after {
+                display: none;
             }
         }
 
@@ -868,6 +950,8 @@
             justify-content: space-around;
             align-items: center;
             padding: 8px 0;
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
             padding-bottom: calc(8px + env(safe-area-inset-bottom));
             z-index: 1000;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
@@ -921,10 +1005,12 @@
         
         #chatSection {
             padding: 0;
-            padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Bottom nav height + safe area */
             display: none; /* Hidden by default */
             flex-direction: column;
             overflow: hidden;
+            height: 100%;
+            position: relative;
         }
 
         .content-section.active {
@@ -1375,9 +1461,9 @@
             <!-- Chat Header -->
             <div class="header">
                 <div class="header-left">
-                    <div class="hotel-icon">🏨</div>
+                    <div class="hotel-icon"><i data-lucide="building-2" class="icon icon-md"></i></div>
                     <div class="guest-profile-photo" id="headerProfilePhoto" onclick="showPhotoModal()" title="Profil fotoğrafı değiştir">
-                        👤
+                        <i data-lucide="user" class="icon icon-md"></i>
                     </div>
                     <div class="header-title">
                         <div class="hotel-name">Voyage Sorgun</div>
@@ -1428,9 +1514,7 @@
                 </div>
                 <div class="action-buttons">
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                        </svg>
+                        <i data-lucide="send" class="icon icon-md"></i>
                     </button>
                 </div>
             </div>
@@ -1439,7 +1523,7 @@
         <div class="content-section" id="reservationsSection">
             <div class="info-section">
                 <div class="info-card">
-                    <div class="info-card-title">📅 Rezervasyonlarım</div>
+                    <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> Rezervasyonlarım</div>
                     <div class="info-card-content">
                         <div style="margin-bottom: 12px;">
                             <strong>Oda:</strong> <span id="reservationRoomNumber">-</span>
@@ -1463,7 +1547,7 @@
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title">🍽️ A'la Carte Restoran Rezervasyonları</div>
+                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> A'la Carte Restoran Rezervasyonları</div>
                     <div class="info-card-content" id="restaurantReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;">
                             Henüz restoran rezervasyonunuz bulunmamaktadır.
@@ -1472,7 +1556,7 @@
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title">💆 Spa Rezervasyonları</div>
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> Spa Rezervasyonları</div>
                     <div class="info-card-content" id="spaReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;">
                             Henüz spa rezervasyonunuz bulunmamaktadır.
@@ -1491,7 +1575,7 @@
                             <video class="story-video" muted loop>
                                 <source src="" type="video/mp4">
                             </video>
-                            <div class="story-avatar-placeholder">🏊</div>
+                            <div class="story-avatar-placeholder"><i data-lucide="waves" class="icon icon-xl"></i></div>
                         </div>
                         <div class="story-label">Yüzme Havuzu</div>
                     </div>
@@ -1500,7 +1584,7 @@
                             <video class="story-video" muted loop>
                                 <source src="" type="video/mp4">
                             </video>
-                            <div class="story-avatar-placeholder">🏖️</div>
+                            <div class="story-avatar-placeholder"><i data-lucide="sun" class="icon icon-xl"></i></div>
                         </div>
                         <div class="story-label">Plaj</div>
                     </div>
@@ -1509,7 +1593,7 @@
                             <video class="story-video" muted loop>
                                 <source src="" type="video/mp4">
                             </video>
-                            <div class="story-avatar-placeholder">🍽️</div>
+                            <div class="story-avatar-placeholder"><i data-lucide="utensils-crossed" class="icon icon-xl"></i></div>
                         </div>
                         <div class="story-label">Restoran</div>
                     </div>
@@ -1518,7 +1602,7 @@
                             <video class="story-video" muted loop>
                                 <source src="" type="video/mp4">
                             </video>
-                            <div class="story-avatar-placeholder">💆</div>
+                            <div class="story-avatar-placeholder"><i data-lucide="sparkles" class="icon icon-xl"></i></div>
                         </div>
                         <div class="story-label">Spa</div>
                     </div>
@@ -1527,7 +1611,7 @@
                             <video class="story-video" muted loop>
                                 <source src="" type="video/mp4">
                             </video>
-                            <div class="story-avatar-placeholder">🎉</div>
+                            <div class="story-avatar-placeholder"><i data-lucide="party-popper" class="icon icon-xl"></i></div>
                         </div>
                         <div class="story-label">Aktiviteler</div>
                     </div>
@@ -1539,7 +1623,7 @@
                     <div class="info-post" data-post-id="restaurants">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">🍽️</div>
+                                <div class="post-avatar-inner"><i data-lucide="utensils-crossed" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Restoranlar</div>
@@ -1548,13 +1632,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">🍽️</div>
+                            <div class="post-image-placeholder"><i data-lucide="utensils-crossed" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1569,7 +1653,7 @@
                     <div class="info-post" data-post-id="beach-pools">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">🏖️</div>
+                                <div class="post-avatar-inner"><i data-lucide="sun" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Plaj ve Havuzlar</div>
@@ -1578,13 +1662,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">🏖️</div>
+                            <div class="post-image-placeholder"><i data-lucide="sun" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1599,7 +1683,7 @@
                     <div class="info-post" data-post-id="wellness">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">💪</div>
+                                <div class="post-avatar-inner"><i data-lucide="dumbbell" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Sağlıklı Yaşam</div>
@@ -1608,13 +1692,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">💪</div>
+                            <div class="post-image-placeholder"><i data-lucide="dumbbell" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1629,7 +1713,7 @@
                     <div class="info-post" data-post-id="sense-spa">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">💆</div>
+                                <div class="post-avatar-inner"><i data-lucide="sparkles" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Sense Spa</div>
@@ -1638,13 +1722,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">💆</div>
+                            <div class="post-image-placeholder"><i data-lucide="sparkles" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1659,7 +1743,7 @@
                     <div class="info-post" data-post-id="kids">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">👶</div>
+                                <div class="post-avatar-inner"><i data-lucide="baby" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Çocuklar</div>
@@ -1668,13 +1752,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">👶</div>
+                            <div class="post-image-placeholder"><i data-lucide="baby" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1689,7 +1773,7 @@
                     <div class="info-post" data-post-id="voyage-assistant">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">🤖</div>
+                                <div class="post-avatar-inner"><i data-lucide="bot" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Voyage Asistan</div>
@@ -1698,13 +1782,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">🤖</div>
+                            <div class="post-image-placeholder"><i data-lucide="bot" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1719,7 +1803,7 @@
                     <div class="info-post" data-post-id="rewards">
                         <div class="post-header">
                             <div class="post-avatar">
-                                <div class="post-avatar-inner">🏆</div>
+                                <div class="post-avatar-inner"><i data-lucide="trophy" class="icon icon-lg"></i></div>
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">Ödüller</div>
@@ -1728,13 +1812,13 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            <div class="post-image-placeholder">🏆</div>
+                            <div class="post-image-placeholder"><i data-lucide="trophy" class="icon icon-xl"></i></div>
                         </div>
                         <div class="post-actions">
-                            <div class="post-action">❤️</div>
-                            <div class="post-action">💬</div>
-                            <div class="post-action">📤</div>
-                            <div class="post-action save">🔖</div>
+                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
                         <div class="post-likes">Beğenmeler yükleniyor...</div>
                         <div class="post-caption">
@@ -1752,7 +1836,7 @@
             <div class="profile-section">
                 <div class="profile-header">
                     <div class="profile-avatar-large" id="profileAvatarLarge">
-                        👤
+                        <i data-lucide="user" class="icon icon-xl"></i>
                     </div>
                     <div>
                         <div class="profile-name" id="profileName">Misafir</div>
@@ -1770,7 +1854,7 @@
                 </div>
                 <div class="settings-item" onclick="handleGuestLogout()" style="margin-top: 8px;">
                     <div class="settings-item-left">
-                        <div class="settings-item-icon">🚪</div>
+                        <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
                         <div class="settings-item-label">Çıkış Yap</div>
                     </div>
                     <div class="settings-item-right">›</div>
@@ -1782,14 +1866,14 @@
             <div class="settings-section">
                 <div class="settings-item" onclick="showPhotoModal()">
                     <div class="settings-item-left">
-                        <div class="settings-item-icon">📷</div>
+                        <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
                         <div class="settings-item-label">Profil Fotoğrafı Değiştir</div>
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
                 <div class="settings-item" onclick="toggleNotifications()">
                     <div class="settings-item-left">
-                        <div class="settings-item-icon">🔔</div>
+                        <div class="settings-item-icon"><i data-lucide="bell" class="icon icon-lg"></i></div>
                         <div class="settings-item-label">Bildirimler</div>
                     </div>
                     <div class="settings-item-right">
@@ -1805,23 +1889,23 @@
         <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
             <button class="nav-item" onclick="switchSection('info')" data-section="info">
-                <div class="nav-item-icon">ℹ️</div>
+                <div class="nav-item-icon"><i data-lucide="info" class="icon icon-lg"></i></div>
                 <div class="nav-item-label">Info</div>
             </button>
             <button class="nav-item" onclick="switchSection('reservations')" data-section="reservations">
-                <div class="nav-item-icon">📅</div>
+                <div class="nav-item-icon"><i data-lucide="calendar" class="icon icon-lg"></i></div>
                 <div class="nav-item-label">Reservations</div>
             </button>
             <button class="nav-item active" onclick="switchSection('chat')" data-section="chat">
-                <div class="nav-item-icon">💬</div>
+                <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
                 <div class="nav-item-label">Chat</div>
             </button>
             <button class="nav-item" onclick="switchSection('profile')" data-section="profile">
-                <div class="nav-item-icon">👤</div>
+                <div class="nav-item-icon"><i data-lucide="user" class="icon icon-lg"></i></div>
                 <div class="nav-item-label">Profile</div>
             </button>
             <button class="nav-item" onclick="switchSection('settings')" data-section="settings">
-                <div class="nav-item-icon">⚙️</div>
+                <div class="nav-item-icon"><i data-lucide="settings" class="icon icon-lg"></i></div>
                 <div class="nav-item-label">Settings</div>
             </button>
         </div>
@@ -1834,10 +1918,10 @@
             <div class="photo-modal-title">Profil Fotoğrafı Seç</div>
             <div class="photo-modal-buttons">
                 <button class="photo-modal-btn camera" onclick="event.stopPropagation(); takePhoto();">
-                    📷 Fotoğraf Çek
+                    <i data-lucide="camera" class="icon icon-md"></i> Fotoğraf Çek
                 </button>
                 <button class="photo-modal-btn gallery" onclick="event.stopPropagation(); selectFromGallery();">
-                    🖼️ Galeriden Seç
+                    <i data-lucide="image" class="icon icon-md"></i> Galeriden Seç
                 </button>
                 <button class="photo-modal-btn cancel" onclick="closePhotoModal()">
                     İptal
@@ -2135,7 +2219,7 @@
                 headerHotelIcon.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                 headerHotelIcon.style.background = 'transparent'; // Remove default background
             } else if (headerHotelIcon) {
-                headerHotelIcon.innerHTML = '🏨'; // Default icon
+                headerHotelIcon.innerHTML = '<i data-lucide="building-2" class="icon icon-md"></i>'; // Default icon
                 headerHotelIcon.style.background = ''; // Restore default background
             }
             
@@ -2162,7 +2246,7 @@
                     updatedHeaderPhoto.style.cursor = 'pointer';
                 } else {
                     // Default icon
-                    updatedHeaderPhoto.innerHTML = '👤';
+                    updatedHeaderPhoto.innerHTML = '<i data-lucide="user" class="icon icon-md"></i>';
                     updatedHeaderPhoto.classList.remove('has-photo');
                     updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
                     updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
@@ -2349,7 +2433,7 @@
                 if (guestProfilePhoto) {
                     avatar.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;">`;
                 } else {
-                    avatar.innerHTML = '👤';
+                    avatar.innerHTML = '<i data-lucide="user" class="icon icon-md"></i>';
                 }
             });
             
@@ -2359,7 +2443,7 @@
                 if (guestProfilePhoto) {
                     profileAvatarLargeEl.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                 } else {
-                    profileAvatarLargeEl.textContent = '👤';
+                    profileAvatarLargeEl.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
                 }
             }
             
@@ -2986,7 +3070,7 @@
                 if (guestProfilePhoto) {
                     avatarHTML = `<div class="message-avatar"><img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;"></div>`;
                 } else {
-                    avatarHTML = '<div class="message-avatar">👤</div>';
+                    avatarHTML = '<div class="message-avatar"><i data-lucide="user" class="icon icon-md"></i></div>';
                 }
             } else {
                 // Not sent - it's from hotel/staff - prioritize assistant avatar, then team avatar, then VOYAGE HOTELS logo
@@ -3971,7 +4055,7 @@
             if (profileAvatarLargeEl && guestProfilePhoto) {
                 profileAvatarLargeEl.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
             } else if (profileAvatarLargeEl) {
-                profileAvatarLargeEl.textContent = '👤';
+                profileAvatarLargeEl.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
             }
         }
 
@@ -3980,6 +4064,10 @@
         });
 
         window.addEventListener('load', async () => {
+            // Initialize Lucide Icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
             console.log('🚀 Voyage Sorgun Chat initialized');
             
             // Setup PWA fullscreen support

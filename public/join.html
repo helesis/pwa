@@ -13,6 +13,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         * {
             margin: 0;
@@ -44,6 +46,14 @@
         .logo {
             font-size: 48px;
             margin-bottom: 20px;
+        }
+
+        .icon {
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
         }
 
         h1 {
@@ -198,7 +208,7 @@
 </head>
 <body>
     <div class="join-container">
-        <div class="logo">🏨</div>
+        <div class="logo"><i data-lucide="building-2" class="icon icon-xl" style="width: 48px; height: 48px;"></i></div>
         <h1>Voyage Sorgun Chat</h1>
         <div class="subtitle">Hoş geldiniz! Chat'e katılmak için aşağıdaki adımları takip edin.</div>
         
@@ -390,6 +400,11 @@
                         console.log('Service Worker registration failed:', error);
                     });
             });
+        }
+
+        // Initialize Lucide Icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
         }
     </script>
 </body>

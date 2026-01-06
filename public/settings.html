@@ -8,11 +8,42 @@
     
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        /* Lucide Icons Styling */
+        .icon {
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .icon-sm {
+            width: 16px;
+            height: 16px;
+        }
+
+        .icon-md {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-lg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .icon-xl {
+            width: 32px;
+            height: 32px;
         }
 
         :root {
@@ -502,14 +533,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚙️ Ayarlar</h1>
+            <h1><i data-lucide="settings" class="icon icon-lg"></i> Ayarlar</h1>
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('assistants')">👥 Assistant'lar</button>
-            <button class="tab" onclick="switchTab('teams')">👨‍👩‍👧‍👦 Takımlar</button>
-            <button class="tab" onclick="switchTab('assignments')">🔗 Eşleştirmeler</button>
-            <button class="tab" onclick="switchTab('unassigned')">⚠️ Eşleşmemiş Odalar</button>
+            <button class="tab active" onclick="switchTab('assistants')"><i data-lucide="users" class="icon icon-md"></i> Assistant'lar</button>
+            <button class="tab" onclick="switchTab('teams')"><i data-lucide="users-round" class="icon icon-md"></i> Takımlar</button>
+            <button class="tab" onclick="switchTab('assignments')"><i data-lucide="link" class="icon icon-md"></i> Eşleştirmeler</button>
+            <button class="tab" onclick="switchTab('unassigned')"><i data-lucide="alert-triangle" class="icon icon-md"></i> Eşleşmemiş Odalar</button>
         </div>
 
         <!-- Assistants Tab -->
@@ -593,7 +624,7 @@
                     <label class="form-label">Avatar</label>
                     <div class="avatar-upload">
                         <div class="avatar-preview" id="assistant-avatar-preview">
-                            <span>👤</span>
+                            <i data-lucide="user" class="icon icon-lg"></i>
                         </div>
                         <input type="file" id="assistant-avatar-input" accept="image/*" onchange="handleAssistantAvatarChange(event)">
                         <button type="button" class="avatar-upload-btn" onclick="document.getElementById('assistant-avatar-input').click()">
@@ -676,7 +707,7 @@
                 <img id="team-qr-code-image" src="" alt="QR Code" style="max-width: 300px; width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin: 20px 0;">
                 <div class="qr-link" id="team-qr-link" style="margin-top: 20px; padding: 12px; background: #f0f2f5; border-radius: 8px; word-break: break-all; font-size: 12px; color: #667781;"></div>
                 <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 8px; font-size: 14px; color: #1976d2;">
-                    <strong>ℹ️ Bilgi:</strong> Bu QR kodu okutan assistant otomatik olarak takıma katılacaktır.
+                    <strong><i data-lucide="info" class="icon icon-sm"></i> Bilgi:</strong> Bu QR kodu okutan assistant otomatik olarak takıma katılacaktır.
                 </div>
             </div>
             <div class="form-actions">
@@ -794,7 +825,7 @@
                                         ${a.avatar ? `
                                             <img src="${a.avatar}" alt="${a.name}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
                                         ` : `
-                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">👤</div>
+                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);"><i data-lucide="user" class="icon icon-lg"></i></div>
                                         `}
                                     </td>
                                     <td>${firstName}</td>
@@ -1018,7 +1049,7 @@
                                                         ${r.profile_photo ? `
                                                             <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
                                                         ` : `
-                                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">🏨</div>
+                                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);"><i data-lucide="building-2" class="icon icon-lg"></i></div>
                                                         `}
                                                     </td>
                                                     <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
@@ -1068,7 +1099,7 @@
                                                     ${r.profile_photo ? `
                                                         <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
                                                     ` : `
-                                                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">🏨</div>
+                                                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);"><i data-lucide="building-2" class="icon icon-lg"></i></div>
                                                     `}
                                                 </td>
                                                 <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
@@ -1133,7 +1164,7 @@
                         <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
                     </div>
                     <div style="margin-bottom: 16px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">
-                        <strong>ℹ️ Bilgi:</strong> Tüm eşleştirmeler gösteriliyor. Belirli bir tarih için filtrelemek için tarih seçin.
+                        <strong><i data-lucide="info" class="icon icon-sm"></i> Bilgi:</strong> Tüm eşleştirmeler gösteriliyor. Belirli bir tarih için filtrelemek için tarih seçin.
                     </div>
                     <table class="table">
                         <thead>
@@ -1155,7 +1186,7 @@
                                         ${a.profile_photo ? `
                                             <img src="${a.profile_photo}" alt="${a.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
                                         ` : `
-                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">🏨</div>
+                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);"><i data-lucide="building-2" class="icon icon-lg"></i></div>
                                         `}
                                     </td>
                                     <td>${a.guest_name || '-'} ${a.guest_surname || ''}</td>
@@ -1263,7 +1294,7 @@
                 } catch (error) {
                     console.error('❌ Error processing avatar:', error);
                     alert('Fotoğraf işlenirken bir hata oluştu: ' + error.message);
-                    preview.innerHTML = '<span>👤</span>';
+                    preview.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
                     event.target.value = ''; // Clear selection
                 }
             } else {
@@ -1333,7 +1364,7 @@
                             preview.innerHTML = `<img src="${data.avatar}" alt="Avatar">`;
                             document.getElementById('assistant-avatar-data').value = data.avatar;
                         } else {
-                            preview.innerHTML = '<span>👤</span>';
+                            preview.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
                             document.getElementById('assistant-avatar-data').value = '';
                         }
                     });
@@ -2174,7 +2205,7 @@
                     console.log('ℹ️ No rooms found for date:', dateFilter);
                     listEl.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-state-icon">🏨</div>
+                            <div class="empty-state-icon"><i data-lucide="building-2" class="icon icon-xl"></i></div>
                             <p>${dateFilter} tarihi için check-in bulunamadı</p>
                         </div>
                     `;
@@ -2206,7 +2237,7 @@
                                         ${r.profile_photo ? `
                                             <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
                                         ` : `
-                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">🏨</div>
+                                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);"><i data-lucide="building-2" class="icon icon-lg"></i></div>
                                         `}
                                     </td>
                                     <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
@@ -2369,7 +2400,7 @@
                                                 ${r.profile_photo ? `
                                                     <img src="${r.profile_photo}" alt="${r.guest_name || 'Misafir'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--voyage-navy);">
                                                 ` : `
-                                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);">🏨</div>
+                                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--voyage-light-blue); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--voyage-navy);"><i data-lucide="building-2" class="icon icon-lg"></i></div>
                                                 `}
                                             </td>
                                             <td>${r.guest_name || '-'} ${r.guest_surname || ''}</td>
@@ -2409,6 +2440,11 @@
         }
 
         // Initialize
+        // Initialize Lucide Icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadAssistants();
             

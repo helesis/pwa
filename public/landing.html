@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voyage Sorgun Chat</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         * {
             margin: 0;
@@ -53,25 +54,39 @@
             backdrop-filter: blur(10px);
         }
         
-        .info-icon {
+            .info-icon {
             font-size: 40px;
             margin-bottom: 15px;
+        }
+
+        .icon {
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">🏨</div>
+        <div class="logo"><i data-lucide="building-2" class="icon icon-xl" style="width: 48px; height: 48px;"></i></div>
         <h1>Voyage Sorgun Chat</h1>
         <p>Misafir chat sistemine erişmek için size gönderilen QR kodu tarayın veya davet linkini kullanın.</p>
         
         <div class="info">
-            <div class="info-icon">📱</div>
+            <div class="info-icon"><i data-lucide="smartphone" class="icon icon-xl" style="width: 40px; height: 40px;"></i></div>
             <p style="margin-bottom: 0; font-size: 16px;">
                 Otel personelimiz size bir QR kod veya davet linki sağlayacaktır.
             </p>
         </div>
     </div>
+    <script>
+        // Initialize Lucide Icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
 </body>
 </html>
 
