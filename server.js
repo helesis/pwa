@@ -66,9 +66,14 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// Test database connection
+// Test database connection - sadece ilk connection'da log
+let isFirstConnection = true;
 pool.on('connect', () => {
-  console.log('✅ PostgreSQL connected');
+  if (isFirstConnection) {
+    console.log('✅ PostgreSQL pool initialized');
+    isFirstConnection = false;
+  }
+  // Production'da her connection log'unu kaldır
 });
 
 pool.on('error', (err) => {
@@ -290,7 +295,9 @@ io.on('connection', (socket) => {
     }
     
     try {
-      logDebug('📊 Fetching chat history for guest_unique_id:', guestUniqueId);
+      if (process.env.NODE_ENV !== 'production') {
+        logDebug('📊 Fetching chat history for guest_unique_id:', guestUniqueId);
+      }
       // Send chat history (last 50 messages) filtered by guest_unique_id
       const result = await pool.query(`
         SELECT m.*, a.name as assistant_name, a.surname as assistant_surname, a.avatar as assistant_avatar
@@ -301,7 +308,9 @@ io.on('connection', (socket) => {
           LIMIT 50
       `, [guestUniqueId]);
       
-      logDebug('📊 Messages found:', result.rows.length);
+      if (process.env.NODE_ENV !== 'production') {
+        logDebug('📊 Messages found:', result.rows.length);
+      }
       
       // Map database column names (snake_case) to frontend format (camelCase)
       const messages = result.rows.reverse().map(row => {
@@ -334,10 +343,14 @@ io.on('connection', (socket) => {
         };
       });
       
-      logDebug('📤 Sending chat_history to client');
-      logDebug('📤 Message count:', messages.length);
+      if (process.env.NODE_ENV !== 'production') {
+        logDebug('📤 Sending chat_history to client');
+        logDebug('📤 Message count:', messages.length);
+      }
       socket.emit('chat_history', messages);
-      logDebug('✅ chat_history sent successfully');
+      if (process.env.NODE_ENV !== 'production') {
+        logDebug('✅ chat_history sent successfully');
+      }
     } catch (error) {
       console.error('❌ Error loading chat history:', error);
       socket.emit('chat_history', []);

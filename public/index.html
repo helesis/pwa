@@ -2660,14 +2660,18 @@
                     initMessageObserver();
                 }, 500);
                 
-                console.log('📤 Step 6: Emitting join_room');
-                console.log('📤 Guest Unique ID:', GUEST_UNIQUE_ID);
-                console.log('📤 Room Number:', ROOM_NUMBER);
-                console.log('📤 Check-in Date:', CHECKIN_DATE);
-                socket.emit('join_room', {
-                    guestUniqueId: GUEST_UNIQUE_ID
-                });
-                console.log('📤 join_room event emitted');
+                // Önceki join_room'u kontrol et - duplicate join'leri önle
+                if (!socket._hasJoinedRoom) {
+                    console.log('📤 Step 6: Emitting join_room');
+                    console.log('📤 Guest Unique ID:', GUEST_UNIQUE_ID);
+                    socket.emit('join_room', {
+                        guestUniqueId: GUEST_UNIQUE_ID
+                    });
+                    socket._hasJoinedRoom = true;
+                    console.log('📤 join_room event emitted');
+                } else {
+                    console.log('ℹ️ Already joined room, skipping duplicate join');
+                }
             });
 
             // Connection attempt started
@@ -2684,6 +2688,10 @@
 
             socket.on('disconnect', (reason) => {
                 console.log('❌ Disconnected from server, reason:', reason);
+                // Disconnect olduğunda join flag'ini sıfırla
+                if (socket) {
+                    socket._hasJoinedRoom = false;
+                }
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
                     if (reason === 'io server disconnect') {
