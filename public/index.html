@@ -86,19 +86,6 @@
             pointer-events: none;
         }
 
-        /* Safe area dışındaki alt alanı bottom nav rengiyle renklendir */
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: calc(60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar height + safe area */
-            background: white;
-            z-index: 999; /* Navigation bar'ın altında ama body background'unun üstünde */
-            pointer-events: none;
-        }
-
         .app-container {
             height: 100vh;
             height: 100dvh; /* Dynamic viewport height for mobile browsers */
