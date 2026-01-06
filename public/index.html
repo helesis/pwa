@@ -59,9 +59,9 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: env(safe-area-inset-bottom);
+            height: calc(60px + env(safe-area-inset-bottom)); /* Navigation bar height + safe area */
             background: white;
-            z-index: 9999;
+            z-index: 999; /* Navigation bar'ın altında ama body background'unun üstünde */
             pointer-events: none;
         }
 
@@ -75,7 +75,6 @@
             width: 100%;
             margin: 0;
             padding: 0;
-            padding-bottom: env(safe-area-inset-bottom);
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
             position: relative;
@@ -292,14 +291,12 @@
             padding-left: calc(8px + env(safe-area-inset-left));
             padding-right: calc(8px + env(safe-area-inset-right));
             padding-top: 16px;
-            padding-bottom: calc(120px + env(safe-area-inset-bottom)); /* Input container max height (100px textarea + 20px padding) + bottom nav (60px) + safe area + extra spacing */
+            padding-bottom: 80px; /* Input container için yeterli alan (max ~70px) */
             background: #efeae2;
             scroll-behavior: smooth;
             display: flex;
             flex-direction: column;
             min-height: 0; /* Allow flex shrinking */
-            /* Dinamik yükseklik: header ve input-container arasındaki alan */
-            max-height: 100%;
             box-sizing: border-box;
         }
 
@@ -727,10 +724,11 @@
             gap: 8px;
             align-items: flex-end;
             position: sticky;
-            bottom: calc(60px + env(safe-area-inset-bottom)); /* Bottom nav height + safe area */
+            bottom: calc(60px + env(safe-area-inset-bottom)); /* Bottom nav height (60px) + safe area */
             z-index: 100;
             flex-shrink: 0;
             width: 100%;
+            margin-top: auto; /* Input container'ı en alta it */
         }
 
         .input-wrapper {
@@ -990,12 +988,13 @@
         
         #chatSection {
             padding: 0;
-            padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Bottom nav height + safe area */
             display: none; /* Hidden by default */
             flex-direction: column;
             overflow: hidden;
             height: 100%;
             position: relative;
+            flex: 1;
+            min-height: 0;
         }
 
         .content-section.active {
