@@ -4,8 +4,8 @@
   "description": "Voyage Sorgun otel müşteri iletişim uygulaması",
   "start_url": "/",
   "display": "fullscreen",
-  "background_color": "#1A4D6D",
-  "theme_color": "#1A4D6D",
+  "background_color": "#008069",
+  "theme_color": "#008069",
   "orientation": "portrait",
   "icons": [
     {
