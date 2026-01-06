@@ -47,25 +47,9 @@
             height: 100dvh; /* Dynamic viewport height for mobile browsers */
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
-            /* Safe area support for notched devices */
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
             position: relative;
-        }
-
-        /* Safe area dışındaki üst alanı header rengiyle renklendir */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: env(safe-area-inset-top);
-            background: #008069;
-            z-index: 9999;
-            pointer-events: none;
+            margin: 0;
+            padding: 0;
         }
 
         /* Safe area dışındaki alt alanı bottom nav rengiyle renklendir */
@@ -82,27 +66,29 @@
         }
 
         .app-container {
-            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-            height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile browsers */
             display: flex;
             flex-direction: column;
             background: white;
             max-width: 100%;
-            width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right));
-            margin: 0 auto;
-            margin-top: env(safe-area-inset-top);
-            margin-bottom: env(safe-area-inset-bottom);
-            margin-left: env(safe-area-inset-left);
-            margin-right: env(safe-area-inset-right);
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
             position: relative;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         .header {
             background: #008069;
             color: white;
             padding: 10px 16px;
-            padding-top: 10px;
+            padding-top: calc(10px + env(safe-area-inset-top));
             padding-left: calc(16px + env(safe-area-inset-left));
             padding-right: calc(16px + env(safe-area-inset-right));
             display: flex;
@@ -836,8 +822,7 @@
                 border-radius: 20px 20px 0 0;
             }
 
-            /* Desktop'ta safe area pseudo-elementlerini gizle */
-            body::before,
+            /* Desktop'ta safe area pseudo-elementini gizle */
             body::after {
                 display: none;
             }
