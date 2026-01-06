@@ -1306,7 +1306,8 @@
         .profile-section {
             gap: 16px;
             padding: 16px;
-            padding-top: 0; /* Header zaten padding-top içeriyor */
+            /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 16px);
         }
 
         .profile-header {
@@ -1354,7 +1355,8 @@
         .settings-section {
             gap: 16px;
             padding: 16px;
-            padding-top: 0; /* Header zaten padding-top içeriyor */
+            /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 16px);
         }
 
         .settings-item {
