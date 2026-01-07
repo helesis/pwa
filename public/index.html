@@ -2611,7 +2611,9 @@
             <!-- Login Screen (shown when not authenticated) -->
             <div class="settings-section" id="loginScreen">
                 <div style="padding: 40px 20px; text-align: center;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">🏨</div>
+                    <div style="width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 16px; background: rgba(0, 128, 105, 0.12); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="building" class="icon icon-xl" style="color: #008069;"></i>
+                    </div>
                     <h2 style="font-size: 24px; font-weight: 600; color: #111b21; margin-bottom: 8px;">Voyage Sorgun</h2>
                     <p style="font-size: 14px; color: #667781; margin-bottom: 32px;">Hoş geldiniz! Devam etmek için giriş yapın.</p>
                     
@@ -2619,23 +2621,6 @@
                         <div class="info-card-title">Giriş Yap</div>
                         <div class="info-card-content">
                             <form id="loginForm" onsubmit="handleLogin(event)">
-                                <div style="margin-bottom: 16px;">
-                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Oda Numarası</label>
-                                    <input 
-                                        type="text" 
-                                        id="loginRoomNumber" 
-                                        placeholder="Örn: 101" 
-                                        required
-                                        style="
-                                            width: 100%;
-                                            padding: 12px;
-                                            border: 1px solid #e4e6e9;
-                                            border-radius: 8px;
-                                            font-size: 14px;
-                                            box-sizing: border-box;
-                                        "
-                                    />
-                                </div>
                                 <div style="margin-bottom: 16px;">
                                     <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Ad</label>
                                     <input 
@@ -2886,7 +2871,7 @@
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
-            </div>
+                </div>
             </div>
         </div>
 
@@ -5171,7 +5156,7 @@
             if (section === 'settings') {
                 checkAuthStatus(); // Check auth state first
                 if (IS_AUTHENTICATED) {
-                    updateProfileInfo();
+                updateProfileInfo();
                 }
             }
             
