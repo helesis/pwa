@@ -3359,7 +3359,283 @@
                 postForm.addEventListener('submit', savePost);
                 console.log('✅ Post form submit handler attached');
             }
+            
+            const activityCalendarForm = document.getElementById('activity-calendar-form');
+            if (activityCalendarForm) {
+                activityCalendarForm.addEventListener('submit', saveActivityCalendar);
+                console.log('✅ Activity calendar form submit handler attached');
+            }
         });
+
+        // ============================================
+        // Activities Calendar Management
+        // ============================================
+
+        let currentCalendarActivityId = null;
+
+        // Load activities calendar for selected year
+        async function loadActivitiesCalendar() {
+            try {
+                const year = parseInt(document.getElementById('calendar-year-select').value) || new Date().getFullYear();
+                const response = await fetch(`/api/activities?year=${year}`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to load activities');
+                }
+                const activities = await response.json();
+                
+                // Group activities by month
+                const activitiesByMonth = {};
+                activities.forEach(activity => {
+                    if (activity.activity_date) {
+                        const date = new Date(activity.activity_date);
+                        const month = date.getMonth();
+                        if (!activitiesByMonth[month]) {
+                            activitiesByMonth[month] = [];
+                        }
+                        activitiesByMonth[month].push(activity);
+                    }
+                });
+                
+                // Generate calendar for each month
+                const calendarList = document.getElementById('activities-calendar-list');
+                const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
+                                   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+                const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+                
+                let html = '';
+                for (let month = 0; month < 12; month++) {
+                    const firstDay = new Date(year, month, 1);
+                    const lastDay = new Date(year, month + 1, 0);
+                    const daysInMonth = lastDay.getDate();
+                    const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Monday = 0
+                    
+                    html += `
+                        <div class="calendar-month">
+                            <div class="calendar-month-header">${monthNames[month]} ${year}</div>
+                            <div class="calendar-grid">
+                                ${dayNames.map(day => `<div class="calendar-day-header">${day}</div>`).join('')}
+                                ${Array(startingDayOfWeek).fill(null).map(() => '<div class="calendar-day empty"></div>').join('')}
+                                ${Array.from({length: daysInMonth}, (_, i) => {
+                                    const day = i + 1;
+                                    const date = new Date(year, month, day);
+                                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                    const dayActivities = (activitiesByMonth[month] || []).filter(a => {
+                                        const activityDate = new Date(a.activity_date);
+                                        return activityDate.getDate() === day;
+                                    });
+                                    
+                                    const today = new Date();
+                                    const isToday = date.getDate() === today.getDate() && 
+                                                   date.getMonth() === today.getMonth() && 
+                                                   date.getFullYear() === today.getFullYear();
+                                    
+                                    return `
+                                        <div class="calendar-day ${isToday ? 'today' : ''}" onclick="openActivityCalendarModal('${dateStr}')">
+                                            <div class="calendar-day-number">${day}</div>
+                                            ${dayActivities.map(activity => `
+                                                <div class="calendar-activity" onclick="event.stopPropagation(); editCalendarActivity(${activity.id})" title="${activity.title} - ${activity.start_time || ''}">
+                                                    ${activity.recurring_rule ? '<span class="recurring-indicator"></span>' : ''}
+                                                    ${activity.title}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                calendarList.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading activities calendar:', error);
+                document.getElementById('activities-calendar-list').innerHTML = `
+                    <div class="alert alert-error">Aktiviteler takvimi yüklenirken hata oluştu: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Open activity calendar modal
+        function openActivityCalendarModal(dateStr = null) {
+            currentCalendarActivityId = null;
+            document.getElementById('activity-calendar-modal-title').textContent = 'Yeni Aktivite';
+            document.getElementById('activity-calendar-modal').classList.add('active');
+            document.getElementById('activity-calendar-form').reset();
+            
+            if (dateStr) {
+                document.getElementById('calendar-activity-start-date').value = dateStr;
+            } else {
+                // Set default to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('calendar-activity-start-date').value = today;
+            }
+            
+            // Reset recurring options
+            document.getElementById('recurring-none').checked = true;
+            toggleRecurringOptions();
+        }
+
+        // Close activity calendar modal
+        function closeActivityCalendarModal() {
+            document.getElementById('activity-calendar-modal').classList.remove('active');
+            currentCalendarActivityId = null;
+        }
+
+        // Toggle recurring options visibility
+        function toggleRecurringOptions() {
+            const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
+            const untilGroup = document.getElementById('recurring-until-group');
+            if (recurringType === 'none') {
+                untilGroup.style.display = 'none';
+            } else {
+                untilGroup.style.display = 'block';
+            }
+        }
+
+        // Edit calendar activity
+        async function editCalendarActivity(id) {
+            try {
+                const response = await fetch(`/api/admin/activities/${id}`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Failed to load activity');
+                const activity = await response.json();
+                
+                currentCalendarActivityId = id;
+                document.getElementById('activity-calendar-modal-title').textContent = 'Aktivite Düzenle';
+                document.getElementById('activity-calendar-modal').classList.add('active');
+                
+                // Fill form
+                document.getElementById('calendar-activity-title').value = activity.title || '';
+                document.getElementById('calendar-activity-start-date').value = activity.activity_date || '';
+                document.getElementById('calendar-activity-end-date').value = activity.end_date || '';
+                document.getElementById('calendar-activity-start-time').value = activity.start_time || '';
+                document.getElementById('calendar-activity-end-time').value = activity.end_time || '';
+                document.getElementById('calendar-activity-category').value = activity.category || '';
+                document.getElementById('calendar-activity-type').value = activity.type || '';
+                document.getElementById('calendar-activity-location').value = activity.location || '';
+                document.getElementById('calendar-activity-description').value = activity.description || '';
+                
+                // Set recurring type
+                const recurringType = activity.recurring_rule || 'none';
+                const recurringRadio = document.getElementById(`recurring-${recurringType}`);
+                if (recurringRadio) {
+                    recurringRadio.checked = true;
+                }
+                if (activity.recurring_until) {
+                    document.getElementById('recurring-until-date').value = activity.recurring_until;
+                }
+                toggleRecurringOptions();
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                showAlert('Aktivite yüklenirken hata oluştu', 'error');
+            }
+        }
+
+        // Save activity calendar (with recurring support)
+        async function saveActivityCalendar(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('calendar-activity-title').value.trim();
+            const startDate = document.getElementById('calendar-activity-start-date').value;
+            const endDate = document.getElementById('calendar-activity-end-date').value || null;
+            const startTime = document.getElementById('calendar-activity-start-time').value || null;
+            const endTime = document.getElementById('calendar-activity-end-time').value || null;
+            const category = document.getElementById('calendar-activity-category').value.trim() || null;
+            const type = document.getElementById('calendar-activity-type').value.trim() || null;
+            const location = document.getElementById('calendar-activity-location').value.trim() || null;
+            const description = document.getElementById('calendar-activity-description').value.trim() || null;
+            const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
+            const recurringUntil = document.getElementById('recurring-until-date').value || null;
+            
+            if (!title || !startDate) {
+                showAlert('Başlık ve başlangıç tarihi gereklidir', 'error');
+                return;
+            }
+            
+            try {
+                const year = parseInt(document.getElementById('calendar-year-select').value) || new Date().getFullYear();
+                const recurringUntilDate = recurringUntil ? recurringUntil : `${year}-12-31`;
+                
+                // Generate all dates based on recurring rule
+                const dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
+                
+                // Save each date as a separate activity
+                for (const date of dates) {
+                    const response = await fetch(currentCalendarActivityId && dates.length === 1 
+                        ? `/api/admin/activities/${currentCalendarActivityId}`
+                        : '/api/admin/activities', {
+                        method: currentCalendarActivityId && dates.length === 1 ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            title,
+                            activity_date: date,
+                            end_date: endDate,
+                            start_time: startTime,
+                            end_time: endTime,
+                            category,
+                            type,
+                            location,
+                            description,
+                            recurring_rule: recurringType !== 'none' ? recurringType : null,
+                            recurring_until: recurringType !== 'none' ? recurringUntilDate : null,
+                            is_story: false, // Timeline activities, not story tray
+                            is_active: true
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to save activity');
+                    }
+                }
+                
+                closeActivityCalendarModal();
+                loadActivitiesCalendar();
+                showAlert(`Aktivite${dates.length > 1 ? 'ler' : ''} başarıyla kaydedildi (${dates.length} adet)`, 'success');
+            } catch (error) {
+                console.error('Error saving activity:', error);
+                showAlert('Aktivite kaydedilirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        // Generate recurring dates
+        function generateRecurringDates(startDate, recurringType, untilDate) {
+            if (recurringType === 'none') {
+                return [startDate];
+            }
+            
+            const dates = [];
+            const start = new Date(startDate);
+            const until = new Date(untilDate);
+            const current = new Date(start);
+            
+            while (current <= until) {
+                dates.push(current.toISOString().split('T')[0]);
+                
+                switch (recurringType) {
+                    case 'daily':
+                        current.setDate(current.getDate() + 1);
+                        break;
+                    case 'weekly':
+                        current.setDate(current.getDate() + 7);
+                        break;
+                    case 'biweekly':
+                        current.setDate(current.getDate() + 14);
+                        break;
+                    case 'monthly':
+                        current.setMonth(current.getMonth() + 1);
+                        break;
+                    default:
+                        current.setDate(current.getDate() + 1);
+                }
+            }
+            
+            return dates;
+        }
     </script>
 </body>
 </html>
