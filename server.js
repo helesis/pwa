@@ -2643,8 +2643,8 @@ app.get('/api/activities', async (req, res) => {
 // Admin Endpoints for Activities
 // ============================================
 
-// Get all activities (admin - includes inactive)
-app.get('/api/admin/activities', requireAssistant, async (req, res) => {
+// Get all activities (admin - includes inactive) - No auth required for viewing
+app.get('/api/admin/activities', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT * FROM activities 
@@ -2864,8 +2864,8 @@ app.get('/api/info-posts', async (req, res) => {
 // Admin Endpoints for Info Posts
 // ============================================
 
-// Get all info posts (admin - includes inactive)
-app.get('/api/admin/info-posts', requireAssistant, async (req, res) => {
+// Get all info posts (admin - includes inactive) - No auth required for viewing
+app.get('/api/admin/info-posts', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT * FROM info_posts 
