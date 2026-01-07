@@ -66,8 +66,8 @@
             left: 0;
             right: 0;
             /* Safe area top + status bar alanı (tüm üst alan) */
-            height: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 14px);
-            min-height: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 14px);
+            height: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 4px);
+            min-height: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 4px);
             background: white !important; /* Chat header beyaz rengi - Dynamic Island için */
             z-index: 10001; /* Navigation bar'ın üstünde sabit kalacak */
             pointer-events: none;
@@ -111,10 +111,10 @@
             padding: 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-top: 16px;
+            padding-top: 0;
             padding-bottom: 16px;
             position: sticky;
-            top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 14px);
+            top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 4px);
             z-index: 10002; /* body::before'un üstünde olmalı */
             width: 100%;
             flex-shrink: 0;
@@ -143,7 +143,7 @@
             justify-content: space-between;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             position: sticky;
-            top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 14px);
+            top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 4px);
             z-index: 100;
             width: 100%;
             flex-shrink: 0;
