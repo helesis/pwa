@@ -80,7 +80,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: calc(60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar height + safe area */
+            height: calc(64px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar height + safe area */
             background: white;
             z-index: 999; /* Navigation bar'ın altında ama body background'unun üstünde */
             pointer-events: none;
@@ -102,6 +102,31 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             box-sizing: border-box;
             overflow: hidden;
+        }
+
+        /* WhatsApp tarzı section header */
+        .section-header {
+            background: white;
+            color: #111b21;
+            padding: 16px;
+            padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
+            padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 16px);
+            padding-bottom: 16px;
+            position: sticky;
+            top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px);
+            z-index: 100;
+            width: 100%;
+            flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .section-header-title {
+            font-size: 24px;
+            font-weight: 600;
+            line-height: 32px;
+            color: #111b21;
+            margin: 0;
         }
 
         .header {
@@ -960,14 +985,14 @@
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 4px 0;
+            padding: 8px 0;
             padding-left: var(--safe-area-inset-left, env(safe-area-inset-left));
             padding-right: var(--safe-area-inset-right, env(safe-area-inset-right));
-            padding-bottom: calc(4px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            padding-bottom: calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
             z-index: 1000;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            min-height: 50px; /* Minimum yükseklik */
-            max-height: 60px; /* Maximum yükseklik */
+            min-height: 56px; /* WhatsApp iOS standardı */
+            max-height: 64px; /* WhatsApp Web'e yakın */
         }
 
         .nav-item {
@@ -1044,23 +1069,23 @@
         /* Info Section */
         .info-section {
             gap: 16px; /* Container'lar arası boşluk */
-            padding: 0;
+            padding: 16px;
             display: flex;
             flex-direction: column;
         }
 
-        /* Reservations Section - İlk elementin aynı yükseklikten başlaması için */
+        /* Reservations Section */
         #reservationsSection .info-section {
-            padding-top: 40px; /* Story bölümüyle aynı yükseklik */
+            padding-top: 0; /* Header eklendi, padding-top gerek yok */
         }
 
-        /* Map Section - İlk elementin aynı yükseklikten başlaması için */
+        /* Map Section */
         #mapSection .map-section {
             gap: 16px; /* Container'lar arası boşluk */
             padding: 16px;
             display: flex;
             flex-direction: column;
-            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px);
+            padding-top: 0; /* Header eklendi, padding-top gerek yok */
         }
 
         .map-search {
@@ -1130,7 +1155,7 @@
 
         /* Settings Section - İlk elementin aynı yükseklikten başlaması için */
         #settingsSection .settings-section {
-            padding-top: 40px; /* Story bölümüyle aynı yükseklik */
+            padding-top: 0; /* Header eklendi, padding-top gerek yok */
         }
 
         /* Instagram Story Tray Style Activity Notifications */
@@ -1138,7 +1163,7 @@
             display: flex;
             gap: 12px;
             padding: 16px;
-            padding-top: 40px; /* Story bölümünü aşağıya almak için */
+            padding-top: 0; /* Header eklendi, padding-top gerek yok */
             padding-bottom: 8px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -1572,21 +1597,17 @@
         <!-- Content Sections -->
         <div class="content-section active" id="chatSection">
             <!-- Chat Header -->
-            <div class="header">
-                <div class="header-left">
-                    <div class="hotel-icon"><i data-lucide="building-2" class="icon icon-md"></i></div>
-                    <div class="guest-profile-photo" id="headerProfilePhoto" onclick="showPhotoModal()" title="Profil fotoğrafı değiştir">
-                        <i data-lucide="user" class="icon icon-md"></i>
-                    </div>
-                    <div class="header-title">
-                        <div class="hotel-name">Voyage Sorgun</div>
-                        <div class="header-subtitle">
-                            <span class="connection-status" id="connectionStatus"></span>
-                            <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
-                        </div>
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="chat">Sohbetler</h1>
+            </div>
+            <!-- Connection status - moved below header -->
+            <div class="header" style="padding-top: 0; padding-bottom: 8px; box-shadow: none;">
+                <div class="header-left" style="justify-content: center; width: 100%;">
+                    <div class="header-subtitle">
+                        <span class="connection-status" id="connectionStatus"></span>
+                        <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
                     </div>
                 </div>
-                <!-- Notification button moved to Settings section -->
             </div>
 
             <!-- Chat Container -->
@@ -1635,6 +1656,9 @@
         </div>
 
         <div class="content-section" id="reservationsSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="reservations">Rezervasyonlar</h1>
+            </div>
             <div class="info-section">
                 <div class="info-card">
                     <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> <span data-i18n="myReservations">Rezervasyonlarım</span></div>
@@ -1681,6 +1705,9 @@
         </div>
 
         <div class="content-section" id="infoSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="info">Info</h1>
+            </div>
             <div class="info-section">
                 <!-- Instagram Story Tray Style Activity Notifications -->
                 <div class="activity-stories-tray">
@@ -1947,6 +1974,9 @@
         </div>
 
         <div class="content-section" id="mapSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="map">Harita</h1>
+            </div>
             <div class="map-section">
                 <div class="info-card">
                     <div class="info-card-title" data-i18n="map">Harita</div>
@@ -1979,6 +2009,9 @@
         </div>
 
         <div class="content-section" id="settingsSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="settings">Ayarlar</h1>
+            </div>
             <div class="settings-section">
                 <div class="profile-header">
                     <div class="profile-avatar-large" id="profileAvatarLarge">
@@ -4369,7 +4402,7 @@
                 // Navigation
                 'info': 'Info',
                 'reservations': 'Rezervasyonlar',
-                'chat': 'Chat',
+                'chat': 'Sohbetler',
                 'map': 'Harita',
                 'settings': 'Ayarlar',
                 
@@ -4431,7 +4464,7 @@
                 // Navigation
                 'info': 'Info',
                 'reservations': 'Reservations',
-                'chat': 'Chat',
+                'chat': 'Chats',
                 'map': 'Map',
                 'settings': 'Settings',
                 
@@ -4487,7 +4520,7 @@
                 // Navigation
                 'info': 'Info',
                 'reservations': 'Reservierungen',
-                'chat': 'Chat',
+                'chat': 'Chats',
                 'map': 'Karte',
                 'settings': 'Einstellungen',
                 
@@ -4549,7 +4582,7 @@
                 // Navigation
                 'info': 'Инфо',
                 'reservations': 'Бронирования',
-                'chat': 'Чат',
+                'chat': 'Чаты',
                 'map': 'Карта',
                 'settings': 'Настройки',
                 
