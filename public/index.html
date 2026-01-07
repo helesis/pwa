@@ -17,8 +17,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
+    <!-- Mapbox GL CSS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <!-- Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
     
     <style>
         * {
@@ -80,7 +85,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: calc(64px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar height + safe area */
+            height: calc(84px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar height + safe area */
             background: white;
             z-index: 999; /* Navigation bar'ın altında ama body background'unun üstünde */
             pointer-events: none;
@@ -119,7 +124,7 @@
             width: 100%;
             flex-shrink: 0;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            margin-top: 0; /* Gereksiz boşluk yok */
+            margin-top: -10px; /* 10px yukarı kaydır */
         }
 
         .section-header-title {
@@ -128,6 +133,18 @@
             line-height: 32px;
             color: #111b21;
             margin: 0;
+        }
+
+        .section-header-subtitle {
+            font-size: 13px;
+            opacity: 0.9;
+            font-weight: 400;
+            line-height: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 4px;
         }
 
         .header {
@@ -663,7 +680,7 @@
 
         /* Guest Login Page Styles */
         .guest-login-container {
-            display: flex;
+            display: none !important; /* Geçici olarak devre dışı - tasarım görmek için */
             align-items: center;
             justify-content: center;
             min-height: 100vh;
@@ -777,6 +794,7 @@
             flex-shrink: 0;
             width: 100%;
             margin-top: auto; /* Input container'ı en alta it */
+            min-height: 143px;
         }
 
         .input-wrapper {
@@ -790,6 +808,7 @@
             padding: 9px 16px;
             transition: all 0.2s ease;
             min-height: 42px;
+            margin-bottom: 36px;
         }
 
         .input-wrapper:focus-within {
@@ -819,6 +838,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            margin-bottom: 36px;
         }
 
 
@@ -987,11 +1007,12 @@
             padding: 8px 0;
             padding-left: var(--safe-area-inset-left, env(safe-area-inset-left));
             padding-right: var(--safe-area-inset-right, env(safe-area-inset-right));
-            padding-bottom: calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            padding-bottom: calc(20px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
             z-index: 1000;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
             min-height: 56px; /* WhatsApp iOS standardı */
-            max-height: 64px; /* WhatsApp Web'e yakın */
+            height: 84px;
+            max-height: 84px; /* WhatsApp Web'e yakın */
         }
 
         .nav-item {
@@ -1034,7 +1055,7 @@
         .content-section {
             display: none !important; /* Force hide when not active */
             flex: 1;
-            overflow-y: auto;
+            overflow: hidden; /* Tüm section'lar için viewport'a göre sticky çalışması için */
             padding: 16px;
             padding-bottom: calc(80px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Bottom nav height + safe area */
             position: relative;
@@ -1044,7 +1065,7 @@
             padding: 0;
             display: none; /* Hidden by default */
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; /* Genel kural ile aynı */
             height: 100%;
             position: relative;
             flex: 1;
@@ -1067,10 +1088,14 @@
 
         /* Info Section */
         .info-section {
-            gap: 16px; /* Container'lar arası boşluk */
-            padding: 16px;
+            gap: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
+            overflow-y: auto; /* Scroll özelliği eklendi */
+            overflow-x: hidden;
+            flex: 1;
+            min-height: 0; /* Flex container'da scroll için gerekli */
         }
 
         /* Reservations Section */
@@ -1081,10 +1106,19 @@
         /* Map Section */
         #mapSection .map-section {
             gap: 16px; /* Container'lar arası boşluk */
-            padding: 16px;
+            padding: 0; /* Tüm padding kaldırıldı */
             display: flex;
             flex-direction: column;
             padding-top: 0; /* Header eklendi, padding-top gerek yok */
+            overflow-y: auto; /* Scroll özelliği eklendi */
+            flex: 1;
+            min-height: 0; /* Flex container'da scroll için gerekli */
+        }
+
+        /* Map Section - Info card sağ ve sol padding kaldırıldı */
+        #mapSection .info-card {
+            padding-left: 0;
+            padding-right: 0;
         }
 
         .map-search {
@@ -1143,18 +1177,496 @@
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             background: #f0f0f0;
-            min-height: 320px;
-            height: calc(100vh - var(--safe-area-inset-top, env(safe-area-inset-top)) - var(--safe-area-inset-bottom, env(safe-area-inset-bottom)) - 200px);
-            max-height: 520px;
+            min-height: 500px;
+            height: 500px; /* Fixed height for Mapbox */
+            position: relative;
+            z-index: 1;
+        }
+        
+        @media (max-height: 800px) {
+            .map-container {
+                height: 400px;
+                min-height: 400px;
+            }
+        }
+        
+        .map-container #mapContainer {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            position: relative;
+        }
+
+        /* Location Permission Banner */
+        .location-permission-banner {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e4e6e9;
+        }
+
+        .location-permission-banner.hidden {
+            display: none !important;
+        }
+
+        /* Accuracy Circle */
+        .accuracy-circle {
+            position: absolute;
+            border: 2px solid rgba(0, 128, 105, 0.3);
+            border-radius: 50%;
+            background: rgba(0, 128, 105, 0.1);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Mapbox map needs explicit height */
+        #mapContainer .mapboxgl-map {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Mapbox specific styles */
+        .mapboxgl-ctrl-logo {
+            display: none !important;
+        }
+
+        .mapboxgl-ctrl-attrib {
+            display: none !important;
+        }
+
+        /* User marker pulse animation */
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .user-marker-pulse {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(52, 183, 241, 0.3);
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            pointer-events: none;
+        }
+
+        .map-location-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999999;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
+
+        .map-location-button:hover {
+            background: #f5f5f5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: scale(1.05);
+        }
+
+        .map-location-button:active {
+            transform: scale(0.95);
+        }
+
+        .map-location-button i {
+            color: #34B7F1;
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Settings Section - İlk elementin aynı yükseklikten başlaması için */
+        #settingsSection .settings-section {
+            padding-top: 0; /* Header eklendi, padding-top gerek yok */
+            padding-left: 0; /* Sağ ve sol padding kaldırıldı */
+            padding-right: 0;
+        }
+
+        /* Avatar Selection */
+        .avatar-selection {
+            padding: 16px;
+            background: white;
+        }
+
+        .avatar-selection-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #111b21;
+        }
+
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .avatar-item {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            border: 3px solid #e4e6e9;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            background: #f0f2f5;
+        }
+
+        .avatar-item:hover {
+            transform: scale(1.05);
+            border-color: #008069;
+        }
+
+        .avatar-item.selected {
+            border-color: #008069;
+            border-width: 4px;
+            box-shadow: 0 0 0 2px rgba(0, 128, 105, 0.2);
+        }
+
+        .avatar-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-style-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            padding: 4px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .avatar-style-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .avatar-style-btn.active {
+            background: #008069;
+            color: white;
+            border-color: #008069;
+        }
+
+        .avatar-preview-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            border: 3px solid #008069;
+            overflow: hidden;
+            background: #f0f2f5;
+        }
+
+        .avatar-preview-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Activities Section */
+        #activitiesSection {
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            position: relative;
+            flex: 1;
+            min-height: 0;
+        }
+
+        #activitiesSection.active {
+            display: flex;
+        }
+
+        .activities-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            padding-bottom: calc(80px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            background: #f0f2f5;
+        }
+
+        /* Now Playing Banner */
+        .now-playing-banner {
+            background: linear-gradient(135deg, #008069 0%, #06cf9c 100%);
+            color: white;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 128, 105, 0.3);
+            display: none;
+        }
+
+        .now-playing-banner.active {
+            display: block;
+        }
+
+        .now-playing-banner-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .now-playing-banner-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .now-playing-banner-time {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Date Navigation */
+        .date-navigation {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .date-nav-btn {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #111b21;
+        }
+
+        .date-nav-btn.active {
+            background: #008069;
+            color: white;
+            border-color: #008069;
+        }
+
+        /* Category Filters */
+        .category-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            padding: 0 4px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .category-filters::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-filter-chip {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #667781;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .category-filter-chip.active {
+            background: #008069;
+            color: white;
+            border-color: #008069;
+        }
+
+        /* Timeline */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .time-period {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .time-period-header {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #667781;
+            letter-spacing: 0.5px;
+            padding: 0 4px;
+            margin-bottom: 4px;
+        }
+
+        .activity-card {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 12px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .activity-card.past {
+            opacity: 0.5;
+        }
+
+        .activity-card.current {
+            border: 2px solid #008069;
+            box-shadow: 0 2px 8px rgba(0, 128, 105, 0.2);
+        }
+
+        .activity-card-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #f0f2f5;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #667781;
         }
 
-        /* Settings Section - İlk elementin aynı yükseklikten başlaması için */
-        #settingsSection .settings-section {
-            padding-top: 0; /* Header eklendi, padding-top gerek yok */
+        .activity-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .activity-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-card-time {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111b21;
+            margin-bottom: 4px;
+        }
+
+        .activity-card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #111b21;
+            margin-bottom: 4px;
+        }
+
+        .activity-card-location {
+            font-size: 13px;
+            color: #667781;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .activity-card-type {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #e4e6e9;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #667781;
+            margin-top: 4px;
+        }
+
+        .activity-card-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .activity-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #667781;
+        }
+
+        .activity-action-btn.active {
+            background: #fff3cd;
+            color: #ff9800;
+        }
+
+        .activity-card-countdown {
+            font-size: 12px;
+            color: #008069;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .empty-timeline {
+            text-align: center;
+            padding: 48px 16px;
+            color: #667781;
+        }
+
+        .empty-timeline-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-timeline-text {
+            font-size: 15px;
         }
 
         /* Instagram Story Tray Style Activity Notifications */
@@ -1162,12 +1674,15 @@
             display: flex;
             gap: 12px;
             padding: 16px;
-            padding-top: 0; /* Header eklendi, padding-top gerek yok */
-            padding-bottom: 8px;
+            padding-top: 40px;
+            padding-bottom: 0;
             overflow-x: auto;
+            overflow-y: visible;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none; /* IE and Edge */
+            flex-shrink: 0;
+            min-height: fit-content;
         }
 
         .activity-stories-tray::-webkit-scrollbar {
@@ -1180,6 +1695,7 @@
             align-items: center;
             gap: 6px;
             min-width: 70px;
+            flex-shrink: 0;
             cursor: pointer;
             transition: transform 0.2s;
         }
@@ -1197,25 +1713,21 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            padding: 3px;
-        }
-
-        .story-avatar::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            padding: 2px;
+            box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         .story-video {
-            width: calc(100% - 6px);
-            height: calc(100% - 6px);
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: calc(100% - 4px);
+            height: calc(100% - 4px);
             object-fit: cover;
             border-radius: 50%;
             display: none;
-            position: relative;
-            z-index: 1;
+            z-index: 2;
         }
 
         .story-video.active {
@@ -1223,8 +1735,8 @@
         }
 
         .story-avatar-placeholder {
-            width: calc(100% - 6px);
-            height: calc(100% - 6px);
+            width: calc(100% - 4px);
+            height: calc(100% - 4px);
             border-radius: 50%;
             background: white;
             display: flex;
@@ -1233,6 +1745,7 @@
             font-size: 32px;
             position: relative;
             z-index: 1;
+            flex-shrink: 0;
         }
 
         .story-label {
@@ -1251,7 +1764,8 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding: 0 16px 16px;
+            padding: 0 0 16px; /* Sağdan ve soldan padding kaldırıldı */
+            margin-top: 0;
         }
 
         .info-post {
@@ -1350,6 +1864,15 @@
 
         .post-action:active {
             transform: scale(0.9);
+        }
+
+        .post-action.liked i {
+            color: #ed4956 !important;
+            fill: #ed4956 !important;
+        }
+
+        .post-action.bookmarked i {
+            fill: #111b21 !important;
         }
 
         .post-action.save {
@@ -1467,6 +1990,9 @@
             flex-direction: column;
             /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
             padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px); /* Story bölümüyle aynı yükseklik için 40px */
+            overflow-y: auto; /* Scroll özelliği eklendi */
+            flex: 1;
+            min-height: 0; /* Flex container'da scroll için gerekli */
         }
 
         .settings-item {
@@ -1592,20 +2118,15 @@
     </div>
 
     <!-- Chat App (hidden until login) -->
-    <div class="app-container" id="appContainer" style="display: none;">
+    <div class="app-container" id="appContainer" style="display: flex;"> <!-- Geçici olarak görünür - tasarım görmek için -->
         <!-- Content Sections -->
-        <div class="content-section active" id="chatSection">
+        <div class="content-section" id="chatSection">
             <!-- Chat Header -->
             <div class="section-header">
                 <h1 class="section-header-title" data-i18n="chat">Sohbetler</h1>
-            </div>
-            <!-- Connection status - moved below header -->
-            <div class="header" style="padding-top: 0; padding-bottom: 8px; box-shadow: none;">
-                <div class="header-left" style="justify-content: center; width: 100%;">
-                    <div class="header-subtitle">
-                        <span class="connection-status" id="connectionStatus"></span>
-                        <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
-                    </div>
+                <div class="section-header-subtitle">
+                    <span class="connection-status" id="connectionStatus"></span>
+                    <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
                 </div>
             </div>
 
@@ -1703,7 +2224,7 @@
             </div>
         </div>
 
-        <div class="content-section" id="infoSection">
+        <div class="content-section active" id="infoSection">
             <div class="section-header">
                 <h1 class="section-header-title" data-i18n="info">Info</h1>
             </div>
@@ -1972,11 +2493,84 @@
             </div>
         </div>
 
+        <!-- Activities Section -->
+        <div class="content-section" id="activitiesSection">
+            <div class="section-header">
+                <h1 class="section-header-title">Aktiviteler</h1>
+            </div>
+            <div class="activities-section">
+                <!-- Now Playing Banner -->
+                <div class="now-playing-banner" id="nowPlayingBanner">
+                    <div class="now-playing-banner-header">
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>
+                        <span>ŞİMDİ OYNANIYOR</span>
+                    </div>
+                    <div class="now-playing-banner-title" id="nowPlayingTitle"></div>
+                    <div class="now-playing-banner-time" id="nowPlayingTime"></div>
+                </div>
+
+                <!-- Date Navigation -->
+                <div class="date-navigation">
+                    <button class="date-nav-btn active" id="todayBtn" onclick="switchActivityDate('today')">
+                        <span id="todayLabel">Bugün</span>
+                    </button>
+                    <button class="date-nav-btn" id="tomorrowBtn" onclick="switchActivityDate('tomorrow')">
+                        <span id="tomorrowLabel">Yarın</span>
+                    </button>
+                </div>
+
+                <!-- Category Filters -->
+                <div class="category-filters">
+                    <button class="category-filter-chip active" onclick="filterByCategory('Tümü')">Tümü</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Çocuk')">Çocuk</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Spor')">Spor</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Gösteri')">Gösteri</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Akşam')">Akşam</button>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline-container" id="timelineContainer">
+                    <div class="empty-timeline">
+                        <div class="empty-timeline-icon">📅</div>
+                        <div class="empty-timeline-text">Aktiviteler yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="content-section" id="mapSection">
             <div class="section-header">
                 <h1 class="section-header-title" data-i18n="map">Harita</h1>
             </div>
             <div class="map-section">
+                <!-- Permission Banner (shown when permission not yet asked or denied) -->
+                <div id="locationPermissionBanner" class="location-permission-banner" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <i data-lucide="map-pin" class="icon icon-lg"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 14px; margin-bottom: 4px;" id="permissionBannerTitle">
+                                Konumunuza ihtiyacımız var
+                            </div>
+                            <div style="font-size: 12px; color: #667781;" id="permissionBannerMessage">
+                                Haritada konumunuzu göstermek için konum iznine ihtiyacımız var.
+                            </div>
+                        </div>
+                    </div>
+                    <button id="permissionBannerBtn" onclick="handlePermissionBannerClick()" style="
+                        padding: 8px 16px;
+                        background: #008069;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        white-space: nowrap;
+                    ">
+                        Konum Ver
+                    </button>
+                </div>
+                
                 <div class="info-card">
                     <div class="info-card-title" data-i18n="map">Harita</div>
                     <div class="info-card-content">
@@ -1999,8 +2593,10 @@
                                 <button type="button" class="map-chip" data-map-target="outlet" data-value="spa">SPA</button>
                             </div>
                         </div>
-                        <div id="mapContainer" class="map-container">
-                            <div data-i18n="mapLoading">Harita yükleniyor...</div>
+                        <div class="map-container" style="height: 500px; min-height: 500px;">
+                            <div id="mapContainer" style="width: 100%; height: 100%; position: relative;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; text-align: center; color: #667781; z-index: 1;" data-i18n="mapLoading">Harita yükleniyor...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2030,6 +2626,79 @@
                         <div style="margin-bottom: 16px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
                     </div>
                 </div>
+                <!-- Avatar & Harita Section -->
+                <div class="info-card">
+                    <div class="info-card-title">Avatar & Harita</div>
+                    <div class="info-card-content">
+                        <div class="avatar-selection">
+                            <div class="avatar-preview-large">
+                                <img id="currentAvatarPreview" src="" alt="Avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 32px;" id="avatarPreviewPlaceholder">👤</div>
+                            </div>
+                            
+                            <div class="avatar-style-selector" id="avatarStyleSelector">
+                                <button class="avatar-style-btn active" onclick="switchAvatarStyle('avataaars')">Avataaars</button>
+                                <button class="avatar-style-btn" onclick="switchAvatarStyle('big-smile')">Big Smile</button>
+                                <button class="avatar-style-btn" onclick="switchAvatarStyle('bottts')">Robots</button>
+                                <button class="avatar-style-btn" onclick="switchAvatarStyle('fun-emoji')">Fun</button>
+                                <button class="avatar-style-btn" onclick="switchAvatarStyle('lorelei')">Lorelei</button>
+                                <button class="avatar-style-btn" onclick="switchAvatarStyle('personas')">Personas</button>
+                            </div>
+                            
+                            <div class="avatar-grid" id="avatarGrid">
+                                <!-- Avatars will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-item" onclick="toggleGhostMode()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="ghost" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label">Hayalet Modu</div>
+                    </div>
+                    <div class="settings-item-right">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="ghostModeToggle" onchange="handleGhostModeToggle()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Konum Durumu Kartı -->
+                <div class="info-card" style="margin-top: 16px;">
+                    <div class="info-card-title">Konum</div>
+                    <div class="info-card-content">
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 14px; color: #667781;">Durum:</span>
+                                <span id="locationPermissionStatus" style="font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="clock" class="icon icon-sm"></i>
+                                    <span>Kontrol ediliyor...</span>
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 14px; color: #667781;">Son güncelleme:</span>
+                                <span id="locationLastUpdate" style="font-size: 14px; color: #667781;">-</span>
+                            </div>
+                            <button id="locationSettingsBtn" onclick="openLocationSettingsGuide()" style="
+                                width: 100%;
+                                padding: 12px;
+                                background: #f0f2f5;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                font-weight: 500;
+                                color: #008069;
+                                cursor: pointer;
+                                margin-top: 8px;
+                            ">
+                                Ayarları Değiştir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="settings-item" onclick="showPhotoModal()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
@@ -2049,6 +2718,15 @@
                         </label>
                     </div>
                 </div>
+                <div class="settings-item" onclick="requestLocationPermission()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="map-pin" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="locationPermission">Konum İzni</div>
+                    </div>
+                    <div class="settings-item-right">
+                        <span id="locationPermissionStatus" style="font-size: 12px; color: #667781;" data-i18n="locationPermissionStatus">İzin ver</span> ›
+                    </div>
+                </div>
                 <div class="settings-item" onclick="openLanguageSelector()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="languages" class="icon icon-lg"></i></div>
@@ -2057,6 +2735,13 @@
                     <div class="settings-item-right">
                         <span id="currentLanguageDisplay">Türkçe</span> ›
                     </div>
+                </div>
+                <div class="settings-item" onclick="forceUpdateApp()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="refresh-cw" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="updateApp">Uygulamayı Güncelle</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
                 </div>
                 <div class="settings-item" onclick="handleGuestLogout()">
                     <div class="settings-item-left">
@@ -2096,17 +2781,21 @@
 
         <!-- Bottom Navigation Bar -->
         <div class="bottom-nav">
-            <button class="nav-item" onclick="switchSection('info')" data-section="info">
+            <button class="nav-item active" onclick="switchSection('info')" data-section="info">
                 <div class="nav-item-icon"><i data-lucide="info" class="icon icon-lg"></i></div>
                 <div class="nav-item-label" data-i18n="info">Info</div>
             </button>
-            <button class="nav-item active" onclick="switchSection('chat')" data-section="chat">
-                <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                <div class="nav-item-label" data-i18n="chat">Chat</div>
+            <button class="nav-item" onclick="switchSection('activities')" data-section="activities">
+                <div class="nav-item-icon"><i data-lucide="calendar-clock" class="icon icon-lg"></i></div>
+                <div class="nav-item-label" data-i18n="activities">Aktiviteler</div>
             </button>
             <button class="nav-item" onclick="switchSection('reservations')" data-section="reservations">
                 <div class="nav-item-icon"><i data-lucide="calendar" class="icon icon-lg"></i></div>
-                <div class="nav-item-label" data-i18n="reservations">Reservations</div>
+                <div class="nav-item-label" data-i18n="reservations">Rezervasyonlar</div>
+            </button>
+            <button class="nav-item" onclick="switchSection('chat')" data-section="chat">
+                <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                <div class="nav-item-label" data-i18n="chat">Chat</div>
             </button>
             <button class="nav-item" onclick="switchSection('map')" data-section="map">
                 <div class="nav-item-icon"><i data-lucide="map" class="icon icon-lg"></i></div>
@@ -2194,12 +2883,12 @@
                 
                 // Not logged in (silently fail - this is expected on first load)
                 document.getElementById('guestLoginContainer').style.display = 'flex';
-                document.getElementById('appContainer').style.display = 'none';
+                // document.getElementById('appContainer').style.display = 'none'; // Geçici olarak devre dışı - tasarım görmek için
                 return false;
             } catch (error) {
                 console.error('Auth check error:', error);
                 document.getElementById('guestLoginContainer').style.display = 'flex';
-                document.getElementById('appContainer').style.display = 'none';
+                // document.getElementById('appContainer').style.display = 'none'; // Geçici olarak devre dışı - tasarım görmek için
                 return false;
             }
         }
@@ -4058,7 +4747,7 @@
             }
             
             // Hide app, show login
-            document.getElementById('appContainer').style.display = 'none';
+            // document.getElementById('appContainer').style.display = 'none'; // Geçici olarak devre dışı - tasarım görmek için
             document.getElementById('guestLoginContainer').style.display = 'flex';
             
             // Clear form
@@ -4071,6 +4760,33 @@
         // Check authentication on page load
         // Navigation functions
         function switchSection(section) {
+            // Check for service worker updates (Safari-like refresh mechanism)
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_UPDATE' });
+                navigator.serviceWorker.getRegistration().then((registration) => {
+                    if (registration) {
+                        registration.update().catch(err => console.error('Update check failed:', err));
+                        
+                        // Force cache refresh by fetching index.html with cache bypass
+                        fetch('/index.html?t=' + Date.now(), { 
+                            cache: 'no-cache',
+                            headers: {
+                                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                'Pragma': 'no-cache',
+                                'Expires': '0'
+                            }
+                        }).then(response => {
+                            if (response.ok) {
+                                // Update cache with fresh content
+                                caches.open('voyage-chat-v4.2').then(cache => {
+                                    cache.put('/index.html', response.clone());
+                                });
+                            }
+                        }).catch(err => console.error('Cache refresh failed:', err));
+                    }
+                });
+            }
+            
             // Hide all sections
             document.querySelectorAll('.content-section').forEach(sec => {
                 sec.classList.remove('active');
@@ -4106,11 +4822,30 @@
             // Load activity stories when switching to info section
             if (section === 'info') {
                 loadActivityStories();
+                loadInfoPosts();
+                setupPostActions();
+            }
+            
+            // Load activities timeline when switching to activities section
+            if (section === 'activities') {
+                loadActivitiesTimeline();
+            }
+            
+            // Initialize map when switching to map section
+            if (section === 'map') {
+                initMap();
+                updatePermissionBanner(); // Update banner based on permission state
+                startLocationTracking(); // Start tracking when map opens
+            } else {
+                stopLocationTracking(); // Stop tracking when leaving map
             }
             
             // Update notification toggle when switching to settings section
             if (section === 'settings') {
                 updateNotificationToggle();
+                updateLocationPermissionStatus();
+                loadAvatarSelection();
+                updateGhostModeToggle();
             }
             
             // Scroll to top when switching sections
@@ -4157,6 +4892,277 @@
             toggle.disabled = Notification.permission === 'denied';
         }
 
+        // Request location permission
+        // Request location permission - shows modal
+        async function requestLocationPermission() {
+            showLocationPermissionModal();
+        }
+
+        // Check permission state
+        async function checkPermissionState() {
+            if (!navigator.geolocation) {
+                permissionState = 'not-supported';
+                return permissionState;
+            }
+
+            try {
+                // Try to get permission state (if supported)
+                if ('permissions' in navigator) {
+                    const result = await navigator.permissions.query({ name: 'geolocation' });
+                    permissionState = result.state; // 'granted', 'denied', 'prompt'
+                    return permissionState;
+                } else {
+                    // Fallback: try to get position
+                    return new Promise((resolve) => {
+                        navigator.geolocation.getCurrentPosition(
+                            () => {
+                                permissionState = 'granted';
+                                resolve('granted');
+                            },
+                            (error) => {
+                                if (error.code === error.PERMISSION_DENIED) {
+                                    permissionState = 'denied';
+                                    resolve('denied');
+                                } else {
+                                    permissionState = 'prompt';
+                                    resolve('prompt');
+                                }
+                            },
+                            { timeout: 1000 }
+                        );
+                    });
+                }
+            } catch (error) {
+                permissionState = 'prompt';
+                return 'prompt';
+            }
+        }
+
+        // Update location permission status display
+        async function updateLocationPermissionStatus() {
+            const statusEl = document.getElementById('locationPermissionStatus');
+            const lastUpdateEl = document.getElementById('locationLastUpdate');
+            if (!statusEl) return;
+
+            if (!navigator.geolocation) {
+                statusEl.innerHTML = '<i data-lucide="x-circle" class="icon icon-sm"></i><span>Desteklenmiyor</span>';
+                statusEl.style.color = '#F44336';
+                if (lastUpdateEl) lastUpdateEl.textContent = '-';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                return;
+            }
+
+            // Check permission state
+            const state = await checkPermissionState();
+
+            if (state === 'granted') {
+                statusEl.innerHTML = '<i data-lucide="check-circle" class="icon icon-sm"></i><span>✅ İzin Verildi</span>';
+                statusEl.style.color = '#4CAF50';
+            } else if (state === 'denied') {
+                statusEl.innerHTML = '<i data-lucide="x-circle" class="icon icon-sm"></i><span>❌ İzin Verilmedi</span>';
+                statusEl.style.color = '#F44336';
+            } else {
+                statusEl.innerHTML = '<i data-lucide="clock" class="icon icon-sm"></i><span>İzin Bekleniyor</span>';
+                statusEl.style.color = '#667781';
+            }
+
+            // Update last update time
+            if (lastUpdateEl) {
+                if (lastLocationUpdateTime) {
+                    const diff = Math.floor((Date.now() - lastLocationUpdateTime) / 1000 / 60); // minutes
+                    if (diff < 1) {
+                        lastUpdateEl.textContent = 'Az önce';
+                    } else if (diff < 60) {
+                        lastUpdateEl.textContent = `${diff} dk önce`;
+                    } else {
+                        const hours = Math.floor(diff / 60);
+                        lastUpdateEl.textContent = `${hours} saat önce`;
+                    }
+                } else {
+                    lastUpdateEl.textContent = '-';
+                }
+            }
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        // Open location settings guide
+        function openLocationSettingsGuide() {
+            const guide = currentLanguage === 'tr' ?
+                'Tarayıcı ayarlarından konum iznini değiştirebilirsiniz:\n\n' +
+                'Safari iOS:\n' +
+                '1. Ayarlar > Safari > Konum Servisleri\n' +
+                '2. Bu site için "İzin Ver" seçin\n\n' +
+                'Chrome Android:\n' +
+                '1. Site ayarları (🔒) > İzinler > Konum\n' +
+                '2. "İzin Ver" seçin\n\n' +
+                'Ayarları değiştirdikten sonra sayfayı yenileyin.' :
+                currentLanguage === 'en' ?
+                'You can change location permission from browser settings:\n\n' +
+                'Safari iOS:\n' +
+                '1. Settings > Safari > Location Services\n' +
+                '2. Select "Allow" for this site\n\n' +
+                'Chrome Android:\n' +
+                '1. Site settings (🔒) > Permissions > Location\n' +
+                '2. Select "Allow"\n\n' +
+                'Please refresh the page after changing settings.' :
+                'Sie können die Standortberechtigung in den Browsereinstellungen ändern.';
+            alert(guide);
+        }
+
+        // Handle permission banner click
+        async function handlePermissionBannerClick() {
+            const state = await checkPermissionState();
+            
+            if (state === 'denied') {
+                // Show settings guide
+                openLocationSettingsGuide();
+            } else {
+                // Show permission modal
+                showLocationPermissionModal();
+            }
+        }
+
+        // Update permission banner visibility
+        async function updatePermissionBanner() {
+            const banner = document.getElementById('locationPermissionBanner');
+            if (!banner) return;
+
+            const state = await checkPermissionState();
+
+            if (state === 'granted') {
+                // Hide banner when permission is granted
+                banner.style.display = 'none';
+            } else if (state === 'denied') {
+                // Show banner with different message for denied state
+                banner.style.display = 'flex';
+                const titleEl = document.getElementById('permissionBannerTitle');
+                const messageEl = document.getElementById('permissionBannerMessage');
+                const btnEl = document.getElementById('permissionBannerBtn');
+                if (titleEl) {
+                    titleEl.textContent = currentLanguage === 'tr' ? 
+                        'Konum izni gerekli' : 
+                        currentLanguage === 'en' ? 'Location permission required' :
+                        'Standortberechtigung erforderlich';
+                }
+                if (messageEl) {
+                    messageEl.textContent = currentLanguage === 'tr' ?
+                        'Ayarlardan konum iznini etkinleştirebilirsiniz.' :
+                        currentLanguage === 'en' ?
+                        'You can enable location permission from settings.' :
+                        'Sie können die Standortberechtigung in den Einstellungen aktivieren.';
+                }
+                if (btnEl) {
+                    btnEl.textContent = currentLanguage === 'tr' ? 'Ayarları Aç' :
+                                       currentLanguage === 'en' ? 'Open Settings' :
+                                       'Einstellungen öffnen';
+                }
+            } else {
+                // Show banner for prompt state (not yet asked)
+                banner.style.display = 'flex';
+                const titleEl = document.getElementById('permissionBannerTitle');
+                const messageEl = document.getElementById('permissionBannerMessage');
+                const btnEl = document.getElementById('permissionBannerBtn');
+                if (titleEl) {
+                    titleEl.textContent = currentLanguage === 'tr' ?
+                        'Konumunuza ihtiyacımız var' :
+                        currentLanguage === 'en' ? 'We need your location' :
+                        'Wir benötigen Ihren Standort';
+                }
+                if (messageEl) {
+                    messageEl.textContent = currentLanguage === 'tr' ?
+                        'Haritada konumunuzu göstermek için konum iznine ihtiyacımız var.' :
+                        currentLanguage === 'en' ?
+                        'We need location permission to show your position on the map.' :
+                        'Wir benötigen Standortberechtigung, um Ihre Position auf der Karte anzuzeigen.';
+                }
+                if (btnEl) {
+                    btnEl.textContent = currentLanguage === 'tr' ? 'Konum Ver' :
+                                       currentLanguage === 'en' ? 'Allow Location' :
+                                       'Standort erlauben';
+                }
+            }
+        }
+
+        // Force update app - Clear cache and reload
+        async function forceUpdateApp() {
+            const confirmMessage = currentLanguage === 'tr' ? 
+                'Uygulamayı güncellemek istediğinize emin misiniz? Tüm cache temizlenecek ve sayfa yenilenecek.' :
+                currentLanguage === 'en' ?
+                'Are you sure you want to update the app? All cache will be cleared and the page will reload.' :
+                currentLanguage === 'de' ?
+                'Sind Sie sicher, dass Sie die App aktualisieren möchten? Der gesamte Cache wird gelöscht und die Seite wird neu geladen.' :
+                'Вы уверены, что хотите обновить приложение? Весь кеш будет очищен, и страница будет перезагружена.';
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                // Clear all caches
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => {
+                            console.log('🗑️ Deleting cache:', cacheName);
+                            return caches.delete(cacheName);
+                        })
+                    );
+                    console.log('✅ All caches cleared');
+                }
+
+                // Unregister service worker
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        await registration.unregister();
+                        console.log('✅ Service worker unregistered');
+                    }
+
+                    // Unregister all service workers
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(
+                        registrations.map(reg => reg.unregister())
+                    );
+                }
+
+                // Clear localStorage (optional - you might want to keep some data)
+                // localStorage.clear();
+
+                // Force reload with cache bypass
+                const successMessage = currentLanguage === 'tr' ?
+                    'Uygulama güncelleniyor...' :
+                    currentLanguage === 'en' ?
+                    'Updating app...' :
+                    currentLanguage === 'de' ?
+                    'App wird aktualisiert...' :
+                    'Обновление приложения...';
+
+                // Show loading indicator
+                const loadingMessage = document.createElement('div');
+                loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;';
+                loadingMessage.textContent = successMessage;
+                document.body.appendChild(loadingMessage);
+
+                // Reload after a short delay
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 500);
+
+            } catch (error) {
+                console.error('❌ Error updating app:', error);
+                const errorMessage = currentLanguage === 'tr' ?
+                    'Güncelleme sırasında bir hata oluştu. Sayfayı manuel olarak yenileyin.' :
+                    currentLanguage === 'en' ?
+                    'An error occurred during update. Please reload the page manually.' :
+                    currentLanguage === 'de' ?
+                    'Bei der Aktualisierung ist ein Fehler aufgetreten. Bitte laden Sie die Seite manuell neu.' :
+                    'Произошла ошибка при обновлении. Пожалуйста, перезагрузите страницу вручную.';
+                alert(errorMessage);
+                window.location.reload(true);
+            }
+        }
+
         // Open activity story
         function openActivityStory(activityId) {
             // TODO: Implement story viewer modal
@@ -4173,14 +5179,1589 @@
         }
 
         // Load activity story videos
-        function loadActivityStories() {
-            // TODO: Load videos from backend or static files
-            const storyVideos = document.querySelectorAll('.story-video');
-            storyVideos.forEach((video, index) => {
-                // For now, videos are empty - will be loaded from backend
-                // video.src = `/videos/activity-${index + 1}.mp4`;
-                // video.load();
+        async function loadActivityStories() {
+            try {
+                const response = await fetch('/api/activities');
+                if (!response.ok) {
+                    console.warn('Failed to load activities, using static data');
+                    return;
+                }
+                const activities = await response.json();
+                
+                const tray = document.querySelector('.activity-stories-tray');
+                if (!tray || activities.length === 0) return;
+                
+                tray.innerHTML = '';
+                
+                activities.forEach(activity => {
+                    const storyEl = document.createElement('div');
+                    storyEl.className = 'activity-story';
+                    storyEl.onclick = () => openActivityStory(activity.id);
+                    storyEl.innerHTML = `
+                        <div class="story-avatar">
+                            ${activity.video_url ? 
+                                `<video class="story-video" muted loop><source src="${activity.video_url}" type="video/mp4"></video>` : 
+                                ''
+                            }
+                            <div class="story-avatar-placeholder">
+                                <i data-lucide="${activity.icon || 'circle'}" class="icon icon-xl"></i>
+                            </div>
+                        </div>
+                        <div class="story-label">${activity.title}</div>
+                    `;
+                    tray.appendChild(storyEl);
+                });
+                
+                if (typeof lucide !== 'undefined') {
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Error loading activities:', error);
+            }
+        }
+
+        async function loadInfoPosts() {
+            try {
+                const response = await fetch('/api/info-posts');
+                if (!response.ok) {
+                    console.warn('Failed to load info posts, using static data');
+                    return;
+                }
+                const posts = await response.json();
+                
+                const container = document.querySelector('.info-posts-container');
+                if (!container || posts.length === 0) return;
+                
+                // Get current user's likes and bookmarks
+                const guestUniqueId = getCookie('guest_unique_id');
+                if (guestUniqueId) {
+                    // Load likes and bookmarks status for each post
+                    for (const post of posts) {
+                        try {
+                            const likesRes = await fetch(`/api/info-posts/${post.post_id}/likes`);
+                            if (likesRes.ok) {
+                                const likesData = await likesRes.json();
+                                post.currentLikesCount = likesData.count;
+                            }
+                            
+                            // Check if user liked this post
+                            const likeCheckRes = await fetch(`/api/info-posts/${post.post_id}/like`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include'
+                            });
+                            // This will toggle, so we need a separate endpoint to check status
+                            // For now, we'll use the likes count
+                        } catch (err) {
+                            console.warn('Error loading post status:', err);
+                        }
+                    }
+                }
+                
+                container.innerHTML = '';
+                
+                posts.forEach(post => {
+                    const postEl = document.createElement('div');
+                    postEl.className = 'info-post';
+                    postEl.dataset.postId = post.post_id;
+                    postEl.dataset.postDbId = post.id;
+                    postEl.innerHTML = `
+                        <div class="post-header">
+                            <div class="post-avatar">
+                                <div class="post-avatar-inner"><i data-lucide="${post.icon || 'circle'}" class="icon icon-lg"></i></div>
+                            </div>
+                            <div class="post-header-info">
+                                <div class="post-username">${post.title}</div>
+                                <div class="post-location">Voyage Sorgun</div>
+                            </div>
+                            <div class="post-more">⋯</div>
+                        </div>
+                        <div class="post-image">
+                            ${post.image_url ? 
+                                `<img src="${post.image_url}" alt="${post.title}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                                `<div class="post-image-placeholder">
+                                    <i data-lucide="${post.icon || 'circle'}" class="icon icon-xl"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="post-actions">
+                            <div class="post-action like-btn"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action comment-btn"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+                            <div class="post-action dm-btn"><i data-lucide="send" class="icon icon-lg"></i></div>
+                            <div class="post-action save bookmark-btn"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
+                        </div>
+                        <div class="post-likes">${post.likes_count || 0} beğeni</div>
+                        <div class="post-caption">
+                            <span class="post-caption-username">${post.title}</span>
+                            ${post.caption || ''}
+                        </div>
+                        <div class="post-comments">Yorumları görüntüle</div>
+                        <div class="post-time">Şimdi</div>
+                    `;
+                    container.appendChild(postEl);
+                });
+                
+                if (typeof lucide !== 'undefined') {
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                }
+                
+                // Setup actions after posts are loaded
+                setupPostActions();
+            } catch (error) {
+                console.error('Error loading info posts:', error);
+            }
+        }
+
+        function setupPostActions() {
+            // Like button
+            document.querySelectorAll('.post-action.like-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const post = e.currentTarget.closest('.info-post');
+                    const postId = post.dataset.postId;
+                    await handlePostLike(postId, post);
+                });
             });
+
+            // Comment button
+            document.querySelectorAll('.post-action.comment-btn, .post-comments').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const post = e.currentTarget.closest('.info-post');
+                    const postId = post.dataset.postId;
+                    await openCommentsModal(postId);
+                });
+            });
+
+            // Send/DM button
+            document.querySelectorAll('.post-action.dm-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const post = e.currentTarget.closest('.info-post');
+                    const postId = post.dataset.postId;
+                    await openDMModal(postId);
+                });
+            });
+
+            // Bookmark button
+            document.querySelectorAll('.post-action.bookmark-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const post = e.currentTarget.closest('.info-post');
+                    const postId = post.dataset.postId;
+                    await handlePostBookmark(postId, post);
+                });
+            });
+        }
+
+        async function handlePostLike(postId, postElement) {
+            try {
+                const response = await fetch(`/api/info-posts/${postId}/like`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Beğenmek için giriş yapmanız gerekiyor.');
+                        return;
+                    }
+                    throw new Error('Failed to like post');
+                }
+                
+                const data = await response.json();
+                
+                // Update UI
+                const likeBtn = postElement.querySelector('.post-action.like-btn');
+                const likesCount = postElement.querySelector('.post-likes');
+                
+                if (data.liked) {
+                    likeBtn.classList.add('liked');
+                    const icon = likeBtn.querySelector('i');
+                    if (icon) {
+                        icon.style.color = '#ed4956';
+                        icon.style.fill = '#ed4956';
+                    }
+                } else {
+                    likeBtn.classList.remove('liked');
+                    const icon = likeBtn.querySelector('i');
+                    if (icon) {
+                        icon.style.color = '#111b21';
+                        icon.style.fill = 'none';
+                    }
+                }
+                
+                likesCount.textContent = `${data.likesCount} beğeni`;
+            } catch (error) {
+                console.error('Error liking post:', error);
+            }
+        }
+
+        async function handlePostBookmark(postId, postElement) {
+            try {
+                const response = await fetch(`/api/info-posts/${postId}/bookmark`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Kaydetmek için giriş yapmanız gerekiyor.');
+                        return;
+                    }
+                    throw new Error('Failed to bookmark post');
+                }
+                
+                const data = await response.json();
+                
+                const bookmarkBtn = postElement.querySelector('.post-action.bookmark-btn');
+                if (data.bookmarked) {
+                    bookmarkBtn.classList.add('bookmarked');
+                    const icon = bookmarkBtn.querySelector('i');
+                    if (icon) {
+                        icon.style.fill = '#111b21';
+                    }
+                } else {
+                    bookmarkBtn.classList.remove('bookmarked');
+                    const icon = bookmarkBtn.querySelector('i');
+                    if (icon) {
+                        icon.style.fill = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error bookmarking post:', error);
+            }
+        }
+
+        async function openCommentsModal(postId) {
+            try {
+                const response = await fetch(`/api/info-posts/${postId}/comments`);
+                if (!response.ok) {
+                    throw new Error('Failed to load comments');
+                }
+                const comments = await response.json();
+                
+                // Create modal
+                const modal = document.createElement('div');
+                modal.id = 'commentsModal';
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    padding: 20px;
+                `;
+                
+                const content = document.createElement('div');
+                content.style.cssText = `
+                    background: white;
+                    border-radius: 16px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 100%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                `;
+                
+                const title = currentLanguage === 'tr' ? 'Yorumlar' :
+                              currentLanguage === 'en' ? 'Comments' :
+                              currentLanguage === 'de' ? 'Kommentare' :
+                              'Комментарии';
+                
+                content.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div style="font-size: 18px; font-weight: 600; color: #111b21;">${title}</div>
+                        <button id="closeCommentsBtn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #667781;">×</button>
+                    </div>
+                    <div id="commentsList" style="margin-bottom: 20px;">
+                        ${comments.length === 0 ? 
+                            '<div style="text-align: center; color: #667781; padding: 20px;">Henüz yorum yok</div>' :
+                            comments.map(c => `
+                                <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e4e6e9;">
+                                    <div style="display: flex; gap: 12px;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #e4e6e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                            ${c.profile_photo ? 
+                                                `<img src="${c.profile_photo}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` :
+                                                '<i data-lucide="user" class="icon icon-md"></i>'
+                                            }
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${c.guest_name || 'Misafir'}</div>
+                                            <div style="font-size: 14px; color: #111b21; line-height: 1.5;">${c.comment}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="newCommentInput" placeholder="${currentLanguage === 'tr' ? 'Yorum yazın...' : currentLanguage === 'en' ? 'Write a comment...' : currentLanguage === 'de' ? 'Kommentar schreiben...' : 'Написать комментарий...'}" style="flex: 1; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px;">
+                        <button id="sendCommentBtn" style="padding: 12px 20px; background: #34B7F1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">${currentLanguage === 'tr' ? 'Gönder' : currentLanguage === 'en' ? 'Send' : currentLanguage === 'de' ? 'Senden' : 'Отправить'}</button>
+                    </div>
+                `;
+                
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+                
+                // Close button
+                document.getElementById('closeCommentsBtn').onclick = () => {
+                    modal.remove();
+                };
+                
+                // Click outside to close
+                modal.onclick = (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                };
+                
+                // Send comment
+                document.getElementById('sendCommentBtn').onclick = async () => {
+                    const input = document.getElementById('newCommentInput');
+                    const commentText = input.value.trim();
+                    
+                    if (!commentText) return;
+                    
+                    try {
+                        const sendResponse = await fetch(`/api/info-posts/${postId}/comments`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ comment: commentText })
+                        });
+                        
+                        if (!sendResponse.ok) {
+                            if (sendResponse.status === 401) {
+                                alert('Yorum yazmak için giriş yapmanız gerekiyor.');
+                                return;
+                            }
+                            throw new Error('Failed to send comment');
+                        }
+                        
+                        const newComment = await sendResponse.json();
+                        
+                        // Add comment to list
+                        const commentsList = document.getElementById('commentsList');
+                        const commentDiv = document.createElement('div');
+                        commentDiv.style.cssText = 'margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e4e6e9;';
+                        commentDiv.innerHTML = `
+                            <div style="display: flex; gap: 12px;">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: #e4e6e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    ${newComment.profile_photo ? 
+                                        `<img src="${newComment.profile_photo}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` :
+                                        '<i data-lucide="user" class="icon icon-md"></i>'
+                                    }
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${newComment.guest_name || 'Misafir'}</div>
+                                    <div style="font-size: 14px; color: #111b21; line-height: 1.5;">${newComment.comment}</div>
+                                </div>
+                            </div>
+                        `;
+                        commentsList.appendChild(commentDiv);
+                        
+                        input.value = '';
+                        
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    } catch (error) {
+                        console.error('Error sending comment:', error);
+                        alert('Yorum gönderilirken bir hata oluştu.');
+                    }
+                };
+                
+                // Enter key to send
+                document.getElementById('newCommentInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        document.getElementById('sendCommentBtn').click();
+                    }
+                });
+                
+                if (typeof lucide !== 'undefined') {
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Error opening comments modal:', error);
+                alert('Yorumlar yüklenirken bir hata oluştu.');
+            }
+        }
+
+        async function openDMModal(postId) {
+            const modal = document.createElement('div');
+            modal.id = 'dmModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 400px;
+                width: 100%;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            `;
+            
+            const title = currentLanguage === 'tr' ? 'Mesaj Gönder' :
+                          currentLanguage === 'en' ? 'Send Message' :
+                          currentLanguage === 'de' ? 'Nachricht senden' :
+                          'Отправить сообщение';
+            
+            content.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: 600; color: #111b21;">${title}</div>
+                    <button id="closeDMBtn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #667781;">×</button>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #111b21;">${currentLanguage === 'tr' ? 'Alıcı Oda Numarası' : currentLanguage === 'en' ? 'Recipient Room Number' : currentLanguage === 'de' ? 'Empfänger Zimmernummer' : 'Номер комнаты получателя'}</label>
+                    <input type="text" id="dmRoomNumber" placeholder="101" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #111b21;">${currentLanguage === 'tr' ? 'Mesaj' : currentLanguage === 'en' ? 'Message' : currentLanguage === 'de' ? 'Nachricht' : 'Сообщение'}</label>
+                    <textarea id="dmMessage" placeholder="${currentLanguage === 'tr' ? 'Mesajınızı yazın...' : currentLanguage === 'en' ? 'Write your message...' : currentLanguage === 'de' ? 'Schreiben Sie Ihre Nachricht...' : 'Напишите ваше сообщение...'}" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; min-height: 100px; resize: vertical; box-sizing: border-box; font-family: inherit;"></textarea>
+                </div>
+                <button id="sendDMBtn" style="width: 100%; padding: 12px; background: #34B7F1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">${currentLanguage === 'tr' ? 'Gönder' : currentLanguage === 'en' ? 'Send' : currentLanguage === 'de' ? 'Senden' : 'Отправить'}</button>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Close button
+            document.getElementById('closeDMBtn').onclick = () => {
+                modal.remove();
+            };
+            
+            // Click outside to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            };
+            
+            // Send DM
+            document.getElementById('sendDMBtn').onclick = async () => {
+                const roomNumber = document.getElementById('dmRoomNumber').value.trim();
+                const message = document.getElementById('dmMessage').value.trim();
+                
+                if (!roomNumber || !message) {
+                    alert(currentLanguage === 'tr' ? 'Oda numarası ve mesaj gereklidir.' : 
+                          currentLanguage === 'en' ? 'Room number and message are required.' :
+                          currentLanguage === 'de' ? 'Zimmernummer und Nachricht sind erforderlich.' :
+                          'Требуются номер комнаты и сообщение.');
+                    return;
+                }
+                
+                try {
+                    // Get guest_unique_id from room number
+                    const roomResponse = await fetch(`/api/rooms/${roomNumber}`);
+                    if (!roomResponse.ok) {
+                        throw new Error('Room not found');
+                    }
+                    const roomData = await roomResponse.json();
+                    const toGuestUniqueId = roomData.guest_unique_id;
+                    
+                    const sendResponse = await fetch(`/api/info-posts/${postId}/dm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            to_guest_unique_id: toGuestUniqueId,
+                            message: message
+                        })
+                    });
+                    
+                    if (!sendResponse.ok) {
+                        if (sendResponse.status === 401) {
+                            alert(currentLanguage === 'tr' ? 'Mesaj göndermek için giriş yapmanız gerekiyor.' :
+                                  currentLanguage === 'en' ? 'You need to login to send messages.' :
+                                  currentLanguage === 'de' ? 'Sie müssen sich anmelden, um Nachrichten zu senden.' :
+                                  'Вам нужно войти, чтобы отправлять сообщения.');
+                            return;
+                        }
+                        throw new Error('Failed to send DM');
+                    }
+                    
+                    modal.remove();
+                    alert(currentLanguage === 'tr' ? 'Mesaj gönderildi!' :
+                          currentLanguage === 'en' ? 'Message sent!' :
+                          currentLanguage === 'de' ? 'Nachricht gesendet!' :
+                          'Сообщение отправлено!');
+                } catch (error) {
+                    console.error('Error sending DM:', error);
+                    alert(currentLanguage === 'tr' ? 'Mesaj gönderilirken bir hata oluştu.' :
+                          currentLanguage === 'en' ? 'An error occurred while sending the message.' :
+                          currentLanguage === 'de' ? 'Beim Senden der Nachricht ist ein Fehler aufgetreten.' :
+                          'Произошла ошибка при отправке сообщения.');
+                }
+            };
+        }
+
+        // Helper function to get cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Map initialization
+        let map = null;
+        let userMarker = null;
+        let hotelMarker = null;
+        let userLocationWatchId = null;
+        let otherUsersMarkers = {};
+        let activityMarkers = [];
+        let lastLocationUpdateTime = null;
+        let locationUpdateInterval = null;
+        let permissionState = null; // 'granted', 'denied', 'prompt'
+
+        // Mapbox access token
+        const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWxpbXVyc2l0IiwiYSI6ImNtazRnYTRjZjAwa2IzZXF2cWJnaW9ocDcifQ.EL6OVUXoR22l0vrNPzVyoQ';
+
+        function initMap() {
+            const mapContainer = document.getElementById('mapContainer');
+            if (!mapContainer) return;
+
+            // Voyage Sorgun coordinates (Sorgun, Manavgat, Antalya, Turkey)
+            const hotelLat = 36.77709681280941;
+            const hotelLng = 31.404080701222686;
+
+            // If map already exists, just update it
+            if (map) {
+                // Start location tracking if not already running
+                startLocationTracking();
+                loadOtherUsers();
+                loadActivityMarkers();
+                return;
+            }
+
+            // Clear loading text but keep container structure
+            const loadingDiv = mapContainer.querySelector('div');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+
+            // Ensure container has explicit height for Mapbox (required!)
+            // Ensure container has explicit height for Mapbox (REQUIRED!)
+            // Mapbox needs a fixed pixel height, not percentage
+            const parent = mapContainer.parentElement;
+            let containerHeight = 500; // Default height
+            
+            if (parent && parent.classList.contains('map-container')) {
+                // Get computed or offset height
+                const computedStyle = window.getComputedStyle(parent);
+                const parentHeight = parseInt(computedStyle.height) || parent.offsetHeight || 500;
+                containerHeight = Math.max(parentHeight, 400); // At least 400px
+            }
+            
+            // Set explicit pixel height (Mapbox requirement)
+            mapContainer.style.height = containerHeight + 'px';
+            mapContainer.style.width = '100%';
+            mapContainer.style.position = 'relative';
+            
+            console.log('🗺️ Map container setup:', {
+                width: mapContainer.offsetWidth,
+                height: mapContainer.offsetHeight,
+                styleHeight: mapContainer.style.height,
+                containerHeight,
+                parentHeight: parent ? parent.offsetHeight : 'no parent'
+            });
+
+            // Check if mapboxgl is loaded
+            if (typeof mapboxgl === 'undefined') {
+                console.error('Mapbox GL JS not loaded');
+                mapContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Mapbox GL JS yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</div>';
+                return;
+            }
+
+            // Initialize Mapbox map
+            try {
+                mapboxgl.accessToken = MAPBOX_TOKEN;
+                map = new mapboxgl.Map({
+                    container: 'mapContainer',
+                    style: 'mapbox://styles/mapbox/streets-v12',
+                    center: [hotelLng, hotelLat],
+                    zoom: 15,
+                    pitch: 0,
+                    bearing: 0
+                });
+
+                // Add error handler
+                map.on('error', (e) => {
+                    console.error('Mapbox error:', e);
+                    if (e.error && e.error.message) {
+                        console.error('Error message:', e.error.message);
+                        if (e.error.message.includes('token') || e.error.message.includes('401') || e.error.message.includes('Unauthorized')) {
+                            mapContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;"><strong>Mapbox Token Hatası</strong><br>Lütfen geçerli bir Mapbox access token ekleyin.<br><small>Şu anda demo token kullanılıyor ve sınırlı olabilir.</small></div>';
+                        } else {
+                            mapContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: #dc3545;">Harita hatası: ${e.error.message}</div>`;
+                        }
+                    }
+                });
+
+                // Debug: Log when map loads
+                map.on('load', () => {
+                    console.log('✅ Mapbox map loaded successfully');
+                });
+
+                map.on('style.load', () => {
+                    console.log('✅ Mapbox style loaded');
+                });
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                mapContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: #dc3545;">Harita yüklenirken hata: ${error.message}</div>`;
+                return;
+            }
+
+            // Wait for map to load
+            map.on('load', () => {
+                // Add hotel marker
+                const hotelEl = document.createElement('div');
+                hotelEl.className = 'hotel-marker';
+                hotelEl.style.cssText = `
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    background: #34B7F1;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                hotelEl.innerHTML = '<i data-lucide="building" style="color: white; width: 16px; height: 16px;"></i>';
+
+                hotelMarker = new mapboxgl.Marker(hotelEl)
+                    .setLngLat([hotelLng, hotelLat])
+                    .setPopup(new mapboxgl.Popup().setHTML('<b>Voyage Sorgun</b><br>Otel konumu'))
+                    .addTo(map);
+
+                // Re-initialize Lucide icons
+                if (typeof lucide !== 'undefined') {
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                }
+
+                // Setup map chip click handlers
+                setupMapChips();
+
+                // Add location button to map
+                addLocationButton();
+
+                // Load other users and activities
+                loadOtherUsers();
+                loadActivityMarkers();
+
+                // Poll for updates every 5 seconds
+                setInterval(() => {
+                    loadOtherUsers();
+                }, 5000);
+            });
+        }
+
+        function addLocationButton() {
+            const mapContainer = document.getElementById('mapContainer');
+            if (!mapContainer) {
+                console.warn('Map container not found');
+                return;
+            }
+
+            // Remove existing button if any
+            const existingButton = document.getElementById('mapLocationButton');
+            if (existingButton) {
+                existingButton.remove();
+            }
+
+            // Wait a bit for map to fully render
+            setTimeout(() => {
+                // Create location button
+                const locationButton = document.createElement('button');
+                locationButton.id = 'mapLocationButton';
+                locationButton.className = 'map-location-button';
+                locationButton.innerHTML = '<i data-lucide="crosshair"></i>';
+                locationButton.title = 'Konumunuza git';
+                locationButton.type = 'button';
+                
+                // Use addEventListener instead of onclick for better reliability
+                locationButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Location button clicked');
+                    focusOnUserLocation();
+                });
+
+                mapContainer.appendChild(locationButton);
+                console.log('Location button added to map');
+
+                // Initialize Lucide icons
+                if (typeof lucide !== 'undefined') {
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                }
+            }, 300);
+        }
+
+        // Show location permission modal
+        function showLocationPermissionModal() {
+            const modal = document.createElement('div');
+            modal.id = 'locationPermissionModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 320px;
+                width: 100%;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            `;
+            
+            const title = currentLanguage === 'tr' ? 'Konumunuza İhtiyacımız Var' :
+                          currentLanguage === 'en' ? 'We Need Your Location' :
+                          currentLanguage === 'de' ? 'Wir benötigen Ihren Standort' :
+                          'Нам нужно ваше местоположение';
+            
+            const message = currentLanguage === 'tr' ? 
+                'Size haritada konumunuzu göstermek için konum iznine ihtiyacımız var.' :
+                currentLanguage === 'en' ?
+                'We need location permission to show your position on the map.' :
+                currentLanguage === 'de' ?
+                'Wir benötigen Standortberechtigung, um Ihre Position auf der Karte anzuzeigen.' :
+                'Нам нужно разрешение на местоположение, чтобы показать вашу позицию на карте.';
+            
+            // Get translation
+            const cancelText = (typeof t !== 'undefined' ? t('cancel') : null) || 'İptal';
+            const allowText = currentLanguage === 'tr' ? 'Konum Ver' :
+                              currentLanguage === 'en' ? 'Allow Location' :
+                              currentLanguage === 'de' ? 'Standort erlauben' :
+                              'Разрешить местоположение';
+            
+            content.innerHTML = `
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #111b21;">${title}</div>
+                <div style="font-size: 14px; color: #667781; margin-bottom: 24px; line-height: 1.5;">${message}</div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="cancelLocationBtn" style="flex: 1; padding: 12px; border: 1px solid #e4e6e9; background: white; color: #667781; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">${cancelText}</button>
+                    <button id="allowLocationBtn" style="flex: 1; padding: 12px; border: none; background: #34B7F1; color: white; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">${allowText}</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Cancel button
+            document.getElementById('cancelLocationBtn').onclick = () => {
+                modal.remove();
+            };
+            
+            // Allow button
+            document.getElementById('allowLocationBtn').onclick = () => {
+                modal.remove();
+                requestLocationAndFocus();
+            };
+            
+            // Click outside to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            };
+        }
+
+        // Request location and focus on it
+        async function requestLocationAndFocus() {
+            if (!navigator.geolocation) {
+                alert('Tarayıcınız konum servislerini desteklemiyor.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude, accuracy } = position.coords;
+                    permissionState = 'granted';
+                    await updateUserLocation(latitude, longitude, accuracy);
+                    updatePermissionBanner(); // Hide banner
+                    updateLocationPermissionStatus(); // Update status
+                    
+                    // Start continuous tracking
+                    startLocationTracking();
+                    
+                    // Focus on location
+                    if (map && userMarker) {
+                        const lngLat = userMarker.getLngLat();
+                        map.easeTo({
+                            center: [lngLat.lng, lngLat.lat],
+                            zoom: 17,
+                            duration: 1000
+                        });
+                    } else if (map) {
+                        // If marker doesn't exist yet, focus on current position
+                        map.easeTo({
+                            center: [longitude, latitude],
+                            zoom: 17,
+                            duration: 1000
+                        });
+                    }
+                },
+                (error) => {
+                    console.error('Location error:', error);
+                    if (error.code === error.PERMISSION_DENIED) {
+                        permissionState = 'denied';
+                        updatePermissionBanner();
+                        updateLocationPermissionStatus();
+                        alert('Konum izni reddedildi. Lütfen tarayıcı ayarlarından izin verin.');
+                    } else {
+                        alert('Konum alınamadı. Lütfen tekrar deneyin.');
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        // Focus on user location - shows modal if no marker exists
+        function focusOnUserLocation() {
+            console.log('focusOnUserLocation called, map:', map, 'userMarker:', userMarker);
+            
+            if (!map) {
+                console.warn('Map not initialized');
+                initMap();
+                setTimeout(() => {
+                    if (!userMarker) {
+                        showLocationPermissionModal();
+                    }
+                }, 500);
+                return;
+            }
+
+            // If user marker exists, just focus on it
+            if (userMarker) {
+                console.log('User marker exists, focusing on it');
+                const lngLat = userMarker.getLngLat();
+                map.easeTo({
+                    center: [lngLat.lng, lngLat.lat],
+                    zoom: 17,
+                    duration: 1000
+                });
+            } else {
+                // Show permission modal
+                console.log('No user marker, showing permission modal');
+                showLocationPermissionModal();
+            }
+        }
+
+        // Start location tracking (watchPosition)
+        async function startLocationTracking() {
+            // Stop existing tracking if any
+            if (userLocationWatchId !== null) {
+                navigator.geolocation.clearWatch(userLocationWatchId);
+            }
+            if (locationUpdateInterval) {
+                clearInterval(locationUpdateInterval);
+            }
+
+            // Default location for testing (Voyage Sorgun - Sorgun, Manavgat, Antalya)
+            const DEFAULT_LAT = 36.77709681280941;
+            const DEFAULT_LNG = 31.404080701222686;
+            const DEFAULT_ACCURACY = 19;
+
+            if (!navigator.geolocation) {
+                console.warn('Geolocation not supported, using default location');
+                // Use default location if geolocation not available
+                updateUserLocation(DEFAULT_LAT, DEFAULT_LNG, DEFAULT_ACCURACY);
+                return;
+            }
+
+            // Check permission state first
+            const state = await checkPermissionState();
+
+            if (state === 'granted') {
+                // Permission already granted, start tracking
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude, accuracy } = position.coords;
+                        updateUserLocation(latitude, longitude, accuracy);
+                        
+                        // Start continuous tracking
+                        userLocationWatchId = navigator.geolocation.watchPosition(
+                            (position) => {
+                                const { latitude, longitude, accuracy } = position.coords;
+                                updateUserLocation(latitude, longitude, accuracy);
+                            },
+                            (error) => {
+                                console.error('Location tracking error:', error);
+                                if (error.code === error.PERMISSION_DENIED) {
+                                    permissionState = 'denied';
+                                    updatePermissionBanner();
+                                    updateLocationPermissionStatus();
+                                }
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 10000,
+                                maximumAge: 5000 // Accept positions up to 5 seconds old
+                            }
+                        );
+                    },
+                    (error) => {
+                        console.error('Location error:', error);
+                        if (error.code === error.PERMISSION_DENIED) {
+                            permissionState = 'denied';
+                            updatePermissionBanner();
+                            updateLocationPermissionStatus();
+                        }
+                    }
+                );
+            } else if (state === 'denied') {
+                // Permission denied, don't request again automatically
+                console.log('Location permission denied, showing banner');
+                updatePermissionBanner();
+            } else {
+                // Permission not yet asked (prompt)
+                // Don't auto-request, wait for user to click banner
+                console.log('Location permission not yet asked, showing banner');
+                updatePermissionBanner();
+            }
+        }
+
+        // Stop location tracking
+        function stopLocationTracking() {
+            if (userLocationWatchId !== null) {
+                navigator.geolocation.clearWatch(userLocationWatchId);
+                userLocationWatchId = null;
+            }
+            if (locationUpdateInterval) {
+                clearInterval(locationUpdateInterval);
+                locationUpdateInterval = null;
+            }
+        }
+
+        // Update user location on map
+        async function updateUserLocation(lat, lng, accuracy) {
+            if (!map) return;
+
+            // Check ghost mode - only send to backend if not in ghost mode
+            try {
+                const response = await fetch('/api/guest/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    const isGhostMode = data.success && data.guest && data.guest.ghost_mode === true;
+                    
+                    // Only send location to backend if not in ghost mode
+                    if (!isGhostMode) {
+                        try {
+                            await fetch('/api/location/update', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ latitude: lat, longitude: lng, accuracy })
+                            });
+                            lastLocationUpdateTime = Date.now();
+                            updateLocationPermissionStatus(); // Update last update time
+                        } catch (error) {
+                            console.error('Error updating location:', error);
+                        }
+                    } else {
+                        // Still update lastLocationUpdateTime for display, but don't send to backend
+                        lastLocationUpdateTime = Date.now();
+                        updateLocationPermissionStatus();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking ghost mode:', error);
+            }
+
+            // Always update marker on own map (even in ghost mode)
+
+            // Update or create user marker
+            if (!userMarker) {
+                // Create user marker with pulse animation
+                const userMarkerContainer = document.createElement('div');
+                userMarkerContainer.className = 'user-marker-container';
+                userMarkerContainer.style.cssText = `
+                    position: relative;
+                    width: 40px;
+                    height: 40px;
+                `;
+
+                // Pulse ring
+                const pulse = document.createElement('div');
+                pulse.className = 'user-marker-pulse';
+                userMarkerContainer.appendChild(pulse);
+
+                // Avatar or default icon
+                const markerEl = document.createElement('div');
+                markerEl.style.cssText = `
+                    position: absolute;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: #008069;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1;
+                `;
+
+                // Try to load avatar
+                try {
+                    const response = await fetch('/api/guest/me', { credentials: 'include' });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.guest && data.guest.avatar_seed && data.guest.avatar_style) {
+                            const avatarUrl = `https://api.dicebear.com/7.x/${data.guest.avatar_style}/svg?seed=${data.guest.avatar_seed}`;
+                            markerEl.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar">`;
+                        } else {
+                            markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                        }
+                    } else {
+                        markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                    }
+                } catch (error) {
+                    markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                }
+
+                userMarkerContainer.appendChild(markerEl);
+                lucide.createIcons();
+
+                userMarker = new mapboxgl.Marker(userMarkerContainer)
+                    .setLngLat([lng, lat])
+                    .setPopup(new mapboxgl.Popup().setHTML('<b>Siz</b><br>Konumunuz'))
+                    .addTo(map);
+            } else {
+                // Marker exists - update position AND check/update avatar
+                // Check if avatar needs to be updated
+                try {
+                    const avatarResponse = await fetch('/api/guest/me', { credentials: 'include' });
+                    if (avatarResponse.ok) {
+                        const avatarData = await avatarResponse.json();
+                        if (avatarData.success && avatarData.guest && avatarData.guest.avatar_seed && avatarData.guest.avatar_style) {
+                            // Get current marker's container element
+                            const markerElement = userMarker.getElement();
+                            if (markerElement) {
+                                // Find the marker container div
+                                const markerContainer = markerElement.querySelector('.user-marker-container');
+                                if (markerContainer) {
+                                    // Find the avatar/image element (div with border-radius)
+                                    const markerEl = markerContainer.querySelector('div[style*="border-radius: 50%"]');
+                                    if (markerEl) {
+                                        const newAvatarUrl = `https://api.dicebear.com/7.x/${avatarData.guest.avatar_style}/svg?seed=${avatarData.guest.avatar_seed}`;
+                                        const existingImg = markerEl.querySelector('img');
+                                        
+                                        // Check if avatar changed
+                                        if (existingImg) {
+                                            if (existingImg.src !== newAvatarUrl) {
+                                                // Update avatar URL
+                                                existingImg.src = newAvatarUrl;
+                                                console.log('✅ User marker avatar updated in existing marker');
+                                            }
+                                        } else {
+                                            // No img element, replace icon with avatar
+                                            markerEl.innerHTML = `<img src="${newAvatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();">`;
+                                            if (typeof lucide !== 'undefined') {
+                                                lucide.createIcons();
+                                            }
+                                            console.log('✅ User marker avatar updated (icon replaced with avatar)');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error updating avatar in existing marker:', error);
+                }
+
+                // Smoothly animate marker to new position
+                const currentPos = userMarker.getLngLat();
+                const targetPos = [lng, lat];
+                
+                // Simple interpolation (could use more sophisticated easing)
+                const steps = 10;
+                let step = 0;
+                const interval = setInterval(() => {
+                    step++;
+                    const progress = step / steps;
+                    const newLng = currentPos.lng + (targetPos[0] - currentPos.lng) * progress;
+                    const newLat = currentPos.lat + (targetPos[1] - currentPos.lat) * progress;
+                    userMarker.setLngLat([newLng, newLat]);
+                    
+                    if (step >= steps) {
+                        clearInterval(interval);
+                    }
+                }, 100); // Update every 100ms for 1 second total
+            }
+
+            // Add/update accuracy circle if accuracy is low
+            if (accuracy && accuracy > 50) {
+                // Remove existing accuracy circle
+                const existingCircle = document.querySelector('.accuracy-circle');
+                if (existingCircle) existingCircle.remove();
+
+                // Calculate radius in pixels (rough approximation)
+                const metersPerPixel = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom());
+                const radiusPixels = accuracy / metersPerPixel;
+
+                // Create accuracy circle
+                const circle = document.createElement('div');
+                circle.className = 'accuracy-circle';
+                circle.style.width = `${radiusPixels * 2}px`;
+                circle.style.height = `${radiusPixels * 2}px`;
+                circle.style.left = '50%';
+                circle.style.top = '50%';
+                circle.style.transform = 'translate(-50%, -50%)';
+                circle.style.marginLeft = `-${radiusPixels}px`;
+                circle.style.marginTop = `-${radiusPixels}px`;
+
+                if (userMarker) {
+                    const markerElement = userMarker.getElement();
+                    if (markerElement && markerElement.parentElement) {
+                        markerElement.parentElement.style.position = 'relative';
+                        markerElement.parentElement.appendChild(circle);
+                    }
+                }
+            }
+        }
+
+        // Update user marker avatar on map
+        function updateUserMarkerAvatar(seed, style) {
+            if (!map) {
+                console.log('Map not initialized yet');
+                return;
+            }
+
+            if (!userMarker) {
+                // Marker doesn't exist yet - it will be created with avatar when location is set
+                // The updateUserLocation function will check for avatar on next update
+                console.log('User marker not found, will be created with avatar on next location update');
+                return;
+            }
+
+            // Get current marker element
+            const markerElement = userMarker.getElement();
+            if (!markerElement) return;
+
+            // Find the marker container div
+            const markerContainer = markerElement.querySelector('.user-marker-container');
+            if (!markerContainer) return;
+
+            // Find the avatar/image element (div with border-radius)
+            const markerEl = markerContainer.querySelector('div[style*="border-radius: 50%"]');
+            if (!markerEl) return;
+
+            // Update avatar
+            if (seed && style) {
+                const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+                const existingImg = markerEl.querySelector('img');
+                
+                if (existingImg) {
+                    // Update existing image src
+                    existingImg.src = avatarUrl;
+                    console.log('✅ User marker avatar updated (existing image)');
+                } else {
+                    // Replace icon with avatar
+                    markerEl.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();">`;
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                    console.log('✅ User marker avatar updated (icon replaced with avatar)');
+                }
+            } else {
+                // No avatar, use default icon
+                markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+                console.log('✅ User marker updated to default icon');
+            }
+        }
+
+        // Load other users' locations
+        async function loadOtherUsers() {
+            if (!map) return;
+
+            // Check ghost mode - if enabled, don't load other users
+            try {
+                const response = await fetch('/api/guest/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    const isGhostMode = data.success && data.guest && data.guest.ghost_mode === true;
+                    
+                    if (isGhostMode) {
+                        // Remove all other users' markers
+                        Object.values(otherUsersMarkers).forEach(marker => marker.remove());
+                        otherUsersMarkers = {};
+                        return; // Don't load other users in ghost mode
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking ghost mode:', error);
+            }
+
+            try {
+                const response = await fetch('/api/location/users', { credentials: 'include' });
+                if (!response.ok) return;
+                
+                const users = await response.json();
+                
+                // Remove users that are no longer active
+                Object.keys(otherUsersMarkers).forEach(userId => {
+                    if (!users.find(u => u.guest_unique_id === userId)) {
+                        otherUsersMarkers[userId].remove();
+                        delete otherUsersMarkers[userId];
+                    }
+                });
+
+                // Add or update markers for active users
+                users.forEach(user => {
+                    if (!user.latitude || !user.longitude) return;
+
+                    if (otherUsersMarkers[user.guest_unique_id]) {
+                        // Update existing marker position smoothly
+                        const marker = otherUsersMarkers[user.guest_unique_id];
+                        const currentPos = marker.getLngLat();
+                        const targetPos = [user.longitude, user.latitude];
+                        
+                        const steps = 10;
+                        let step = 0;
+                        const interval = setInterval(() => {
+                            step++;
+                            const progress = step / steps;
+                            const newLng = currentPos.lng + (targetPos[0] - currentPos.lng) * progress;
+                            const newLat = currentPos.lat + (targetPos[1] - currentPos.lat) * progress;
+                            marker.setLngLat([newLng, newLat]);
+                            
+                            if (step >= steps) {
+                                clearInterval(interval);
+                            }
+                        }, 100);
+                    } else {
+                        // Create new marker with fade-in
+                        const markerEl = document.createElement('div');
+                        markerEl.style.cssText = `
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 50%;
+                            background: #f0f0f0;
+                            border: 2px solid white;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            opacity: 0;
+                            transition: opacity 0.5s;
+                        `;
+
+                        // Load avatar
+                        if (user.avatar_seed && user.avatar_style) {
+                            const avatarUrl = `https://api.dicebear.com/7.x/${user.avatar_style}/svg?seed=${user.avatar_seed}`;
+                            markerEl.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar">`;
+                        } else {
+                            markerEl.innerHTML = '<i data-lucide="user" style="color: #667781; width: 18px; height: 18px;"></i>';
+                            lucide.createIcons();
+                        }
+
+                        const marker = new mapboxgl.Marker(markerEl)
+                            .setLngLat([user.longitude, user.latitude])
+                            .setPopup(new mapboxgl.Popup().setHTML(`<b>${user.guest_name || 'Misafir'}</b>`))
+                            .addTo(map);
+
+                        // Fade in animation
+                        setTimeout(() => {
+                            markerEl.style.opacity = '1';
+                        }, 10);
+
+                        otherUsersMarkers[user.guest_unique_id] = marker;
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading other users:', error);
+            }
+        }
+
+        // Load activity markers
+        async function loadActivityMarkers() {
+            if (!map) return;
+
+            try {
+                // Get today's activities with location
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`/api/activities?date=${today}`);
+                if (!response.ok) return;
+
+                const activities = await response.json();
+                
+                // Clear existing activity markers
+                activityMarkers.forEach(marker => marker.remove());
+                activityMarkers = [];
+
+                // Add markers for activities with coordinates
+                activities.forEach(activity => {
+                    if (!activity.map_latitude || !activity.map_longitude) return;
+
+                    const markerEl = document.createElement('div');
+                    markerEl.style.cssText = `
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: #FF9800;
+                        border: 2px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+
+                    if (activity.icon) {
+                        markerEl.innerHTML = `<i data-lucide="${activity.icon}" style="color: white; width: 16px; height: 16px;"></i>`;
+                        lucide.createIcons();
+                    } else {
+                        markerEl.innerHTML = '📍';
+                    }
+
+                    const popupContent = `
+                        <div style="text-align: center;">
+                            <b>${activity.title || 'Aktivite'}</b><br>
+                            ${activity.start_time ? formatTime(activity.start_time) : ''}
+                            ${activity.location ? `<br><small>${activity.location}</small>` : ''}
+                            ${activity.map_latitude && activity.map_longitude ? 
+                                `<br><button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${activity.map_latitude},${activity.map_longitude}', '_blank')" style="margin-top: 8px; padding: 4px 8px; background: #008069; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Yol Tarifi Al</button>` 
+                                : ''}
+                        </div>
+                    `;
+
+                    const marker = new mapboxgl.Marker(markerEl)
+                        .setLngLat([activity.map_longitude, activity.map_latitude])
+                        .setPopup(new mapboxgl.Popup().setHTML(popupContent))
+                        .addTo(map);
+
+                    activityMarkers.push(marker);
+                });
+            } catch (error) {
+                console.error('Error loading activity markers:', error);
+            }
+        }
+
+        function setupMapChips() {
+            const mapChips = document.querySelectorAll('.map-chip');
+            mapChips.forEach(chip => {
+                chip.addEventListener('click', (e) => {
+                    const target = e.target.getAttribute('data-map-target');
+                    const value = e.target.getAttribute('data-value');
+                    
+                    if (!map) {
+                        initMap();
+                        return;
+                    }
+
+                    // Define locations for different targets (lat, lng)
+                    // Base coordinates: Voyage Sorgun (36.777, 31.404)
+                    const locations = {
+                        'room': {
+                            '101': [36.7772, 31.4043],
+                            '102': [36.7771, 31.4041]
+                        },
+                        'outlet': {
+                            'lobby': [36.77709681280941, 31.404080701222686],
+                            'restaurant': [36.7770, 31.4040],
+                            'spa': [36.7772, 31.4042]
+                        }
+                    };
+
+                    const location = locations[target]?.[value];
+                    if (location) {
+                        map.easeTo({
+                            center: [location[1], location[0]], // [lng, lat]
+                            zoom: 18,
+                            duration: 500
+                        });
+
+                        // Add temporary marker
+                        const tempEl = document.createElement('div');
+                        tempEl.style.cssText = `
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 50%;
+                            background: #FF9800;
+                            border: 3px solid white;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        `;
+                        tempEl.innerHTML = '<i data-lucide="navigation" style="color: white; width: 16px; height: 16px;"></i>';
+
+                        // Remove previous temp marker if exists
+                        if (window.tempMarker) {
+                            window.tempMarker.remove();
+                        }
+
+                        window.tempMarker = new mapboxgl.Marker(tempEl)
+                            .setLngLat([location[1], location[0]])
+                            .setPopup(new mapboxgl.Popup().setHTML(`<b>${e.target.textContent}</b>`))
+                            .addTo(map)
+                            .togglePopup();
+
+                        // Re-initialize Lucide icons
+                        if (typeof lucide !== 'undefined') {
+                            setTimeout(() => {
+                                lucide.createIcons();
+                            }, 100);
+                        }
+                    }
+                });
+            });
+        }
+
+        // Old getUserLocation function - replaced by startLocationTracking
+        // Keeping for backwards compatibility if needed elsewhere
+        function getUserLocation(showError = false) {
+            // This function is now replaced by startLocationTracking
+            // But keeping for compatibility
+            if (!navigator.geolocation) {
+                console.warn('Geolocation is not supported by this browser.');
+                if (showError) {
+                    const errorMsg = currentLanguage === 'tr' ? 
+                        'Tarayıcınız konum servislerini desteklemiyor.' :
+                        currentLanguage === 'en' ?
+                        'Your browser does not support location services.' :
+                        currentLanguage === 'de' ?
+                        'Ihr Browser unterstützt keine Standortdienste.' :
+                        'Ваш браузер не поддерживает службы определения местоположения.';
+                    alert(errorMsg);
+                }
+                return;
+            }
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+
+                    // Use updateUserLocation function
+                    updateUserLocation(userLat, userLng, position.coords.accuracy);
+
+                    // Fit map to show both markers
+                    if (hotelMarker && userMarker && map) {
+                        const bounds = new mapboxgl.LngLatBounds();
+                        bounds.extend([hotelMarker.getLngLat().lng, hotelMarker.getLngLat().lat]);
+                        bounds.extend([userLng, userLat]);
+                        map.fitBounds(bounds, { padding: 50 });
+                    } else if (map) {
+                        map.easeTo({
+                            center: [userLng, userLat],
+                            zoom: 15,
+                            duration: 1000
+                        });
+                    }
+                },
+                (error) => {
+                    console.warn('Error getting user location:', error);
+                    
+                    // If geolocation fails, just show hotel location (silent mode)
+                    if (map && hotelMarker) {
+                        const lngLat = hotelMarker.getLngLat();
+                        map.easeTo({
+                            center: [lngLat.lng, lngLat.lat],
+                            zoom: 15,
+                            duration: 1000
+                        });
+                    }
+                    
+                    // Show error message only if explicitly requested
+                    if (showError) {
+                        let errorMsg;
+                        
+                        if (error.code === error.PERMISSION_DENIED) {
+                            errorMsg = currentLanguage === 'tr' ?
+                                'Konum izni reddedildi.\n\nTarayıcı ayarlarından izin verebilirsiniz:\n\n📱 Safari: Ayarlar > Safari > Konum Servisleri\n📱 Chrome: Ayarlar > Site Ayarları > Konum\n\nYa da Settings > Konum İzni bölümünden tekrar deneyebilirsiniz.' :
+                                currentLanguage === 'en' ?
+                                'Location permission denied.\n\nYou can grant permission in browser settings:\n\n📱 Safari: Settings > Safari > Location Services\n📱 Chrome: Settings > Site Settings > Location\n\nOr try again from Settings > Location Permission.' :
+                                currentLanguage === 'de' ?
+                                'Standortberechtigung abgelehnt.\n\nSie können die Berechtigung in den Browsereinstellungen erteilen:\n\n📱 Safari: Einstellungen > Safari > Standortdienste\n📱 Chrome: Einstellungen > Website-Einstellungen > Standort\n\nOder versuchen Sie es erneut unter Einstellungen > Standortberechtigung.' :
+                                'Разрешение на местоположение отклонено.\n\nВы можете предоставить разрешение в настройках браузера:\n\n📱 Safari: Настройки > Safari > Службы геолокации\n📱 Chrome: Настройки > Настройки сайта > Местоположение\n\nИли попробуйте снова в Настройки > Разрешение на местоположение.';
+                        } else if (error.code === error.POSITION_UNAVAILABLE) {
+                            errorMsg = currentLanguage === 'tr' ?
+                                'Konum bilgisi alınamadı. Lütfen internet bağlantınızı kontrol edin.' :
+                                currentLanguage === 'en' ?
+                                'Location information unavailable. Please check your internet connection.' :
+                                currentLanguage === 'de' ?
+                                'Standortinformationen nicht verfügbar. Bitte überprüfen Sie Ihre Internetverbindung.' :
+                                'Информация о местоположении недоступна. Пожалуйста, проверьте подключение к интернету.';
+                        } else if (error.code === error.TIMEOUT) {
+                            errorMsg = currentLanguage === 'tr' ?
+                                'Konum bilgisi alınırken zaman aşımı oluştu. Lütfen tekrar deneyin.' :
+                                currentLanguage === 'en' ?
+                                'Timeout while getting location. Please try again.' :
+                                currentLanguage === 'de' ?
+                                'Zeitüberschreitung beim Abrufen des Standorts. Bitte versuchen Sie es erneut.' :
+                                'Истекло время ожидания получения местоположения. Пожалуйста, попробуйте еще раз.';
+                        } else {
+                            errorMsg = currentLanguage === 'tr' ?
+                                'Konum alınamadı. Lütfen tekrar deneyin.' :
+                                currentLanguage === 'en' ?
+                                'Could not get location. Please try again.' :
+                                currentLanguage === 'de' ?
+                                'Standort konnte nicht ermittelt werden. Bitte versuchen Sie es erneut.' :
+                                'Не удалось получить местоположение. Пожалуйста, попробуйте еще раз.';
+                        }
+                        alert(errorMsg);
+                    }
+                },
+                options
+            );
         }
 
         // Update reservations information
@@ -4272,6 +6853,191 @@
                 profileAvatarLargeEl.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
             } else if (profileAvatarLargeEl) {
                 profileAvatarLargeEl.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
+            }
+        }
+
+        // ============================================
+        // Avatar Selection Functions
+        // ============================================
+
+        let currentAvatarStyle = 'avataaars';
+        let currentAvatarSeed = null;
+
+        // Load avatar selection
+        async function loadAvatarSelection() {
+            try {
+                // Get current avatar from user data
+                const response = await fetch('/api/guest/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.guest) {
+                        // TODO: Fetch avatar_seed and avatar_style from guest data
+                        // For now, generate a seed if not exists
+                        currentAvatarSeed = data.guest.avatar_seed || GUEST_NAME || 'user';
+                        currentAvatarStyle = data.guest.avatar_style || 'avataaars';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading avatar data:', error);
+            }
+            
+            generateAvatars(currentAvatarStyle);
+            updateAvatarPreview();
+        }
+
+        // Generate avatars for a style
+        function generateAvatars(style) {
+            const grid = document.getElementById('avatarGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            // Generate 36 avatars (6x6 grid)
+            for (let i = 0; i < 36; i++) {
+                const seed = `${GUEST_NAME || 'user'}-${i}-${Date.now()}`;
+                const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+                
+                const avatarItem = document.createElement('div');
+                avatarItem.className = 'avatar-item';
+                if (currentAvatarSeed && seed === currentAvatarSeed) {
+                    avatarItem.classList.add('selected');
+                }
+                avatarItem.onclick = () => selectAvatar(seed, style);
+                
+                const img = document.createElement('img');
+                img.src = avatarUrl;
+                img.alt = `Avatar ${i + 1}`;
+                avatarItem.appendChild(img);
+                
+                grid.appendChild(avatarItem);
+            }
+        }
+
+        // Switch avatar style
+        function switchAvatarStyle(style) {
+            currentAvatarStyle = style;
+            
+            // Update active button
+            document.querySelectorAll('.avatar-style-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(style.toLowerCase()) || 
+                    (style === 'avataaars' && btn.textContent === 'Avataaars')) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            generateAvatars(style);
+        }
+
+        // Select avatar
+        async function selectAvatar(seed, style) {
+            currentAvatarSeed = seed;
+            currentAvatarStyle = style;
+            
+            // Update selected state
+            document.querySelectorAll('.avatar-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Update preview
+            updateAvatarPreview();
+            
+            // Save to backend
+            try {
+                const response = await fetch('/api/guest/avatar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        avatar_seed: seed,
+                        avatar_style: style
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to save avatar');
+                
+                // Update map marker with new avatar
+                updateUserMarkerAvatar(seed, style);
+            } catch (error) {
+                console.error('Error saving avatar:', error);
+            }
+        }
+
+        // Update avatar preview
+        function updateAvatarPreview() {
+            const preview = document.getElementById('currentAvatarPreview');
+            const placeholder = document.getElementById('avatarPreviewPlaceholder');
+            
+            if (currentAvatarSeed && preview) {
+                const avatarUrl = `https://api.dicebear.com/7.x/${currentAvatarStyle}/svg?seed=${currentAvatarSeed}`;
+                preview.src = avatarUrl;
+                preview.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+            } else {
+                if (preview) preview.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'flex';
+            }
+        }
+
+        // ============================================
+        // Ghost Mode Functions
+        // ============================================
+
+        // Toggle ghost mode
+        function toggleGhostMode() {
+            const toggle = document.getElementById('ghostModeToggle');
+            if (toggle) {
+                toggle.checked = !toggle.checked;
+                handleGhostModeToggle();
+            }
+        }
+
+        // Handle ghost mode toggle
+        async function handleGhostModeToggle() {
+            const toggle = document.getElementById('ghostModeToggle');
+            if (!toggle) return;
+            
+            const enabled = toggle.checked;
+            
+            try {
+                const response = await fetch('/api/guest/ghost-mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ enabled })
+                });
+                
+                if (!response.ok) throw new Error('Failed to update ghost mode');
+                
+                // Show feedback
+                if (enabled) {
+                    console.log('Ghost mode enabled - location sharing disabled');
+                } else {
+                    console.log('Ghost mode disabled - location sharing enabled');
+                }
+            } catch (error) {
+                console.error('Error updating ghost mode:', error);
+                toggle.checked = !enabled; // Revert on error
+            }
+        }
+
+        // Update ghost mode toggle state
+        async function updateGhostModeToggle() {
+            const toggle = document.getElementById('ghostModeToggle');
+            if (!toggle) return;
+            
+            try {
+                const response = await fetch('/api/guest/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.guest) {
+                        // TODO: Get ghost_mode from guest data
+                        // toggle.checked = data.guest.ghost_mode || false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading ghost mode state:', error);
             }
         }
 
@@ -4408,6 +7174,9 @@
                 // Settings
                 'changeProfilePhoto': 'Profil Fotoğrafı Değiştir',
                 'notifications': 'Bildirimler',
+                'locationPermission': 'Konum İzni',
+                'locationPermissionStatus': 'İzin ver',
+                'updateApp': 'Uygulamayı Güncelle',
                 'language': 'Dil',
                 'selectLanguage': 'Dil Seçin',
                 'cancel': 'İptal',
@@ -4470,6 +7239,9 @@
                 // Settings
                 'changeProfilePhoto': 'Change Profile Photo',
                 'notifications': 'Notifications',
+                'locationPermission': 'Location Permission',
+                'locationPermissionStatus': 'Grant permission',
+                'updateApp': 'Update App',
                 'language': 'Language',
                 'selectLanguage': 'Select Language',
                 'cancel': 'Cancel',
@@ -4526,6 +7298,9 @@
                 // Settings
                 'changeProfilePhoto': 'Profilfoto ändern',
                 'notifications': 'Benachrichtigungen',
+                'locationPermission': 'Standortberechtigung',
+                'locationPermissionStatus': 'Berechtigung erteilen',
+                'updateApp': 'App aktualisieren',
                 'language': 'Sprache',
                 'selectLanguage': 'Sprache auswählen',
                 'cancel': 'Abbrechen',
@@ -4588,6 +7363,9 @@
                 // Settings
                 'changeProfilePhoto': 'Изменить фото профиля',
                 'notifications': 'Уведомления',
+                'locationPermission': 'Разрешение на местоположение',
+                'locationPermissionStatus': 'Предоставить разрешение',
+                'updateApp': 'Обновить приложение',
                 'language': 'Язык',
                 'selectLanguage': 'Выберите язык',
                 'cancel': 'Отмена',
@@ -4704,9 +7482,329 @@
             }
         }
 
+        // ============================================
+        // Activities Timeline Functions
+        // ============================================
+
+        let currentActivityDate = 'today';
+        let currentActivityCategory = 'Tümü';
+        let activitiesData = [];
+
+        // Format time
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            const [hours, minutes] = timeString.split(':');
+            return `${hours}:${minutes}`;
+        }
+
+        // Format date
+        function formatActivityDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString + 'T00:00:00');
+            const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+            const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+            return `${date.getDate()} ${months[date.getMonth()]} ${days[date.getDay()]}`;
+        }
+
+        // Get date string for API
+        function getActivityDateString(dateType) {
+            const today = new Date();
+            const date = new Date(today);
+            
+            if (dateType === 'tomorrow') {
+                date.setDate(today.getDate() + 1);
+            }
+            
+            return date.toISOString().split('T')[0];
+        }
+
+        // Load activities timeline
+        async function loadActivitiesTimeline() {
+            try {
+                const dateStr = getActivityDateString(currentActivityDate);
+                let url = `/api/activities?date=${dateStr}`;
+                
+                if (currentActivityCategory !== 'Tümü') {
+                    url += `&type=${encodeURIComponent(currentActivityCategory)}`;
+                }
+                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load activities');
+                
+                activitiesData = await response.json();
+                renderActivitiesTimeline();
+                updateNowPlayingBanner();
+                updateDateLabels();
+            } catch (error) {
+                console.error('Error loading activities:', error);
+                document.getElementById('timelineContainer').innerHTML = `
+                    <div class="empty-timeline">
+                        <div class="empty-timeline-icon">⚠️</div>
+                        <div class="empty-timeline-text">Aktiviteler yüklenirken hata oluştu</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Render activities timeline
+        function renderActivitiesTimeline() {
+            const container = document.getElementById('timelineContainer');
+            
+            if (activitiesData.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-timeline">
+                        <div class="empty-timeline-icon">📅</div>
+                        <div class="empty-timeline-text">Bu tarihte aktivite bulunmuyor</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group by category (Sabah, Öğle, Akşam)
+            const grouped = {};
+            const now = new Date();
+            
+            activitiesData.forEach(activity => {
+                const category = activity.category || 'Diğer';
+                if (!grouped[category]) {
+                    grouped[category] = [];
+                }
+                grouped[category].push(activity);
+            });
+            
+            let html = '';
+            const categories = ['Sabah', 'Öğle', 'Akşam', 'Diğer'];
+            
+            categories.forEach(cat => {
+                if (!grouped[cat] || grouped[cat].length === 0) return;
+                
+                html += `
+                    <div class="time-period">
+                        <div class="time-period-header">${cat.toUpperCase()}</div>
+                        ${grouped[cat].map(activity => {
+                            const startTime = formatTime(activity.start_time);
+                            const endTime = formatTime(activity.end_time);
+                            const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
+                            
+                            // Check if activity is past, current, or upcoming
+                            const activityDate = activity.activity_date ? new Date(activity.activity_date + 'T' + (activity.start_time || '00:00:00')) : null;
+                            let cardClass = '';
+                            let isPast = false;
+                            let isCurrent = false;
+                            
+                            if (activityDate) {
+                                const now = new Date();
+                                const endDate = activity.end_time ? new Date(activity.activity_date + 'T' + activity.end_time) : activityDate;
+                                isPast = endDate < now;
+                                isCurrent = activityDate <= now && endDate >= now;
+                                
+                                if (isPast) cardClass = 'past';
+                                if (isCurrent) cardClass = 'current';
+                            }
+                            
+                            return `
+                                <div class="activity-card ${cardClass}" data-activity-id="${activity.id}">
+                                    <div class="activity-card-image">
+                                        ${activity.image_url ? 
+                                            `<img src="${activity.image_url}" alt="${activity.title}">` :
+                                            `<i data-lucide="${activity.icon || 'calendar'}" class="icon icon-xl"></i>`
+                                        }
+                                    </div>
+                                    <div class="activity-card-content">
+                                        <div class="activity-card-time">${timeRange}</div>
+                                        <div class="activity-card-title">${activity.title || ''}</div>
+                                        ${activity.location ? `
+                                            <div class="activity-card-location">
+                                                <i data-lucide="map-pin" class="icon icon-sm"></i>
+                                                <span>${activity.location}</span>
+                                            </div>
+                                        ` : ''}
+                                        ${activity.type ? `
+                                            <span class="activity-card-type">${activity.type}</span>
+                                        ` : ''}
+                                        ${!isPast && !isCurrent && activityDate ? `
+                                            <div class="activity-card-countdown" id="countdown-${activity.id}"></div>
+                                        ` : ''}
+                                    </div>
+                                    <div class="activity-card-actions">
+                                        ${activity.map_latitude && activity.map_longitude ? `
+                                            <button class="activity-action-btn" onclick="showActivityOnMap(${activity.map_latitude}, ${activity.map_longitude}, '${activity.title}')" title="Haritada göster">
+                                                <i data-lucide="map" class="icon icon-sm"></i>
+                                            </button>
+                                        ` : ''}
+                                        <button class="activity-action-btn" onclick="toggleFavorite(${activity.id})" title="Favorilere ekle">
+                                            <i data-lucide="star" class="icon icon-sm"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || `
+                <div class="empty-timeline">
+                    <div class="empty-timeline-icon">📅</div>
+                    <div class="empty-timeline-text">Bu tarihte aktivite bulunmuyor</div>
+                </div>
+            `;
+            
+            // Re-initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            // Start countdown timers
+            startCountdownTimers();
+        }
+
+        // Update Now Playing banner
+        function updateNowPlayingBanner() {
+            const banner = document.getElementById('nowPlayingBanner');
+            const titleEl = document.getElementById('nowPlayingTitle');
+            const timeEl = document.getElementById('nowPlayingTime');
+            
+            const now = new Date();
+            const currentActivity = activitiesData.find(activity => {
+                if (!activity.start_time || !activity.activity_date) return false;
+                const startDate = new Date(activity.activity_date + 'T' + activity.start_time);
+                const endDate = activity.end_time ? new Date(activity.activity_date + 'T' + activity.end_time) : startDate;
+                return startDate <= now && endDate >= now;
+            });
+            
+            if (currentActivity) {
+                banner.classList.add('active');
+                titleEl.textContent = currentActivity.title || '';
+                const timeRange = currentActivity.end_time 
+                    ? `${formatTime(currentActivity.start_time)} - ${formatTime(currentActivity.end_time)}`
+                    : formatTime(currentActivity.start_time);
+                timeEl.textContent = timeRange;
+            } else {
+                banner.classList.remove('active');
+            }
+        }
+
+        // Update date labels
+        function updateDateLabels() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            
+            document.getElementById('todayLabel').textContent = `Bugün (${formatActivityDate(today.toISOString().split('T')[0])})`;
+            document.getElementById('tomorrowLabel').textContent = `Yarın (${formatActivityDate(tomorrow.toISOString().split('T')[0])})`;
+        }
+
+        // Switch activity date
+        function switchActivityDate(dateType) {
+            currentActivityDate = dateType;
+            
+            document.querySelectorAll('.date-nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (dateType === 'today') {
+                document.getElementById('todayBtn').classList.add('active');
+            } else {
+                document.getElementById('tomorrowBtn').classList.add('active');
+            }
+            
+            loadActivitiesTimeline();
+        }
+
+        // Filter by category
+        function filterByCategory(category) {
+            currentActivityCategory = category;
+            
+            document.querySelectorAll('.category-filter-chip').forEach(chip => chip.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            loadActivitiesTimeline();
+        }
+
+        // Start countdown timers
+        function startCountdownTimers() {
+            const now = new Date();
+            
+            activitiesData.forEach(activity => {
+                if (!activity.start_time || !activity.activity_date) return;
+                
+                const startDate = new Date(activity.activity_date + 'T' + activity.start_time);
+                if (startDate <= now) return; // Skip past activities
+                
+                const countdownEl = document.getElementById(`countdown-${activity.id}`);
+                if (!countdownEl) return;
+                
+                const updateCountdown = () => {
+                    const diff = startDate - new Date();
+                    if (diff <= 0) {
+                        countdownEl.textContent = '';
+                        loadActivitiesTimeline(); // Reload to update status
+                        return;
+                    }
+                    
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    if (hours > 0) {
+                        countdownEl.textContent = `${hours}s ${minutes}dk sonra başlıyor`;
+                    } else {
+                        countdownEl.textContent = `${minutes}dk sonra başlıyor`;
+                    }
+                };
+                
+                updateCountdown();
+                setInterval(updateCountdown, 60000); // Update every minute
+            });
+        }
+
+        // Toggle favorite
+        function toggleFavorite(activityId) {
+            // TODO: Implement favorite functionality with database
+            const btn = event.target.closest('.activity-action-btn');
+            btn.classList.toggle('active');
+            
+            // Save to localStorage for now
+            const favorites = JSON.parse(localStorage.getItem('activityFavorites') || '[]');
+            const index = favorites.indexOf(activityId);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(activityId);
+            }
+            localStorage.setItem('activityFavorites', JSON.stringify(favorites));
+        }
+
+        // Show activity on map
+        function showActivityOnMap(lat, lng, title) {
+            // Switch to map section and show activity location
+            switchSection('map');
+            setTimeout(() => {
+                if (typeof map !== 'undefined' && map) {
+                    map.setView([lat, lng], 17, { animate: true, duration: 1.0 });
+                    
+                    // Add marker if it doesn't exist
+                    if (typeof L !== 'undefined') {
+                        const marker = L.marker([lat, lng])
+                            .addTo(map)
+                            .bindPopup(`<b>${title}</b>`)
+                            .openPopup();
+                    }
+                }
+            }, 300);
+        }
+
+        // Add pulse animation for now playing banner
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(style);
+
         window.addEventListener('DOMContentLoaded', async () => {
-            await checkGuestAuth();
+            // await checkGuestAuth(); // Geçici olarak devre dışı - tasarım görmek için
             applyTranslations(); // Sayfa yüklendiğinde çevirileri uygula
+            updateDateLabels(); // Update date labels on load
         });
 
         window.addEventListener('load', async () => {
@@ -4736,6 +7834,9 @@
             
             // Initialize notification toggle
             updateNotificationToggle();
+            
+            // Initialize location permission status
+            updateLocationPermissionStatus();
             
             // Setup file input event listeners
             const cameraInput = document.getElementById('cameraInput');

@@ -95,7 +95,9 @@ async function initializeDatabase() {
     const tablesExist = checkResult.rows[0].exists;
     
     if (tablesExist) {
-      console.log('ℹ️ Database tables already exist, skipping initialization');
+      console.log('ℹ️ Database tables already exist, checking for new tables...');
+      // Check if new tables exist, if not add them
+      await addNewTablesIfNeeded();
       return;
     }
     
@@ -113,6 +115,9 @@ async function initializeDatabase() {
         checkout_date DATE NOT NULL,
         guest_unique_id VARCHAR(255) NOT NULL UNIQUE,
         profile_photo TEXT,
+        avatar_seed VARCHAR(255),
+        avatar_style VARCHAR(50) DEFAULT 'avataaars',
+        ghost_mode BOOLEAN DEFAULT false,
         adult_count INTEGER DEFAULT 1,
         child_count INTEGER DEFAULT 0,
         agency VARCHAR(100),
@@ -199,12 +204,371 @@ async function initializeDatabase() {
       CREATE INDEX idx_team_room_assignments_guest_unique_id ON team_room_assignments(guest_unique_id);
       CREATE INDEX idx_assistant_assignments_assistant ON assistant_assignments(assistant_id);
       CREATE INDEX idx_assistant_assignments_guest_unique_id ON assistant_assignments(guest_unique_id);
+
+      -- Activities table (for timeline and story tray)
+      CREATE TABLE activities (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(100) NOT NULL,
+        icon VARCHAR(50),
+        video_url TEXT,
+        image_url TEXT,
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        activity_date DATE,
+        start_time TIME,
+        end_time TIME,
+        description TEXT,
+        category VARCHAR(50),
+        type VARCHAR(50),
+        location VARCHAR(200),
+        instructor_name VARCHAR(100),
+        age_group VARCHAR(50),
+        capacity INTEGER,
+        featured BOOLEAN DEFAULT false,
+        map_latitude DECIMAL(10, 8),
+        map_longitude DECIMAL(11, 8),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Info Posts table
+      CREATE TABLE info_posts (
+        id SERIAL PRIMARY KEY,
+        post_id VARCHAR(50) UNIQUE NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        icon VARCHAR(50),
+        image_url TEXT,
+        caption TEXT,
+        likes_count INTEGER DEFAULT 0,
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Post Likes table
+      CREATE TABLE post_likes (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+        guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(post_id, guest_unique_id)
+      );
+
+      -- Post Comments table
+      CREATE TABLE post_comments (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+        guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        comment TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Post Bookmarks table
+      CREATE TABLE post_bookmarks (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+        guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(post_id, guest_unique_id)
+      );
+
+      -- Direct Messages table
+      CREATE TABLE direct_messages (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+        from_guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        to_guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Additional indexes
+      CREATE INDEX idx_post_likes_post ON post_likes(post_id);
+      CREATE INDEX idx_post_likes_guest ON post_likes(guest_unique_id);
+      CREATE INDEX idx_post_comments_post ON post_comments(post_id);
+      CREATE INDEX idx_post_comments_guest ON post_comments(guest_unique_id);
+      CREATE INDEX idx_post_bookmarks_post ON post_bookmarks(post_id);
+      CREATE INDEX idx_post_bookmarks_guest ON post_bookmarks(guest_unique_id);
+      CREATE INDEX idx_dm_from ON direct_messages(from_guest_unique_id);
+      CREATE INDEX idx_dm_to ON direct_messages(to_guest_unique_id);
+      CREATE INDEX idx_dm_post ON direct_messages(post_id);
+
+      -- User locations table (real-time tracking)
+      CREATE TABLE user_locations (
+        id SERIAL PRIMARY KEY,
+        guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        latitude DECIMAL(10, 8) NOT NULL,
+        longitude DECIMAL(11, 8) NOT NULL,
+        accuracy DECIMAL(8, 2),
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Indexes for user_locations
+      CREATE INDEX idx_user_locations_guest ON user_locations(guest_unique_id);
+      CREATE INDEX idx_user_locations_timestamp ON user_locations(timestamp DESC);
     `);
     
     console.log('✅ Database tables initialized');
   } catch (error) {
     console.error('❌ Database initialization error:', error);
     throw error;
+  }
+}
+
+// Add new tables if they don't exist (for existing databases)
+async function addNewTablesIfNeeded() {
+  try {
+    // Check and add activities table
+    const activitiesCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'activities'
+      );
+    `);
+    
+    if (!activitiesCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE activities (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(100) NOT NULL,
+          icon VARCHAR(50),
+          video_url TEXT,
+          image_url TEXT,
+          display_order INTEGER DEFAULT 0,
+          is_active BOOLEAN DEFAULT true,
+          activity_date DATE,
+          start_time TIME,
+          end_time TIME,
+          description TEXT,
+          category VARCHAR(50),
+          type VARCHAR(50),
+          location VARCHAR(200),
+          instructor_name VARCHAR(100),
+          age_group VARCHAR(50),
+          capacity INTEGER,
+          featured BOOLEAN DEFAULT false,
+          map_latitude DECIMAL(10, 8),
+          map_longitude DECIMAL(11, 8),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('✅ Created activities table');
+    } else {
+      // Add new columns if they don't exist (migration)
+      const columnsToAdd = [
+        { name: 'activity_date', type: 'DATE' },
+        { name: 'start_time', type: 'TIME' },
+        { name: 'end_time', type: 'TIME' },
+        { name: 'description', type: 'TEXT' },
+        { name: 'category', type: 'VARCHAR(50)' },
+        { name: 'type', type: 'VARCHAR(50)' },
+        { name: 'location', type: 'VARCHAR(200)' },
+        { name: 'instructor_name', type: 'VARCHAR(100)' },
+        { name: 'age_group', type: 'VARCHAR(50)' },
+        { name: 'capacity', type: 'INTEGER' },
+        { name: 'featured', type: 'BOOLEAN DEFAULT false' },
+        { name: 'map_latitude', type: 'DECIMAL(10, 8)' },
+        { name: 'map_longitude', type: 'DECIMAL(11, 8)' }
+      ];
+      
+      for (const col of columnsToAdd) {
+        const columnCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'activities' 
+            AND column_name = $1
+          );
+        `, [col.name]);
+        
+        if (!columnCheck.rows[0].exists) {
+          await pool.query(`ALTER TABLE activities ADD COLUMN ${col.name} ${col.type};`);
+          console.log(`✅ Added column ${col.name} to activities table`);
+        }
+      }
+    }
+
+    // Add avatar and ghost_mode columns to rooms table if they don't exist
+    const avatarColumnCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'rooms' 
+        AND column_name = 'avatar_seed'
+      );
+    `);
+    
+    if (!avatarColumnCheck.rows[0].exists) {
+      await pool.query(`
+        ALTER TABLE rooms 
+        ADD COLUMN avatar_seed VARCHAR(255),
+        ADD COLUMN avatar_style VARCHAR(50) DEFAULT 'avataaars',
+        ADD COLUMN ghost_mode BOOLEAN DEFAULT false;
+      `);
+      console.log('✅ Added avatar_seed, avatar_style, and ghost_mode columns to rooms table');
+    }
+
+    // Check and add user_locations table
+    const locationsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_locations'
+      );
+    `);
+    
+    if (!locationsCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE user_locations (
+          id SERIAL PRIMARY KEY,
+          guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          latitude DECIMAL(10, 8) NOT NULL,
+          longitude DECIMAL(11, 8) NOT NULL,
+          accuracy DECIMAL(8, 2),
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX idx_user_locations_guest ON user_locations(guest_unique_id);
+        CREATE INDEX idx_user_locations_timestamp ON user_locations(timestamp DESC);
+      `);
+      console.log('✅ Created user_locations table');
+    }
+
+    // Check and add info_posts table
+    const postsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'info_posts'
+      );
+    `);
+    
+    if (!postsCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE info_posts (
+          id SERIAL PRIMARY KEY,
+          post_id VARCHAR(50) UNIQUE NOT NULL,
+          title VARCHAR(100) NOT NULL,
+          icon VARCHAR(50),
+          image_url TEXT,
+          caption TEXT,
+          likes_count INTEGER DEFAULT 0,
+          display_order INTEGER DEFAULT 0,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('✅ Created info_posts table');
+    }
+
+    // Check and add post_likes table
+    const likesCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'post_likes'
+      );
+    `);
+    
+    if (!likesCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE post_likes (
+          id SERIAL PRIMARY KEY,
+          post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+          guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(post_id, guest_unique_id)
+        );
+        CREATE INDEX idx_post_likes_post ON post_likes(post_id);
+        CREATE INDEX idx_post_likes_guest ON post_likes(guest_unique_id);
+      `);
+      console.log('✅ Created post_likes table');
+    }
+
+    // Check and add post_comments table
+    const commentsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'post_comments'
+      );
+    `);
+    
+    if (!commentsCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE post_comments (
+          id SERIAL PRIMARY KEY,
+          post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+          guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          comment TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_post_comments_post ON post_comments(post_id);
+        CREATE INDEX idx_post_comments_guest ON post_comments(guest_unique_id);
+      `);
+      console.log('✅ Created post_comments table');
+    }
+
+    // Check and add post_bookmarks table
+    const bookmarksCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'post_bookmarks'
+      );
+    `);
+    
+    if (!bookmarksCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE post_bookmarks (
+          id SERIAL PRIMARY KEY,
+          post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+          guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(post_id, guest_unique_id)
+        );
+        CREATE INDEX idx_post_bookmarks_post ON post_bookmarks(post_id);
+        CREATE INDEX idx_post_bookmarks_guest ON post_bookmarks(guest_unique_id);
+      `);
+      console.log('✅ Created post_bookmarks table');
+    }
+
+    // Check and add direct_messages table
+    const dmCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'direct_messages'
+      );
+    `);
+    
+    if (!dmCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE direct_messages (
+          id SERIAL PRIMARY KEY,
+          post_id INTEGER REFERENCES info_posts(id) ON DELETE CASCADE,
+          from_guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          to_guest_unique_id VARCHAR(255) REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          message TEXT NOT NULL,
+          is_read BOOLEAN DEFAULT false,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_dm_from ON direct_messages(from_guest_unique_id);
+        CREATE INDEX idx_dm_to ON direct_messages(to_guest_unique_id);
+        CREATE INDEX idx_dm_post ON direct_messages(post_id);
+      `);
+      console.log('✅ Created direct_messages table');
+    }
+  } catch (error) {
+    console.error('❌ Error adding new tables:', error);
+    // Don't throw, just log - existing tables might have foreign key constraints
   }
 }
 
@@ -1095,6 +1459,151 @@ app.post('/api/guest/logout', async (req, res) => {
   res.json({ success: true });
 });
 
+// ============================================
+// Avatar & Ghost Mode API Endpoints
+// ============================================
+
+// Update guest avatar
+app.post('/api/guest/avatar', async (req, res) => {
+  try {
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    const { avatar_seed, avatar_style } = req.body;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    if (!avatar_seed || !avatar_style) {
+      return res.status(400).json({ error: 'avatar_seed and avatar_style are required' });
+    }
+    
+    await pool.query(`
+      UPDATE rooms 
+      SET avatar_seed = $1, avatar_style = $2
+      WHERE guest_unique_id = $3
+    `, [avatar_seed, avatar_style, guest_unique_id]);
+    
+    res.json({ success: true, avatar_seed, avatar_style });
+  } catch (error) {
+    console.error('Error updating avatar:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Toggle ghost mode
+app.post('/api/guest/ghost-mode', async (req, res) => {
+  try {
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    const { enabled } = req.body;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    await pool.query(`
+      UPDATE rooms 
+      SET ghost_mode = $1
+      WHERE guest_unique_id = $2
+    `, [enabled === true, guest_unique_id]);
+    
+    res.json({ success: true, ghost_mode: enabled });
+  } catch (error) {
+    console.error('Error updating ghost mode:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ============================================
+// Location Tracking API Endpoints
+// ============================================
+
+// Update user location
+app.post('/api/location/update', async (req, res) => {
+  try {
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    const { latitude, longitude, accuracy } = req.body;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({ error: 'latitude and longitude are required' });
+    }
+    
+    // Check if ghost mode is enabled
+    const roomResult = await pool.query(`
+      SELECT ghost_mode FROM rooms WHERE guest_unique_id = $1
+    `, [guest_unique_id]);
+    
+    if (roomResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Guest not found' });
+    }
+    
+    // Only save location if ghost mode is disabled
+    if (!roomResult.rows[0].ghost_mode) {
+      await pool.query(`
+        INSERT INTO user_locations (guest_unique_id, latitude, longitude, accuracy)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT DO NOTHING
+      `, [guest_unique_id, latitude, longitude, accuracy || null]);
+      
+      // Keep only last location per user (delete old ones)
+      await pool.query(`
+        DELETE FROM user_locations 
+        WHERE guest_unique_id = $1 
+        AND id NOT IN (
+          SELECT id FROM user_locations 
+          WHERE guest_unique_id = $1 
+          ORDER BY timestamp DESC 
+          LIMIT 1
+        )
+      `, [guest_unique_id]);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating location:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get all active users' locations (for map)
+app.get('/api/location/users', async (req, res) => {
+  try {
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Get locations from last 2 minutes (active users)
+    const result = await pool.query(`
+      SELECT DISTINCT ON (r.guest_unique_id)
+        r.guest_unique_id,
+        r.guest_name,
+        r.avatar_seed,
+        r.avatar_style,
+        ul.latitude,
+        ul.longitude,
+        ul.accuracy,
+        ul.timestamp
+      FROM rooms r
+      LEFT JOIN user_locations ul ON r.guest_unique_id = ul.guest_unique_id
+      WHERE r.is_active = true
+        AND r.ghost_mode = false
+        AND ul.timestamp > NOW() - INTERVAL '2 minutes'
+        AND r.guest_unique_id != $1
+      ORDER BY r.guest_unique_id, ul.timestamp DESC
+    `, [guest_unique_id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user locations:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Get current guest info (for session check)
 app.get('/api/guest/me', async (req, res) => {
   try {
@@ -1135,7 +1644,10 @@ app.get('/api/guest/me', async (req, res) => {
         checkout_date: guest.checkout_date,
         room_number: guest.room_number,
         team_id: guest.team_id || null,
-        team_name: guest.team_name || null
+        team_name: guest.team_name || null,
+        avatar_seed: guest.avatar_seed || null,
+        avatar_style: guest.avatar_style || 'avataaars',
+        ghost_mode: guest.ghost_mode || false
       }
     });
   } catch (error) {
@@ -1788,6 +2300,869 @@ app.post('/api/admin/update-checkin-dates', async (req, res) => {
   } catch (error) {
     console.error('Error updating checkin dates:', error);
     res.status(500).json({ error: 'Database error', details: error.message });
+  }
+});
+
+// ============================================
+// Admin Middleware
+// ============================================
+
+// Middleware to check if user is authenticated as assistant
+async function requireAssistant(req, res, next) {
+  try {
+    const assistantId = req.cookies?.assistant_id;
+    
+    if (!assistantId) {
+      return res.status(401).json({ error: 'Unauthorized: Assistant authentication required' });
+    }
+    
+    const result = await pool.query(
+      'SELECT id, name, surname, is_active FROM assistants WHERE id = $1 AND is_active = true',
+      [assistantId]
+    );
+    
+    if (result.rows.length === 0) {
+      res.clearCookie('assistant_id');
+      return res.status(401).json({ error: 'Unauthorized: Assistant not found or inactive' });
+    }
+    
+    req.assistant = result.rows[0];
+    next();
+  } catch (error) {
+    console.error('Error checking assistant authentication:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+}
+
+// ============================================
+// Info Posts & Activities API Endpoints
+// ============================================
+
+// Get all activities (for timeline and story tray) - Public
+app.get('/api/activities', async (req, res) => {
+  try {
+    const { date, type, category } = req.query;
+    let query = `
+      SELECT * FROM activities 
+      WHERE is_active = true
+    `;
+    const params = [];
+    let paramCount = 1;
+    
+    if (date) {
+      query += ` AND activity_date = $${paramCount++}`;
+      params.push(date);
+    }
+    
+    if (type && type !== 'Tümü') {
+      query += ` AND type = $${paramCount++}`;
+      params.push(type);
+    }
+    
+    if (category) {
+      query += ` AND category = $${paramCount++}`;
+      params.push(category);
+    }
+    
+    query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ============================================
+// Admin Endpoints for Activities
+// ============================================
+
+// Get all activities (admin - includes inactive)
+app.get('/api/admin/activities', requireAssistant, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM activities 
+      ORDER BY display_order ASC, created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching activities (admin):', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get single activity (admin)
+app.get('/api/admin/activities/:id', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM activities WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching activity (admin):', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Create activity
+app.post('/api/admin/activities', requireAssistant, async (req, res) => {
+  try {
+    const { 
+      title, icon, display_order, is_active, activity_date, start_time, end_time,
+      description, category, type, location, instructor_name, age_group, capacity,
+      featured, map_latitude, map_longitude, video_url, image_url
+    } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO activities (
+        title, icon, display_order, is_active, activity_date, start_time, end_time,
+        description, category, type, location, instructor_name, age_group, capacity,
+        featured, map_latitude, map_longitude, video_url, image_url
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      RETURNING *
+    `, [
+      title.trim(),
+      icon || null,
+      display_order || 0,
+      is_active !== undefined ? is_active : true,
+      activity_date || null,
+      start_time || null,
+      end_time || null,
+      description || null,
+      category || null,
+      type || null,
+      location || null,
+      instructor_name || null,
+      age_group || null,
+      capacity || null,
+      featured || false,
+      map_latitude || null,
+      map_longitude || null,
+      video_url || null,
+      image_url || null
+    ]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating activity:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update activity
+app.put('/api/admin/activities/:id', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      title, icon, display_order, is_active, activity_date, start_time, end_time,
+      description, category, type, location, instructor_name, age_group, capacity,
+      featured, map_latitude, map_longitude, video_url, image_url
+    } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE activities 
+      SET 
+        title = COALESCE($1, title),
+        icon = COALESCE($2, icon),
+        display_order = COALESCE($3, display_order),
+        is_active = COALESCE($4, is_active),
+        activity_date = COALESCE($5, activity_date),
+        start_time = COALESCE($6, start_time),
+        end_time = COALESCE($7, end_time),
+        description = COALESCE($8, description),
+        category = COALESCE($9, category),
+        type = COALESCE($10, type),
+        location = COALESCE($11, location),
+        instructor_name = COALESCE($12, instructor_name),
+        age_group = COALESCE($13, age_group),
+        capacity = COALESCE($14, capacity),
+        featured = COALESCE($15, featured),
+        map_latitude = COALESCE($16, map_latitude),
+        map_longitude = COALESCE($17, map_longitude),
+        video_url = COALESCE($18, video_url),
+        image_url = COALESCE($19, image_url),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $20
+      RETURNING *
+    `, [
+      title, icon, display_order, is_active, activity_date, start_time, end_time,
+      description, category, type, location, instructor_name, age_group, capacity,
+      featured, map_latitude, map_longitude, video_url, image_url, id
+    ]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating activity:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Delete activity
+app.delete('/api/admin/activities/:id', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query('DELETE FROM activities WHERE id = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+    
+    res.json({ success: true, message: 'Activity deleted' });
+  } catch (error) {
+    console.error('Error deleting activity:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Upload photo/video for activity
+app.post('/api/admin/activities/:id/upload', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { image_url, video_url, file_type } = req.body;
+    
+    if (!image_url && !video_url) {
+      return res.status(400).json({ error: 'image_url or video_url is required' });
+    }
+    
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (image_url) {
+      updateFields.push(`image_url = $${paramCount++}`);
+      values.push(image_url);
+      // Clear video_url if uploading image
+      updateFields.push(`video_url = NULL`);
+    }
+    
+    if (video_url) {
+      updateFields.push(`video_url = $${paramCount++}`);
+      values.push(video_url);
+      // Clear image_url if uploading video
+      updateFields.push(`image_url = NULL`);
+    }
+    
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const query = `
+      UPDATE activities 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error uploading media for activity:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get all info posts - Public
+app.get('/api/info-posts', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM info_posts 
+      WHERE is_active = true 
+      ORDER BY display_order ASC, created_at ASC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching info posts:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ============================================
+// Admin Endpoints for Info Posts
+// ============================================
+
+// Get all info posts (admin - includes inactive)
+app.get('/api/admin/info-posts', requireAssistant, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM info_posts 
+      ORDER BY display_order ASC, created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching info posts (admin):', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get single info post (admin)
+app.get('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM info_posts WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching info post (admin):', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Create info post
+app.post('/api/admin/info-posts', requireAssistant, async (req, res) => {
+  try {
+    const { post_id, title, icon, caption, display_order, is_active } = req.body;
+    
+    if (!post_id || !title) {
+      return res.status(400).json({ error: 'post_id and title are required' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO info_posts (post_id, title, icon, caption, display_order, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [
+      post_id.trim(),
+      title.trim(),
+      icon || null,
+      caption || null,
+      display_order || 0,
+      is_active !== undefined ? is_active : true
+    ]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating info post:', error);
+    if (error.code === '23505') { // Unique violation
+      return res.status(400).json({ error: 'Post ID already exists' });
+    }
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update info post
+app.put('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, icon, caption, display_order, is_active, image_url } = req.body;
+    
+    const result = await pool.query(`
+      UPDATE info_posts 
+      SET 
+        title = COALESCE($1, title),
+        icon = COALESCE($2, icon),
+        caption = COALESCE($3, caption),
+        display_order = COALESCE($4, display_order),
+        is_active = COALESCE($5, is_active),
+        image_url = COALESCE($6, image_url),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING *
+    `, [title, icon, caption, display_order, is_active, image_url, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating info post:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Delete info post
+app.delete('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query('DELETE FROM info_posts WHERE id = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    res.json({ success: true, message: 'Post deleted' });
+  } catch (error) {
+    console.error('Error deleting info post:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Upload photo/video for info post
+app.post('/api/admin/info-posts/:id/upload', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { image_url } = req.body;
+    
+    if (!image_url) {
+      return res.status(400).json({ error: 'image_url is required' });
+    }
+    
+    const result = await pool.query(`
+      UPDATE info_posts 
+      SET image_url = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `, [image_url, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error uploading media for info post:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get single info post by post_id
+app.get('/api/info-posts/:postId', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const result = await pool.query(`
+      SELECT * FROM info_posts 
+      WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching info post:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Like/Unlike a post
+app.post('/api/info-posts/:postId/like', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Get post by post_id
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    
+    // Check if already liked
+    const likeCheck = await pool.query(`
+      SELECT id FROM post_likes 
+      WHERE post_id = $1 AND guest_unique_id = $2
+    `, [postDbId, guest_unique_id]);
+    
+    let liked = false;
+    
+    if (likeCheck.rows.length > 0) {
+      // Unlike
+      await pool.query(`
+        DELETE FROM post_likes 
+        WHERE post_id = $1 AND guest_unique_id = $2
+      `, [postDbId, guest_unique_id]);
+      
+      // Decrease likes count
+      await pool.query(`
+        UPDATE info_posts 
+        SET likes_count = GREATEST(likes_count - 1, 0)
+        WHERE id = $1
+      `, [postDbId]);
+    } else {
+      // Like
+      await pool.query(`
+        INSERT INTO post_likes (post_id, guest_unique_id)
+        VALUES ($1, $2)
+      `, [postDbId, guest_unique_id]);
+      
+      // Increase likes count
+      await pool.query(`
+        UPDATE info_posts 
+        SET likes_count = likes_count + 1
+        WHERE id = $1
+      `, [postDbId]);
+      
+      liked = true;
+    }
+    
+    // Get updated likes count
+    const countResult = await pool.query(`
+      SELECT likes_count FROM info_posts WHERE id = $1
+    `, [postDbId]);
+    
+    res.json({
+      liked,
+      likesCount: parseInt(countResult.rows[0].likes_count) || 0
+    });
+  } catch (error) {
+    console.error('Error toggling like:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get post likes
+app.get('/api/info-posts/:postId/likes', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    const result = await pool.query(`
+      SELECT COUNT(*) as count FROM post_likes WHERE post_id = $1
+    `, [postDbId]);
+    
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (error) {
+    console.error('Error fetching likes:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get post comments
+app.get('/api/info-posts/:postId/comments', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    const result = await pool.query(`
+      SELECT 
+        pc.*,
+        r.guest_name,
+        r.guest_surname,
+        r.profile_photo
+      FROM post_comments pc
+      INNER JOIN rooms r ON pc.guest_unique_id = r.guest_unique_id
+      WHERE pc.post_id = $1
+      ORDER BY pc.created_at ASC
+    `, [postDbId]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Add comment to post
+app.post('/api/info-posts/:postId/comments', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { comment } = req.body;
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    if (!comment || comment.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment is required' });
+    }
+    
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    
+    const result = await pool.query(`
+      INSERT INTO post_comments (post_id, guest_unique_id, comment)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [postDbId, guest_unique_id, comment.trim()]);
+    
+    // Get guest info
+    const guestResult = await pool.query(`
+      SELECT guest_name, guest_surname, profile_photo
+      FROM rooms
+      WHERE guest_unique_id = $1
+    `, [guest_unique_id]);
+    
+    const commentData = result.rows[0];
+    if (guestResult.rows.length > 0) {
+      commentData.guest_name = guestResult.rows[0].guest_name;
+      commentData.guest_surname = guestResult.rows[0].guest_surname;
+      commentData.profile_photo = guestResult.rows[0].profile_photo;
+    }
+    
+    res.json(commentData);
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Delete comment
+app.delete('/api/info-posts/comments/:commentId', async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Check if comment belongs to user
+    const checkResult = await pool.query(`
+      SELECT id FROM post_comments 
+      WHERE id = $1 AND guest_unique_id = $2
+    `, [commentId, guest_unique_id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Comment not found or unauthorized' });
+    }
+    
+    await pool.query(`
+      DELETE FROM post_comments WHERE id = $1
+    `, [commentId]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Bookmark/Unbookmark a post
+app.post('/api/info-posts/:postId/bookmark', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    
+    // Check if already bookmarked
+    const bookmarkCheck = await pool.query(`
+      SELECT id FROM post_bookmarks 
+      WHERE post_id = $1 AND guest_unique_id = $2
+    `, [postDbId, guest_unique_id]);
+    
+    let bookmarked = false;
+    
+    if (bookmarkCheck.rows.length > 0) {
+      // Unbookmark
+      await pool.query(`
+        DELETE FROM post_bookmarks 
+        WHERE post_id = $1 AND guest_unique_id = $2
+      `, [postDbId, guest_unique_id]);
+    } else {
+      // Bookmark
+      await pool.query(`
+        INSERT INTO post_bookmarks (post_id, guest_unique_id)
+        VALUES ($1, $2)
+      `, [postDbId, guest_unique_id]);
+      bookmarked = true;
+    }
+    
+    res.json({ bookmarked });
+  } catch (error) {
+    console.error('Error toggling bookmark:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get bookmarked posts
+app.get('/api/info-posts/bookmarked', async (req, res) => {
+  try {
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const result = await pool.query(`
+      SELECT ip.*
+      FROM info_posts ip
+      INNER JOIN post_bookmarks pb ON ip.id = pb.post_id
+      WHERE pb.guest_unique_id = $1 AND ip.is_active = true
+      ORDER BY pb.created_at DESC
+    `, [guest_unique_id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching bookmarked posts:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get DMs for a post
+app.get('/api/info-posts/:postId/dm', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    
+    // Get DMs where user is sender or receiver
+    const result = await pool.query(`
+      SELECT 
+        dm.*,
+        r1.guest_name as from_name,
+        r1.guest_surname as from_surname,
+        r1.profile_photo as from_photo,
+        r2.guest_name as to_name,
+        r2.guest_surname as to_surname,
+        r2.profile_photo as to_photo
+      FROM direct_messages dm
+      LEFT JOIN rooms r1 ON dm.from_guest_unique_id = r1.guest_unique_id
+      LEFT JOIN rooms r2 ON dm.to_guest_unique_id = r2.guest_unique_id
+      WHERE dm.post_id = $1 
+        AND (dm.from_guest_unique_id = $2 OR dm.to_guest_unique_id = $2)
+      ORDER BY dm.created_at ASC
+    `, [postDbId, guest_unique_id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching DMs:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Send DM
+app.post('/api/info-posts/:postId/dm', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { to_guest_unique_id, message } = req.body;
+    const from_guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!from_guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    if (!to_guest_unique_id || !message || message.trim().length === 0) {
+      return res.status(400).json({ error: 'to_guest_unique_id and message are required' });
+    }
+    
+    const postResult = await pool.query(`
+      SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
+    `, [postId]);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    
+    const postDbId = postResult.rows[0].id;
+    
+    const result = await pool.query(`
+      INSERT INTO direct_messages (post_id, from_guest_unique_id, to_guest_unique_id, message)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [postDbId, from_guest_unique_id, to_guest_unique_id, message.trim()]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error sending DM:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get all DMs for current user
+app.get('/api/dms', async (req, res) => {
+  try {
+    const guest_unique_id = req.cookies?.guest_unique_id;
+    
+    if (!guest_unique_id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        dm.*,
+        ip.post_id,
+        ip.title as post_title,
+        r1.guest_name as from_name,
+        r1.guest_surname as from_surname,
+        r1.profile_photo as from_photo,
+        r2.guest_name as to_name,
+        r2.guest_surname as to_surname,
+        r2.profile_photo as to_photo
+      FROM direct_messages dm
+      INNER JOIN info_posts ip ON dm.post_id = ip.id
+      LEFT JOIN rooms r1 ON dm.from_guest_unique_id = r1.guest_unique_id
+      LEFT JOIN rooms r2 ON dm.to_guest_unique_id = r2.guest_unique_id
+      WHERE dm.from_guest_unique_id = $1 OR dm.to_guest_unique_id = $1
+      ORDER BY dm.created_at DESC
+    `, [guest_unique_id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching DMs:', error);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 

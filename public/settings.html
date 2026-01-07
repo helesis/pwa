@@ -541,6 +541,8 @@
             <button class="tab" onclick="switchTab('teams')"><i data-lucide="users-round" class="icon icon-md"></i> Takımlar</button>
             <button class="tab" onclick="switchTab('assignments')"><i data-lucide="link" class="icon icon-md"></i> Eşleştirmeler</button>
             <button class="tab" onclick="switchTab('unassigned')"><i data-lucide="alert-triangle" class="icon icon-md"></i> Eşleşmemiş Odalar</button>
+            <button class="tab" onclick="switchTab('activities')"><i data-lucide="sparkles" class="icon icon-md"></i> Hikayeler</button>
+            <button class="tab" onclick="switchTab('posts')"><i data-lucide="image" class="icon icon-md"></i> Postlar</button>
         </div>
 
         <!-- Assistants Tab -->
@@ -606,6 +608,32 @@
                     <button class="btn btn-secondary" onclick="document.getElementById('unassigned-date-filter').value = ''; loadUnassignedRooms();">Filtreyi Temizle</button>
                 </div>
                 <div id="unassigned-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activities Tab -->
+        <div id="activities-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Hikaye Yönetimi (Story Tray)</h2>
+                    <button class="btn btn-primary" onclick="openActivityModal()">+ Yeni Hikaye</button>
+                </div>
+                <div id="activities-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Posts Tab -->
+        <div id="posts-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Post Yönetimi</h2>
+                    <button class="btn btn-primary" onclick="openPostModal()">+ Yeni Post</button>
+                </div>
+                <div id="posts-list">
                     <div class="loading">Yükleniyor...</div>
                 </div>
             </div>
@@ -764,9 +792,85 @@
         </div>
     </div>
 
+    <!-- Activity Modal -->
+    <div id="activity-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="activity-modal-title">Yeni Hikaye</h3>
+                <button class="close-btn" onclick="closeActivityModal()">&times;</button>
+            </div>
+            <form id="activity-form" onsubmit="saveActivity(event)">
+                <div class="form-group">
+                    <label class="form-label">Başlık *</label>
+                    <input type="text" id="activity-title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">İkon (opsiyonel)</label>
+                    <input type="text" id="activity-icon" class="form-input" placeholder="Örn: activity-1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sıra (opsiyonel)</label>
+                    <input type="number" id="activity-display-order" class="form-input" value="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="activity-is-active" checked> Aktif
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeActivityModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Post Modal -->
+    <div id="post-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="post-modal-title">Yeni Post</h3>
+                <button class="close-btn" onclick="closePostModal()">&times;</button>
+            </div>
+            <form id="post-form" onsubmit="savePost(event)">
+                <div class="form-group">
+                    <label class="form-label">Post ID *</label>
+                    <input type="text" id="post-post-id" class="form-input" required placeholder="Örn: post-1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Başlık *</label>
+                    <input type="text" id="post-title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">İkon (opsiyonel)</label>
+                    <input type="text" id="post-icon" class="form-input" placeholder="Örn: activity-1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama (opsiyonel)</label>
+                    <textarea id="post-caption" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sıra (opsiyonel)</label>
+                    <input type="number" id="post-display-order" class="form-input" value="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="post-is-active" checked> Aktif
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closePostModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let currentAssistantId = null;
         let currentTeamId = null;
+        let currentActivityId = null;
+        let currentPostId = null;
 
         // Tab switching
         function switchTab(tabName) {
@@ -780,6 +884,8 @@
             if (tabName === 'teams') loadTeams();
             if (tabName === 'assignments') loadAssignments();
             if (tabName === 'unassigned') loadUnassignedRooms();
+            if (tabName === 'activities') loadActivities();
+            if (tabName === 'posts') loadPosts();
         }
 
         // Load assistants
@@ -2439,6 +2545,429 @@
             setTimeout(() => alert.remove(), 3000);
         }
 
+        // ============================================
+        // Activities Management
+        // ============================================
+
+        async function loadActivities() {
+            try {
+                const response = await fetch('/api/admin/activities');
+                if (!response.ok) throw new Error('Failed to load activities');
+                const activities = await response.json();
+                
+                const listEl = document.getElementById('activities-list');
+                if (activities.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <p>Henüz hikaye eklenmemiş</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                listEl.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Başlık</th>
+                                <th>İkon</th>
+                                <th>Foto/Video</th>
+                                <th>Sıra</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${activities.map(a => `
+                                <tr>
+                                    <td><strong>${a.title || '-'}</strong></td>
+                                    <td>${a.icon || '-'}</td>
+                                    <td>
+                                        ${a.image_url ? `<img src="${a.image_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" alt="Image">` : ''}
+                                        ${a.video_url ? `<video src="${a.video_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" controls></video>` : ''}
+                                        ${!a.image_url && !a.video_url ? '<span style="color: #999;">Yok</span>' : ''}
+                                    </td>
+                                    <td>${a.display_order || 0}</td>
+                                    <td>${a.is_active ? '<span style="color: green;">✓ Aktif</span>' : '<span style="color: red;">✗ Pasif</span>'}</td>
+                                    <td>
+                                        <button class="btn btn-primary" onclick="openActivityUploadModal(${a.id})" style="padding: 6px 12px; font-size: 12px; margin-right: 4px;">📷 Foto/Video Ekle</button>
+                                        <button class="btn btn-primary" onclick="editActivity(${a.id})" style="padding: 6px 12px; font-size: 12px; margin-right: 4px;">Düzenle</button>
+                                        <button class="btn btn-danger" onclick="deleteActivity(${a.id})" style="padding: 6px 12px; font-size: 12px;">Sil</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading activities:', error);
+                document.getElementById('activities-list').innerHTML = `
+                    <div class="alert alert-error">Hikayeler yüklenirken hata oluştu</div>
+                `;
+            }
+        }
+
+        function openActivityModal(id = null) {
+            currentActivityId = id;
+            document.getElementById('activity-modal-title').textContent = id ? 'Hikaye Düzenle' : 'Yeni Hikaye';
+            document.getElementById('activity-modal').classList.add('active');
+            
+            if (id) {
+                fetch(`/api/admin/activities/${id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('activity-title').value = data.title || '';
+                        document.getElementById('activity-icon').value = data.icon || '';
+                        document.getElementById('activity-display-order').value = data.display_order || 0;
+                        document.getElementById('activity-is-active').checked = data.is_active !== false;
+                    });
+            } else {
+                document.getElementById('activity-form').reset();
+                document.getElementById('activity-display-order').value = 0;
+                document.getElementById('activity-is-active').checked = true;
+            }
+        }
+
+        function closeActivityModal() {
+            document.getElementById('activity-modal').classList.remove('active');
+            currentActivityId = null;
+        }
+
+        async function saveActivity(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('activity-title').value.trim();
+            const icon = document.getElementById('activity-icon').value.trim();
+            const display_order = parseInt(document.getElementById('activity-display-order').value) || 0;
+            const is_active = document.getElementById('activity-is-active').checked;
+            
+            if (!title) {
+                showAlert('Başlık gereklidir', 'error');
+                return;
+            }
+            
+            try {
+                const url = currentActivityId 
+                    ? `/api/admin/activities/${currentActivityId}`
+                    : '/api/admin/activities';
+                const method = currentActivityId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ title, icon, display_order, is_active })
+                });
+                
+                if (!response.ok) throw new Error('Failed to save activity');
+                
+                closeActivityModal();
+                loadActivities();
+                showAlert('Hikaye başarıyla kaydedildi', 'success');
+            } catch (error) {
+                console.error('Error saving activity:', error);
+                showAlert('Hikaye kaydedilirken hata oluştu', 'error');
+            }
+        }
+
+        async function deleteActivity(id) {
+            if (!confirm('Bu hikayeyi silmek istediğinize emin misiniz?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/activities/${id}`, { 
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete activity');
+                
+                loadActivities();
+                showAlert('Hikaye silindi', 'success');
+            } catch (error) {
+                console.error('Error deleting activity:', error);
+                showAlert('Hikaye silinirken hata oluştu', 'error');
+            }
+        }
+
+        async function editActivity(id) {
+            openActivityModal(id);
+        }
+
+        function openActivityUploadModal(activityId) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 500px;
+                width: 100%;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            `;
+            
+            content.innerHTML = `
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Fotoğraf veya Video Yükle</div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Fotoğraf (URL veya Base64)</label>
+                    <input type="text" id="activity-image-url" class="form-input" placeholder="https://... veya data:image/...">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Video (URL veya Base64)</label>
+                    <input type="text" id="activity-video-url" class="form-input" placeholder="https://... veya data:video/...">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="cancel-upload-btn" class="btn btn-secondary" style="flex: 1;">İptal</button>
+                    <button id="upload-activity-btn" class="btn btn-primary" style="flex: 1;">Yükle</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            document.getElementById('cancel-upload-btn').onclick = () => modal.remove();
+            document.getElementById('upload-activity-btn').onclick = async () => {
+                const imageUrl = document.getElementById('activity-image-url').value.trim();
+                const videoUrl = document.getElementById('activity-video-url').value.trim();
+                
+                if (!imageUrl && !videoUrl) {
+                    alert('Fotoğraf veya video URL\'si gerekli');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/admin/activities/${activityId}/upload`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ 
+                            image_url: imageUrl || null,
+                            video_url: videoUrl || null,
+                            file_type: imageUrl ? 'image' : 'video'
+                        })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to upload');
+                    
+                    modal.remove();
+                    loadActivities();
+                    showAlert('Medya başarıyla yüklendi', 'success');
+                } catch (error) {
+                    console.error('Error uploading:', error);
+                    alert('Yükleme başarısız: ' + error.message);
+                }
+            };
+        }
+
+        // ============================================
+        // Posts Management
+        // ============================================
+
+        async function loadPosts() {
+            try {
+                const response = await fetch('/api/admin/info-posts');
+                if (!response.ok) throw new Error('Failed to load posts');
+                const posts = await response.json();
+                
+                const listEl = document.getElementById('posts-list');
+                if (posts.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <p>Henüz post eklenmemiş</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                listEl.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        ${posts.map(p => `
+                            <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e4e6e9;">
+                                <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                                    ${p.image_url ? `
+                                        <img src="${p.image_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" alt="Post Image">
+                                    ` : `
+                                        <div style="width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">
+                                            Fotoğraf Yok
+                                        </div>
+                                    `}
+                                    <div style="flex: 1;">
+                                        <h3 style="margin: 0 0 8px 0; color: var(--voyage-navy);">${p.title || '-'}</h3>
+                                        <p style="margin: 0 0 8px 0; color: #667781; font-size: 14px;"><strong>Post ID:</strong> ${p.post_id || '-'}</p>
+                                        <p style="margin: 0 0 8px 0; color: #667781; font-size: 14px;"><strong>İkon:</strong> ${p.icon || '-'}</p>
+                                        ${p.caption ? `<p style="margin: 8px 0; color: #667781; font-size: 14px;">${p.caption}</p>` : ''}
+                                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                                            <span style="padding: 4px 8px; background: ${p.is_active ? '#d4edda' : '#f8d7da'}; color: ${p.is_active ? '#155724' : '#721c24'}; border-radius: 4px; font-size: 12px;">
+                                                ${p.is_active ? '✓ Aktif' : '✗ Pasif'}
+                                            </span>
+                                            <span style="padding: 4px 8px; background: #e7f3ff; color: #0056b3; border-radius: 4px; font-size: 12px;">
+                                                Sıra: ${p.display_order || 0}
+                                            </span>
+                                            <span style="padding: 4px 8px; background: #fff3cd; color: #856404; border-radius: 4px; font-size: 12px;">
+                                                ❤️ ${p.likes_count || 0}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <button class="btn btn-primary" onclick="editPost(${p.id})" style="padding: 8px 16px; font-size: 14px;">Düzenle</button>
+                                        <button class="btn btn-danger" onclick="deletePost(${p.id})" style="padding: 8px 16px; font-size: 14px;">Sil</button>
+                                    </div>
+                                </div>
+                                <div style="border-top: 1px solid #e4e6e9; padding-top: 16px; margin-top: 16px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: var(--voyage-navy);">Fotoğraf/Video Ekle</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="post-image-url-${p.id}" class="form-input" placeholder="Fotoğraf URL veya Base64" style="flex: 1;">
+                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id})" style="padding: 8px 16px;">📷 Yükle</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                document.getElementById('posts-list').innerHTML = `
+                    <div class="alert alert-error">Postlar yüklenirken hata oluştu</div>
+                `;
+            }
+        }
+
+        function openPostModal(id = null) {
+            currentPostId = id;
+            document.getElementById('post-modal-title').textContent = id ? 'Post Düzenle' : 'Yeni Post';
+            document.getElementById('post-modal').classList.add('active');
+            
+            if (id) {
+                fetch(`/api/admin/info-posts/${id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('post-post-id').value = data.post_id || '';
+                        document.getElementById('post-post-id').disabled = true; // Don't allow changing post_id
+                        document.getElementById('post-title').value = data.title || '';
+                        document.getElementById('post-icon').value = data.icon || '';
+                        document.getElementById('post-caption').value = data.caption || '';
+                        document.getElementById('post-display-order').value = data.display_order || 0;
+                        document.getElementById('post-is-active').checked = data.is_active !== false;
+                    });
+            } else {
+                document.getElementById('post-form').reset();
+                document.getElementById('post-post-id').disabled = false;
+                document.getElementById('post-display-order').value = 0;
+                document.getElementById('post-is-active').checked = true;
+            }
+        }
+
+        function closePostModal() {
+            document.getElementById('post-modal').classList.remove('active');
+            currentPostId = null;
+        }
+
+        async function savePost(e) {
+            e.preventDefault();
+            
+            const post_id = document.getElementById('post-post-id').value.trim();
+            const title = document.getElementById('post-title').value.trim();
+            const icon = document.getElementById('post-icon').value.trim();
+            const caption = document.getElementById('post-caption').value.trim();
+            const display_order = parseInt(document.getElementById('post-display-order').value) || 0;
+            const is_active = document.getElementById('post-is-active').checked;
+            
+            if (!post_id || !title) {
+                showAlert('Post ID ve başlık gereklidir', 'error');
+                return;
+            }
+            
+            try {
+                const url = currentPostId 
+                    ? `/api/admin/info-posts/${currentPostId}`
+                    : '/api/admin/info-posts';
+                const method = currentPostId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ post_id, title, icon, caption, display_order, is_active })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to save post');
+                }
+                
+                closePostModal();
+                loadPosts();
+                showAlert('Post başarıyla kaydedildi', 'success');
+            } catch (error) {
+                console.error('Error saving post:', error);
+                showAlert('Post kaydedilirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Bu postu silmek istediğinize emin misiniz?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/info-posts/${id}`, { 
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete post');
+                
+                loadPosts();
+                showAlert('Post silindi', 'success');
+            } catch (error) {
+                console.error('Error deleting post:', error);
+                showAlert('Post silinirken hata oluştu', 'error');
+            }
+        }
+
+        async function editPost(id) {
+            openPostModal(id);
+        }
+
+        async function uploadPostMedia(postId) {
+            const imageUrlInput = document.getElementById(`post-image-url-${postId}`);
+            const imageUrl = imageUrlInput.value.trim();
+            
+            if (!imageUrl) {
+                alert('Fotoğraf URL\'si gerekli');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/info-posts/${postId}/upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ image_url: imageUrl })
+                });
+                
+                if (!response.ok) throw new Error('Failed to upload');
+                
+                imageUrlInput.value = '';
+                loadPosts();
+                showAlert('Fotoğraf başarıyla yüklendi', 'success');
+            } catch (error) {
+                console.error('Error uploading:', error);
+                alert('Yükleme başarısız: ' + error.message);
+            }
+        }
+
         // Initialize
         // Initialize Lucide Icons
         if (typeof lucide !== 'undefined') {
@@ -2465,6 +2994,18 @@
             if (assignmentForm) {
                 assignmentForm.addEventListener('submit', saveAssignment);
                 console.log('✅ Assignment form submit handler attached');
+            }
+            
+            const activityForm = document.getElementById('activity-form');
+            if (activityForm) {
+                activityForm.addEventListener('submit', saveActivity);
+                console.log('✅ Activity form submit handler attached');
+            }
+            
+            const postForm = document.getElementById('post-form');
+            if (postForm) {
+                postForm.addEventListener('submit', savePost);
+                console.log('✅ Post form submit handler attached');
             }
         });
     </script>
