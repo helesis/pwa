@@ -2920,8 +2920,13 @@
 
         async function loadPosts() {
             try {
-                const response = await fetch('/api/admin/info-posts');
-                if (!response.ok) throw new Error('Failed to load posts');
+                const response = await fetch('/api/admin/info-posts', {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Failed to load posts' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}: Failed to load posts`);
+                }
                 const posts = await response.json();
                 
                 const listEl = document.getElementById('posts-list');
