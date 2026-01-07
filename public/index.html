@@ -5342,26 +5342,32 @@
                 const container = document.querySelector('.info-posts-container');
                 if (!container || posts.length === 0) return;
                 
-                // Get current user's likes and bookmarks
+                // Get current user's likes and bookmarks status for each post
                 const guestUniqueId = getCookie('guest_unique_id');
+                const userLikesMap = {};
+                const userBookmarksMap = {};
+                
                 if (guestUniqueId) {
-                    // Load likes and bookmarks status for each post
                     for (const post of posts) {
                         try {
-                            const likesRes = await fetch(`/api/info-posts/${post.post_id}/likes`);
+                            // Check if user liked this post
+                            const likesRes = await fetch(`/api/info-posts/${post.post_id}/likes`, {
+                                credentials: 'include'
+                            });
                             if (likesRes.ok) {
                                 const likesData = await likesRes.json();
                                 post.currentLikesCount = likesData.count;
+                                userLikesMap[post.post_id] = likesData.userLiked || false;
                             }
                             
-                            // Check if user liked this post
-                            const likeCheckRes = await fetch(`/api/info-posts/${post.post_id}/like`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                            // Check if user bookmarked this post
+                            const bookmarksRes = await fetch(`/api/info-posts/bookmarked`, {
                                 credentials: 'include'
                             });
-                            // This will toggle, so we need a separate endpoint to check status
-                            // For now, we'll use the likes count
+                            if (bookmarksRes.ok) {
+                                const bookmarks = await bookmarksRes.json();
+                                userBookmarksMap[post.post_id] = bookmarks.some(b => b.post_id === post.post_id);
+                            }
                         } catch (err) {
                             console.warn('Error loading post status:', err);
                         }
@@ -5398,10 +5404,14 @@
                             }
                         </div>
                         <div class="post-actions">
-                            <div class="post-action like-btn"><i data-lucide="heart" class="icon icon-lg"></i></div>
+                            <div class="post-action like-btn ${userLikesMap[post.post_id] ? 'liked' : ''}">
+                                <i data-lucide="heart" class="icon icon-lg" style="${userLikesMap[post.post_id] ? 'color: #ed4956; fill: #ed4956;' : 'color: #111b21; fill: none;'}"></i>
+                            </div>
                             <div class="post-action comment-btn"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
                             <div class="post-action dm-btn"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save bookmark-btn"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
+                            <div class="post-action save bookmark-btn ${userBookmarksMap[post.post_id] ? 'bookmarked' : ''}">
+                                <i data-lucide="bookmark" class="icon icon-lg" style="${userBookmarksMap[post.post_id] ? 'fill: #111b21;' : 'fill: none;'}"></i>
+                            </div>
                         </div>
                         <div class="post-likes">${post.likes_count || 0} <span data-i18n="likes">beğeni</span></div>
                         <div class="post-caption">
@@ -5499,21 +5509,38 @@
                 
                 if (data.liked) {
                     likeBtn.classList.add('liked');
+                    // Replace heart outline with filled heart
                     const icon = likeBtn.querySelector('i');
                     if (icon) {
+                        icon.setAttribute('data-lucide', 'heart');
                         icon.style.color = '#ed4956';
                         icon.style.fill = '#ed4956';
+                        // Force re-render Lucide icon
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
                     }
+                    // Add animation
+                    likeBtn.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        likeBtn.style.transform = 'scale(1)';
+                        likeBtn.style.transition = 'transform 0.2s ease';
+                    }, 200);
                 } else {
                     likeBtn.classList.remove('liked');
                     const icon = likeBtn.querySelector('i');
                     if (icon) {
+                        icon.setAttribute('data-lucide', 'heart');
                         icon.style.color = '#111b21';
                         icon.style.fill = 'none';
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
                     }
                 }
                 
-                likesCount.textContent = `${data.likesCount} beğeni`;
+                likesCount.innerHTML = `${data.likesCount} <span data-i18n="likes">beğeni</span>`;
+                applyTranslations();
             } catch (error) {
                 console.error('Error liking post:', error);
             }
@@ -5561,13 +5588,37 @@
 
         async function openCommentsModal(postId) {
             try {
-                const response = await fetch(`/api/info-posts/${postId}/comments`);
-                if (!response.ok) {
+                // Get post details and comments
+                const [commentsRes, postsRes] = await Promise.all([
+                    fetch(`/api/info-posts/${postId}/comments`),
+                    fetch(`/api/info-posts`).then(r => r.ok ? r.json() : [])
+                ]);
+                
+                if (!commentsRes.ok) {
                     throw new Error('Failed to load comments');
                 }
-                const comments = await response.json();
+                const comments = await commentsRes.json();
+                const posts = await postsRes;
+                const post = posts.find(p => p.post_id === postId) || {};
                 
-                // Create modal
+                // Format time ago
+                function timeAgo(date) {
+                    const now = new Date();
+                    const diff = Math.floor((now - new Date(date)) / 1000);
+                    if (diff < 60) return currentLanguage === 'tr' ? 'şimdi' : currentLanguage === 'en' ? 'now' : currentLanguage === 'de' ? 'gerade eben' : 'сейчас';
+                    if (diff < 3600) {
+                        const mins = Math.floor(diff / 60);
+                        return currentLanguage === 'tr' ? `${mins}d` : currentLanguage === 'en' ? `${mins}m` : currentLanguage === 'de' ? `${mins}m` : `${mins}м`;
+                    }
+                    if (diff < 86400) {
+                        const hours = Math.floor(diff / 3600);
+                        return currentLanguage === 'tr' ? `${hours}s` : currentLanguage === 'en' ? `${hours}h` : currentLanguage === 'de' ? `${hours}h` : `${hours}ч`;
+                    }
+                    const days = Math.floor(diff / 86400);
+                    return currentLanguage === 'tr' ? `${days}g` : currentLanguage === 'en' ? `${days}d` : currentLanguage === 'de' ? `${days}T` : `${days}д`;
+                }
+                
+                // Create modal (Instagram-style fullscreen)
                 const modal = document.createElement('div');
                 modal.id = 'commentsModal';
                 modal.style.cssText = `
@@ -5576,24 +5627,10 @@
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0,0,0,0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10000;
-                    padding: 20px;
-                `;
-                
-                const content = document.createElement('div');
-                content.style.cssText = `
                     background: white;
-                    border-radius: 16px;
-                    padding: 24px;
-                    max-width: 400px;
-                    width: 100%;
-                    max-height: 80vh;
-                    overflow-y: auto;
-                    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                    display: flex;
+                    flex-direction: column;
+                    z-index: 10000;
                 `;
                 
                 const title = currentLanguage === 'tr' ? 'Yorumlar' :
@@ -5601,61 +5638,105 @@
                               currentLanguage === 'de' ? 'Kommentare' :
                               'Комментарии';
                 
-                content.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <div style="font-size: 18px; font-weight: 600; color: #111b21;">${title}</div>
-                        <button id="closeCommentsBtn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #667781;">×</button>
+                modal.innerHTML = `
+                    <!-- Header -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e4e6e9;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button id="closeCommentsBtn" style="background: none; border: none; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #111b21;">
+                                <i data-lucide="arrow-left" style="width: 24px; height: 24px;"></i>
+                            </button>
+                            <div style="font-size: 16px; font-weight: 600; color: #111b21;">${title}</div>
+                        </div>
                     </div>
-                    <div id="commentsList" style="margin-bottom: 20px;">
+                    
+                    <!-- Post Preview (Instagram-style) -->
+                    ${post.image_url || post.video_url ? `
+                    <div style="border-bottom: 1px solid #e4e6e9; background: #000; display: flex; align-items: center; justify-content: center; max-height: 400px; overflow: hidden;">
+                        ${post.video_url ? 
+                            `<video src="${post.video_url}" style="width: 100%; max-height: 400px; object-fit: contain;" controls playsinline></video>` :
+                            `<img src="${post.image_url}" alt="${post.title}" style="width: 100%; max-height: 400px; object-fit: contain; display: block;">`
+                        }
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Comments List (Scrollable) -->
+                    <div id="commentsList" style="flex: 1; overflow-y: auto; padding: 8px 16px; background: white;">
                         ${comments.length === 0 ? 
-                            '<div style="text-align: center; color: #667781; padding: 20px;">Henüz yorum yok</div>' :
+                            '<div style="text-align: center; color: #667781; padding: 40px 20px;">Henüz yorum yok</div>' :
                             comments.map(c => `
-                                <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e4e6e9;">
-                                    <div style="display: flex; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #e4e6e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                            ${c.profile_photo ? 
-                                                `<img src="${c.profile_photo}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` :
-                                                '<i data-lucide="user" class="icon icon-md"></i>'
-                                            }
+                                <div style="display: flex; gap: 12px; padding: 12px 0;">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #e4e6e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;">
+                                        ${c.profile_photo ? 
+                                            `<img src="${c.profile_photo}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                                            '<i data-lucide="user" style="width: 24px; height: 24px; color: #667781;"></i>'
+                                        }
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                                            <span style="font-weight: 600; font-size: 14px; color: #111b21;">${(c.guest_name || 'Misafir') + ' ' + (c.guest_surname || '')}</span>
+                                            <span style="font-size: 14px; color: #111b21; word-break: break-word; flex: 1; min-width: 0;">${c.comment}</span>
                                         </div>
-                                        <div style="flex: 1;">
-                                            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${c.guest_name || 'Misafir'}</div>
-                                            <div style="font-size: 14px; color: #111b21; line-height: 1.5;">${c.comment}</div>
+                                        <div style="display: flex; gap: 16px; margin-top: 6px;">
+                                            <span style="font-size: 12px; color: #8e8e8e;">${timeAgo(c.created_at)}</span>
+                                            <button style="background: none; border: none; font-size: 12px; color: #8e8e8e; cursor: pointer; padding: 0;">${currentLanguage === 'tr' ? 'Yanıtla' : currentLanguage === 'en' ? 'Reply' : currentLanguage === 'de' ? 'Antworten' : 'Ответить'}</button>
                                         </div>
                                     </div>
                                 </div>
                             `).join('')
                         }
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="newCommentInput" placeholder="${currentLanguage === 'tr' ? 'Yorum yazın...' : currentLanguage === 'en' ? 'Write a comment...' : currentLanguage === 'de' ? 'Kommentar schreiben...' : 'Написать комментарий...'}" style="flex: 1; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px;">
-                        <button id="sendCommentBtn" style="padding: 12px 20px; background: #34B7F1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">${currentLanguage === 'tr' ? 'Gönder' : currentLanguage === 'en' ? 'Send' : currentLanguage === 'de' ? 'Senden' : 'Отправить'}</button>
+                    
+                    <!-- Input Area (Instagram-style bottom input) -->
+                    <div style="border-top: 1px solid #e4e6e9; padding: 8px 16px; background: white;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="text" id="newCommentInput" placeholder="${currentLanguage === 'tr' ? 'Yorum ekle...' : currentLanguage === 'en' ? 'Add a comment...' : currentLanguage === 'de' ? 'Kommentar hinzufügen...' : 'Добавить комментарий...'}" style="flex: 1; padding: 8px 0; border: none; outline: none; font-size: 14px; color: #111b21;">
+                            <button id="sendCommentBtn" style="background: none; border: none; color: #34B7F1; font-size: 14px; font-weight: 600; cursor: pointer; padding: 0; opacity: 0.5;" disabled>${currentLanguage === 'tr' ? 'Gönder' : currentLanguage === 'en' ? 'Post' : currentLanguage === 'de' ? 'Posten' : 'Отправить'}</button>
+                        </div>
                     </div>
                 `;
                 
-                modal.appendChild(content);
                 document.body.appendChild(modal);
+                
+                // Initialize Lucide icons
+                if (typeof lucide !== 'undefined') {
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                }
                 
                 // Close button
                 document.getElementById('closeCommentsBtn').onclick = () => {
                     modal.remove();
                 };
                 
-                // Click outside to close
-                modal.onclick = (e) => {
-                    if (e.target === modal) {
-                        modal.remove();
+                // Input handler for enable/disable send button
+                const input = document.getElementById('newCommentInput');
+                const sendBtn = document.getElementById('sendCommentBtn');
+                
+                input.addEventListener('input', () => {
+                    const text = input.value.trim();
+                    if (text) {
+                        sendBtn.style.opacity = '1';
+                        sendBtn.disabled = false;
+                    } else {
+                        sendBtn.style.opacity = '0.5';
+                        sendBtn.disabled = true;
                     }
-                };
+                });
                 
                 // Send comment
-                document.getElementById('sendCommentBtn').onclick = async () => {
-                    const input = document.getElementById('newCommentInput');
+                async function sendComment() {
                     const commentText = input.value.trim();
                     
                     if (!commentText) return;
                     
+                    // Check auth
+                    if (!requireAuth()) return;
+                    
                     try {
+                        sendBtn.style.opacity = '0.5';
+                        sendBtn.disabled = true;
+                        
                         const sendResponse = await fetch(`/api/info-posts/${postId}/comments`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -5665,7 +5746,10 @@
                         
                         if (!sendResponse.ok) {
                             if (sendResponse.status === 401) {
-                                alert('Yorum yazmak için giriş yapmanız gerekiyor.');
+                                alert(currentLanguage === 'tr' ? 'Yorum yazmak için giriş yapmanız gerekiyor.' :
+                                      currentLanguage === 'en' ? 'You need to login to comment.' :
+                                      currentLanguage === 'de' ? 'Sie müssen sich anmelden, um zu kommentieren.' :
+                                      'Вам нужно войти, чтобы комментировать.');
                                 return;
                             }
                             throw new Error('Failed to send comment');
@@ -5673,41 +5757,80 @@
                         
                         const newComment = await sendResponse.json();
                         
-                        // Add comment to list
+                        // Add comment to list (Instagram-style)
                         const commentsList = document.getElementById('commentsList');
                         const commentDiv = document.createElement('div');
-                        commentDiv.style.cssText = 'margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e4e6e9;';
+                        commentDiv.style.cssText = 'display: flex; gap: 12px; padding: 12px 0;';
+                        
+                        function timeAgo(date) {
+                            const now = new Date();
+                            const diff = Math.floor((now - new Date(date)) / 1000);
+                            if (diff < 60) return currentLanguage === 'tr' ? 'şimdi' : currentLanguage === 'en' ? 'now' : currentLanguage === 'de' ? 'gerade eben' : 'сейчас';
+                            if (diff < 3600) {
+                                const mins = Math.floor(diff / 60);
+                                return currentLanguage === 'tr' ? `${mins}d` : currentLanguage === 'en' ? `${mins}m` : currentLanguage === 'de' ? `${mins}m` : `${mins}м`;
+                            }
+                            if (diff < 86400) {
+                                const hours = Math.floor(diff / 3600);
+                                return currentLanguage === 'tr' ? `${hours}s` : currentLanguage === 'en' ? `${hours}h` : currentLanguage === 'de' ? `${hours}h` : `${hours}ч`;
+                            }
+                            const days = Math.floor(diff / 86400);
+                            return currentLanguage === 'tr' ? `${days}g` : currentLanguage === 'en' ? `${days}d` : currentLanguage === 'de' ? `${days}T` : `${days}д`;
+                        }
+                        
                         commentDiv.innerHTML = `
-                            <div style="display: flex; gap: 12px;">
-                                <div style="width: 32px; height: 32px; border-radius: 50%; background: #e4e6e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                    ${newComment.profile_photo ? 
-                                        `<img src="${newComment.profile_photo}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` :
-                                        '<i data-lucide="user" class="icon icon-md"></i>'
-                                    }
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #e4e6e9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;">
+                                ${newComment.profile_photo ? 
+                                    `<img src="${newComment.profile_photo}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                                    '<i data-lucide="user" style="width: 24px; height: 24px; color: #667781;"></i>'
+                                }
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;">
+                                    <span style="font-weight: 600; font-size: 14px; color: #111b21;">${(newComment.guest_name || 'Misafir') + ' ' + (newComment.guest_surname || '')}</span>
+                                    <span style="font-size: 14px; color: #111b21; word-break: break-word;">${newComment.comment}</span>
                                 </div>
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${newComment.guest_name || 'Misafir'}</div>
-                                    <div style="font-size: 14px; color: #111b21; line-height: 1.5;">${newComment.comment}</div>
+                                <div style="display: flex; gap: 16px; margin-top: 6px;">
+                                    <span style="font-size: 12px; color: #8e8e8e;">${timeAgo(newComment.created_at)}</span>
+                                    <button style="background: none; border: none; font-size: 12px; color: #8e8e8e; cursor: pointer; padding: 0;">${currentLanguage === 'tr' ? 'Yanıtla' : currentLanguage === 'en' ? 'Reply' : currentLanguage === 'de' ? 'Antworten' : 'Ответить'}</button>
                                 </div>
                             </div>
                         `;
+                        
+                        // Remove "no comments" message if exists
+                        const noCommentsMsg = commentsList.querySelector('div[style*="text-align: center"]');
+                        if (noCommentsMsg) {
+                            noCommentsMsg.remove();
+                        }
+                        
                         commentsList.appendChild(commentDiv);
+                        commentsList.scrollTop = commentsList.scrollHeight;
                         
                         input.value = '';
+                        sendBtn.style.opacity = '0.5';
+                        sendBtn.disabled = true;
                         
                         if (typeof lucide !== 'undefined') {
                             lucide.createIcons();
                         }
                     } catch (error) {
                         console.error('Error sending comment:', error);
-                        alert('Yorum gönderilirken bir hata oluştu.');
+                        alert(currentLanguage === 'tr' ? 'Yorum gönderilirken bir hata oluştu.' :
+                              currentLanguage === 'en' ? 'An error occurred while sending comment.' :
+                              currentLanguage === 'de' ? 'Beim Senden des Kommentars ist ein Fehler aufgetreten.' :
+                              'Произошла ошибка при отправке комментария.');
+                        sendBtn.style.opacity = '1';
+                        sendBtn.disabled = false;
                     }
-                };
+                }
+                
+                sendBtn.onclick = sendComment;
                 
                 // Enter key to send
-                document.getElementById('newCommentInput').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        document.getElementById('sendCommentBtn').click();
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendComment();
                     }
                 });
                 

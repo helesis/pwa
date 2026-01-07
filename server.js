@@ -3211,6 +3211,7 @@ app.post('/api/info-posts/:postId/like', async (req, res) => {
 app.get('/api/info-posts/:postId/likes', async (req, res) => {
   try {
     const { postId } = req.params;
+    const guest_unique_id = req.cookies?.guest_unique_id;
     
     const postResult = await pool.query(`
       SELECT id FROM info_posts WHERE post_id = $1 AND is_active = true
@@ -3221,11 +3222,23 @@ app.get('/api/info-posts/:postId/likes', async (req, res) => {
     }
     
     const postDbId = postResult.rows[0].id;
-    const result = await pool.query(`
+    const countResult = await pool.query(`
       SELECT COUNT(*) as count FROM post_likes WHERE post_id = $1
     `, [postDbId]);
     
-    res.json({ count: parseInt(result.rows[0].count) || 0 });
+    let userLiked = false;
+    if (guest_unique_id) {
+      const likeCheck = await pool.query(`
+        SELECT id FROM post_likes 
+        WHERE post_id = $1 AND guest_unique_id = $2
+      `, [postDbId, guest_unique_id]);
+      userLiked = likeCheck.rows.length > 0;
+    }
+    
+    res.json({ 
+      count: parseInt(countResult.rows[0].count) || 0,
+      userLiked: userLiked
+    });
   } catch (error) {
     console.error('Error fetching likes:', error);
     res.status(500).json({ error: 'Database error' });
