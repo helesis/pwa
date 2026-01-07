@@ -237,7 +237,9 @@ async function initializeDatabase() {
         post_id VARCHAR(50) UNIQUE NOT NULL,
         title VARCHAR(100) NOT NULL,
         icon VARCHAR(50),
+        location VARCHAR(200),
         image_url TEXT,
+        video_url TEXT,
         caption TEXT,
         likes_count INTEGER DEFAULT 0,
         display_order INTEGER DEFAULT 0,
@@ -455,7 +457,9 @@ async function addNewTablesIfNeeded() {
           post_id VARCHAR(50) UNIQUE NOT NULL,
           title VARCHAR(100) NOT NULL,
           icon VARCHAR(50),
+          location VARCHAR(200),
           image_url TEXT,
+          video_url TEXT,
           caption TEXT,
           likes_count INTEGER DEFAULT 0,
           display_order INTEGER DEFAULT 0,
@@ -465,6 +469,26 @@ async function addNewTablesIfNeeded() {
         );
       `);
       console.log('✅ Created info_posts table');
+    } else {
+      // Add new columns if they don't exist (migration)
+      const postColumnsToAdd = [
+        { name: 'location', type: 'VARCHAR(200)' },
+        { name: 'video_url', type: 'TEXT' }
+      ];
+      for (const col of postColumnsToAdd) {
+        const columnCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'info_posts' 
+            AND column_name = $1
+          );
+        `, [col.name]);
+        if (!columnCheck.rows[0].exists) {
+          await pool.query(`ALTER TABLE info_posts ADD COLUMN ${col.name} ${col.type};`);
+          console.log(`✅ Added column ${col.name} to info_posts table`);
+        }
+      }
     }
 
     // Check and add post_likes table
@@ -2728,20 +2752,29 @@ app.get('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
 // Create info post
 app.post('/api/admin/info-posts', requireAssistant, async (req, res) => {
   try {
-    const { post_id, title, icon, caption, display_order, is_active } = req.body;
+    const { post_id, title, icon, caption, display_order, is_active, location, image_url, video_url } = req.body;
     
     if (!post_id || !title) {
       return res.status(400).json({ error: 'post_id and title are required' });
     }
+
+    // Only one media type should be set
+    const finalImageUrl = image_url || null;
+    const finalVideoUrl = video_url || null;
+    const mediaImage = finalVideoUrl ? null : finalImageUrl;
+    const mediaVideo = finalVideoUrl ? finalVideoUrl : null;
     
     const result = await pool.query(`
-      INSERT INTO info_posts (post_id, title, icon, caption, display_order, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO info_posts (post_id, title, icon, location, image_url, video_url, caption, display_order, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [
       post_id.trim(),
       title.trim(),
       icon || null,
+      location || null,
+      mediaImage,
+      mediaVideo,
       caption || null,
       display_order || 0,
       is_active !== undefined ? is_active : true
@@ -2761,21 +2794,39 @@ app.post('/api/admin/info-posts', requireAssistant, async (req, res) => {
 app.put('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, icon, caption, display_order, is_active, image_url } = req.body;
-    
+    const { title, icon, caption, display_order, is_active, image_url, video_url, location } = req.body;
+
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (title !== undefined) { updateFields.push(`title = $${paramCount++}`); values.push(title); }
+    if (icon !== undefined) { updateFields.push(`icon = $${paramCount++}`); values.push(icon); }
+    if (location !== undefined) { updateFields.push(`location = $${paramCount++}`); values.push(location); }
+    if (caption !== undefined) { updateFields.push(`caption = $${paramCount++}`); values.push(caption); }
+    if (display_order !== undefined) { updateFields.push(`display_order = $${paramCount++}`); values.push(display_order); }
+    if (is_active !== undefined) { updateFields.push(`is_active = $${paramCount++}`); values.push(is_active); }
+
+    // Media: set one, clear the other
+    if (image_url) {
+      updateFields.push(`image_url = $${paramCount++}`);
+      values.push(image_url);
+      updateFields.push(`video_url = NULL`);
+    } else if (video_url) {
+      updateFields.push(`video_url = $${paramCount++}`);
+      values.push(video_url);
+      updateFields.push(`image_url = NULL`);
+    }
+
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+
     const result = await pool.query(`
-      UPDATE info_posts 
-      SET 
-        title = COALESCE($1, title),
-        icon = COALESCE($2, icon),
-        caption = COALESCE($3, caption),
-        display_order = COALESCE($4, display_order),
-        is_active = COALESCE($5, is_active),
-        image_url = COALESCE($6, image_url),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $7
+      UPDATE info_posts
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramCount}
       RETURNING *
-    `, [title, icon, caption, display_order, is_active, image_url, id]);
+    `, values);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
@@ -2810,18 +2861,35 @@ app.delete('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
 app.post('/api/admin/info-posts/:id/upload', requireAssistant, async (req, res) => {
   try {
     const { id } = req.params;
-    const { image_url } = req.body;
+    const { image_url, video_url } = req.body;
     
-    if (!image_url) {
-      return res.status(400).json({ error: 'image_url is required' });
+    if (!image_url && !video_url) {
+      return res.status(400).json({ error: 'image_url or video_url is required' });
     }
+
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (image_url) {
+      updateFields.push(`image_url = $${paramCount++}`);
+      values.push(image_url);
+      updateFields.push(`video_url = NULL`);
+    }
+    if (video_url) {
+      updateFields.push(`video_url = $${paramCount++}`);
+      values.push(video_url);
+      updateFields.push(`image_url = NULL`);
+    }
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
     
     const result = await pool.query(`
       UPDATE info_posts 
-      SET image_url = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramCount}
       RETURNING *
-    `, [image_url, id]);
+    `, values);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });

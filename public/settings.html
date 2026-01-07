@@ -809,6 +809,74 @@
                     <input type="text" id="activity-icon" class="form-input" placeholder="Örn: activity-1">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Tarih</label>
+                    <input type="date" id="activity-date" class="form-input">
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="form-label">Başlangıç Saati</label>
+                        <input type="time" id="activity-start-time" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">Bitiş Saati</label>
+                        <input type="time" id="activity-end-time" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <input type="text" id="activity-category" class="form-input" placeholder="Örn: Sabah / Öğle / Akşam">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tür</label>
+                    <input type="text" id="activity-type" class="form-input" placeholder="Örn: Spor / Çocuk / Gösteri">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Lokasyon</label>
+                    <input type="text" id="activity-location" class="form-input" placeholder="Örn: Ana Sahne / Havuz">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <textarea id="activity-description" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="form-label">Eğitmen</label>
+                        <input type="text" id="activity-instructor" class="form-input" placeholder="Opsiyonel">
+                    </div>
+                    <div>
+                        <label class="form-label">Yaş Grubu</label>
+                        <input type="text" id="activity-age-group" class="form-input" placeholder="Örn: Kids / Adults / All">
+                    </div>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="form-label">Kapasite</label>
+                        <input type="number" id="activity-capacity" class="form-input" min="0" step="1">
+                    </div>
+                    <div>
+                        <label class="form-label">Enlem</label>
+                        <input type="number" id="activity-lat" class="form-input" step="0.00000001">
+                    </div>
+                    <div>
+                        <label class="form-label">Boylam</label>
+                        <input type="number" id="activity-lng" class="form-input" step="0.00000001">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="activity-featured"> Öne Çıkan
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Medya (Foto/Video URL)</label>
+                    <input type="text" id="activity-image-url" class="form-input" placeholder="Fotoğraf URL (opsiyonel)">
+                    <div style="height: 8px;"></div>
+                    <input type="text" id="activity-video-url" class="form-input" placeholder="Video URL (opsiyonel)">
+                    <div style="font-size: 12px; color: #667781; margin-top: 6px;">
+                        Not: Video URL girerseniz fotoğraf alanı otomatik boşaltılır (ve tersi).
+                    </div>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Sıra (opsiyonel)</label>
                     <input type="number" id="activity-display-order" class="form-input" value="0">
                 </div>
@@ -846,8 +914,21 @@
                     <input type="text" id="post-icon" class="form-input" placeholder="Örn: activity-1">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Lokasyon</label>
+                    <input type="text" id="post-location" class="form-input" placeholder="Örn: Voyage Sorgun / Lobby">
+                </div>
+                <div class="form-group">
                     <label class="form-label">Açıklama (opsiyonel)</label>
                     <textarea id="post-caption" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Medya (Foto/Video URL)</label>
+                    <input type="text" id="post-image-url" class="form-input" placeholder="Fotoğraf URL (opsiyonel)">
+                    <div style="height: 8px;"></div>
+                    <input type="text" id="post-video-url" class="form-input" placeholder="Video URL (opsiyonel)">
+                    <div style="font-size: 12px; color: #667781; margin-top: 6px;">
+                        Not: Video URL girerseniz fotoğraf alanı otomatik boşaltılır (ve tersi).
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Sıra (opsiyonel)</label>
@@ -2618,6 +2699,21 @@
                     .then(data => {
                         document.getElementById('activity-title').value = data.title || '';
                         document.getElementById('activity-icon').value = data.icon || '';
+                        document.getElementById('activity-date').value = data.activity_date ? String(data.activity_date).split('T')[0] : '';
+                        document.getElementById('activity-start-time').value = data.start_time ? String(data.start_time).slice(0,5) : '';
+                        document.getElementById('activity-end-time').value = data.end_time ? String(data.end_time).slice(0,5) : '';
+                        document.getElementById('activity-category').value = data.category || '';
+                        document.getElementById('activity-type').value = data.type || '';
+                        document.getElementById('activity-location').value = data.location || '';
+                        document.getElementById('activity-description').value = data.description || '';
+                        document.getElementById('activity-instructor').value = data.instructor_name || '';
+                        document.getElementById('activity-age-group').value = data.age_group || '';
+                        document.getElementById('activity-capacity').value = data.capacity ?? '';
+                        document.getElementById('activity-lat').value = data.map_latitude ?? '';
+                        document.getElementById('activity-lng').value = data.map_longitude ?? '';
+                        document.getElementById('activity-featured').checked = data.featured === true;
+                        document.getElementById('activity-image-url').value = data.image_url || '';
+                        document.getElementById('activity-video-url').value = data.video_url || '';
                         document.getElementById('activity-display-order').value = data.display_order || 0;
                         document.getElementById('activity-is-active').checked = data.is_active !== false;
                     });
@@ -2625,6 +2721,7 @@
                 document.getElementById('activity-form').reset();
                 document.getElementById('activity-display-order').value = 0;
                 document.getElementById('activity-is-active').checked = true;
+                document.getElementById('activity-featured').checked = false;
             }
         }
 
@@ -2638,6 +2735,26 @@
             
             const title = document.getElementById('activity-title').value.trim();
             const icon = document.getElementById('activity-icon').value.trim();
+            const activity_date = document.getElementById('activity-date').value || null;
+            const start_time = document.getElementById('activity-start-time').value || null;
+            const end_time = document.getElementById('activity-end-time').value || null;
+            const category = document.getElementById('activity-category').value.trim() || null;
+            const type = document.getElementById('activity-type').value.trim() || null;
+            const location = document.getElementById('activity-location').value.trim() || null;
+            const description = document.getElementById('activity-description').value.trim() || null;
+            const instructor_name = document.getElementById('activity-instructor').value.trim() || null;
+            const age_group = document.getElementById('activity-age-group').value.trim() || null;
+            const capacityRaw = document.getElementById('activity-capacity').value;
+            const capacity = capacityRaw === '' ? null : parseInt(capacityRaw, 10);
+            const mapLatRaw = document.getElementById('activity-lat').value;
+            const mapLngRaw = document.getElementById('activity-lng').value;
+            const map_latitude = mapLatRaw === '' ? null : parseFloat(mapLatRaw);
+            const map_longitude = mapLngRaw === '' ? null : parseFloat(mapLngRaw);
+            const featured = document.getElementById('activity-featured').checked;
+            const image_url_raw = document.getElementById('activity-image-url').value.trim();
+            const video_url_raw = document.getElementById('activity-video-url').value.trim();
+            const image_url = video_url_raw ? null : (image_url_raw || null);
+            const video_url = video_url_raw || null;
             const display_order = parseInt(document.getElementById('activity-display-order').value) || 0;
             const is_active = document.getElementById('activity-is-active').checked;
             
@@ -2656,7 +2773,27 @@
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ title, icon, display_order, is_active })
+                    body: JSON.stringify({
+                        title,
+                        icon,
+                        display_order,
+                        is_active,
+                        activity_date,
+                        start_time,
+                        end_time,
+                        description,
+                        category,
+                        type,
+                        location,
+                        instructor_name,
+                        age_group,
+                        capacity,
+                        featured,
+                        map_latitude,
+                        map_longitude,
+                        image_url,
+                        video_url
+                    })
                 });
                 
                 if (!response.ok) throw new Error('Failed to save activity');
@@ -2797,7 +2934,9 @@
                         ${posts.map(p => `
                             <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e4e6e9;">
                                 <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-                                    ${p.image_url ? `
+                                    ${p.video_url ? `
+                                        <video src="${p.video_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" controls></video>
+                                    ` : p.image_url ? `
                                         <img src="${p.image_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" alt="Post Image">
                                     ` : `
                                         <div style="width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">
@@ -2807,6 +2946,7 @@
                                     <div style="flex: 1;">
                                         <h3 style="margin: 0 0 8px 0; color: var(--voyage-navy);">${p.title || '-'}</h3>
                                         <p style="margin: 0 0 8px 0; color: #667781; font-size: 14px;"><strong>Post ID:</strong> ${p.post_id || '-'}</p>
+                                        <p style="margin: 0 0 8px 0; color: #667781; font-size: 14px;"><strong>Lokasyon:</strong> ${p.location || '-'}</p>
                                         <p style="margin: 0 0 8px 0; color: #667781; font-size: 14px;"><strong>İkon:</strong> ${p.icon || '-'}</p>
                                         ${p.caption ? `<p style="margin: 8px 0; color: #667781; font-size: 14px;">${p.caption}</p>` : ''}
                                         <div style="margin-top: 12px; display: flex; gap: 8px;">
@@ -2828,9 +2968,13 @@
                                 </div>
                                 <div style="border-top: 1px solid #e4e6e9; padding-top: 16px; margin-top: 16px;">
                                     <label style="display: block; margin-bottom: 8px; font-weight: 500; color: var(--voyage-navy);">Fotoğraf/Video Ekle</label>
-                                    <div style="display: flex; gap: 8px;">
+                                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                                         <input type="text" id="post-image-url-${p.id}" class="form-input" placeholder="Fotoğraf URL veya Base64" style="flex: 1;">
-                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id})" style="padding: 8px 16px;">📷 Yükle</button>
+                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id}, 'image')" style="padding: 8px 16px;">📷 Foto Yükle</button>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="post-video-url-${p.id}" class="form-input" placeholder="Video URL" style="flex: 1;">
+                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id}, 'video')" style="padding: 8px 16px;">🎬 Video Yükle</button>
                                     </div>
                                 </div>
                             </div>
@@ -2858,7 +3002,10 @@
                         document.getElementById('post-post-id').disabled = true; // Don't allow changing post_id
                         document.getElementById('post-title').value = data.title || '';
                         document.getElementById('post-icon').value = data.icon || '';
+                        document.getElementById('post-location').value = data.location || '';
                         document.getElementById('post-caption').value = data.caption || '';
+                        document.getElementById('post-image-url').value = data.image_url || '';
+                        document.getElementById('post-video-url').value = data.video_url || '';
                         document.getElementById('post-display-order').value = data.display_order || 0;
                         document.getElementById('post-is-active').checked = data.is_active !== false;
                     });
@@ -2881,7 +3028,12 @@
             const post_id = document.getElementById('post-post-id').value.trim();
             const title = document.getElementById('post-title').value.trim();
             const icon = document.getElementById('post-icon').value.trim();
+            const location = document.getElementById('post-location').value.trim();
             const caption = document.getElementById('post-caption').value.trim();
+            const image_url_raw = document.getElementById('post-image-url').value.trim();
+            const video_url_raw = document.getElementById('post-video-url').value.trim();
+            const image_url = video_url_raw ? null : (image_url_raw || null);
+            const video_url = video_url_raw || null;
             const display_order = parseInt(document.getElementById('post-display-order').value) || 0;
             const is_active = document.getElementById('post-is-active').checked;
             
@@ -2900,7 +3052,7 @@
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ post_id, title, icon, caption, display_order, is_active })
+                    body: JSON.stringify({ post_id, title, icon, location, caption, image_url, video_url, display_order, is_active })
                 });
                 
                 if (!response.ok) {
@@ -2940,13 +3092,22 @@
             openPostModal(id);
         }
 
-        async function uploadPostMedia(postId) {
+        async function uploadPostMedia(postId, type) {
             const imageUrlInput = document.getElementById(`post-image-url-${postId}`);
-            const imageUrl = imageUrlInput.value.trim();
-            
-            if (!imageUrl) {
-                alert('Fotoğraf URL\'si gerekli');
-                return;
+            const videoUrlInput = document.getElementById(`post-video-url-${postId}`);
+            const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
+            const videoUrl = videoUrlInput ? videoUrlInput.value.trim() : '';
+
+            if (type === 'video') {
+                if (!videoUrl) {
+                    alert('Video URL gerekli');
+                    return;
+                }
+            } else {
+                if (!imageUrl) {
+                    alert('Fotoğraf URL gerekli');
+                    return;
+                }
             }
             
             try {
@@ -2954,12 +3115,13 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ image_url: imageUrl })
+                    body: JSON.stringify(type === 'video' ? { video_url: videoUrl } : { image_url: imageUrl })
                 });
                 
                 if (!response.ok) throw new Error('Failed to upload');
                 
-                imageUrlInput.value = '';
+                if (imageUrlInput) imageUrlInput.value = '';
+                if (videoUrlInput) videoUrlInput.value = '';
                 loadPosts();
                 showAlert('Fotoğraf başarıyla yüklendi', 'success');
             } catch (error) {
