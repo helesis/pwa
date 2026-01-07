@@ -112,7 +112,7 @@
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
             /* Yeşil panel yüksekliğinden hemen sonra başlamalı */
             /* Yeşil panel: safe-area-inset-top + 44px (status bar) */
-            padding-top: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px);
+            padding-top: calc(-30px + var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -315,7 +315,7 @@
             padding-left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right)));
             padding-top: 16px;
-            padding-bottom: 80px; /* Input container için yeterli alan (max ~70px) */
+            padding-bottom: 0; /* Input container artık içinde, padding gerekmez */
             background: white;
             scroll-behavior: smooth;
             display: flex;
@@ -741,14 +741,14 @@
             padding: 10px 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-bottom: 10px;
+            padding-bottom: calc(10px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar + safe area */
             background: white;
             border-top: 1px solid rgba(0, 0, 0, 0.08);
             display: flex;
             gap: 8px;
             align-items: flex-end;
             position: sticky;
-            bottom: calc(60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Bottom nav height (60px) + safe area */
+            bottom: 0;
             z-index: 100;
             flex-shrink: 0;
             width: 100%;
@@ -761,6 +761,7 @@
             display: flex;
             align-items: center;
             background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1); /* Sürekli görünür border */
             border-radius: 21px;
             padding: 9px 16px;
             transition: all 0.2s ease;
@@ -769,6 +770,7 @@
 
         .input-wrapper:focus-within {
             background: white;
+            border-color: rgba(0, 0, 0, 0.2); /* Focus olduğunda border daha belirgin */
             box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
         }
 
@@ -958,12 +960,14 @@
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 8px 0;
+            padding: 4px 0;
             padding-left: var(--safe-area-inset-left, env(safe-area-inset-left));
             padding-right: var(--safe-area-inset-right, env(safe-area-inset-right));
-            padding-bottom: calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            padding-bottom: calc(4px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
             z-index: 1000;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            min-height: 50px; /* Minimum yükseklik */
+            max-height: 60px; /* Maximum yükseklik */
         }
 
         .nav-item {
@@ -972,15 +976,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 8px 4px;
+            padding: 4px 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             color: #667781;
             text-decoration: none;
             border: none;
             background: none;
-            font-size: 12px;
-            gap: 4px;
+            font-size: 11px;
+            gap: 2px;
         }
 
         .nav-item:hover {
@@ -1039,8 +1043,94 @@
 
         /* Info Section */
         .info-section {
-            gap: 0;
+            gap: 16px; /* Container'lar arası boşluk */
             padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Reservations Section - İlk elementin aynı yükseklikten başlaması için */
+        #reservationsSection .info-section {
+            padding-top: 40px; /* Story bölümüyle aynı yükseklik */
+        }
+
+        /* Map Section - İlk elementin aynı yükseklikten başlaması için */
+        #mapSection .map-section {
+            gap: 16px; /* Container'lar arası boşluk */
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px);
+        }
+
+        .map-search {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .map-search-label {
+            font-size: 13px;
+            color: #667781;
+        }
+
+        .map-search-input-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        .map-search-input {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 999px;
+            border: 1px solid #e4e6e9;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .map-search-input:focus {
+            border-color: #cfd1d4;
+        }
+
+        .map-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .map-chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #e4e6e9;
+            background: #f0f2f5;
+            font-size: 12px;
+            color: #667781;
+            cursor: pointer;
+        }
+
+        .map-chip:active {
+            background: #e4e6e9;
+        }
+
+        .map-container {
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: #f0f0f0;
+            min-height: 320px;
+            height: calc(100vh - var(--safe-area-inset-top, env(safe-area-inset-top)) - var(--safe-area-inset-bottom, env(safe-area-inset-bottom)) - 200px);
+            max-height: 520px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667781;
+        }
+
+        /* Settings Section - İlk elementin aynı yükseklikten başlaması için */
+        #settingsSection .settings-section {
+            padding-top: 40px; /* Story bölümüyle aynı yükseklik */
         }
 
         /* Instagram Story Tray Style Activity Notifications */
@@ -1048,6 +1138,7 @@
             display: flex;
             gap: 12px;
             padding: 16px;
+            padding-top: 40px; /* Story bölümünü aşağıya almak için */
             padding-bottom: 8px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -1296,10 +1387,12 @@
 
         /* Profile Section */
         .profile-section {
-            gap: 16px;
+            gap: 16px; /* Container'lar arası boşluk */
             padding: 16px;
+            display: flex;
+            flex-direction: column;
             /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
-            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 16px);
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px); /* Story bölümüyle aynı yükseklik için 40px */
         }
 
         .profile-header {
@@ -1311,7 +1404,6 @@
             background: white;
             border-radius: 12px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-top: 16px;
         }
 
         .profile-avatar-large {
@@ -1345,10 +1437,12 @@
 
         /* Settings Section */
         .settings-section {
-            gap: 16px;
+            gap: 16px; /* Container'lar arası boşluk */
             padding: 16px;
+            display: flex;
+            flex-direction: column;
             /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
-            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 16px);
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px); /* Story bölümüyle aynı yükseklik için 40px */
         }
 
         .settings-item {
@@ -1488,7 +1582,7 @@
                         <div class="hotel-name">Voyage Sorgun</div>
                         <div class="header-subtitle">
                             <span class="connection-status" id="connectionStatus"></span>
-                            <span id="statusText">Bağlanıyor...</span>
+                            <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
                         </div>
                     </div>
                 </div>
@@ -1498,34 +1592,34 @@
             <!-- Chat Container -->
             <div class="chat-container" id="chatContainer">
                 <!-- Messages will be loaded here -->
-            </div>
-
-            <!-- Typing Indicator -->
-            <div class="typing-indicator" id="typingIndicator">
-                <div class="message-avatar">
-                    <div class="voyage-logo">
-                        <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
-                            <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
-                            <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
-                            <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
-                            <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
-                        </svg>
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="message-avatar">
+                        <div class="voyage-logo">
+                            <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                                <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                                <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                                <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                                <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
                     </div>
                 </div>
-                <div class="typing-dots">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            </div>
 
-            <!-- Input Container -->
-            <div class="input-container">
+                <!-- Input Container -->
+                <div class="input-container">
                 <div class="input-wrapper">
                     <textarea 
                         id="messageInput" 
                         placeholder="Mesajınızı yazın..."
+                        data-i18n-placeholder="typeMessage"
                         rows="1"
                         onkeypress="handleKeyPress(event)"
                         oninput="handleInputChange()"
@@ -1536,13 +1630,14 @@
                         <i data-lucide="send" class="icon icon-md"></i>
                     </button>
                 </div>
+                </div>
             </div>
         </div>
 
         <div class="content-section" id="reservationsSection">
             <div class="info-section">
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> Rezervasyonlarım</div>
+                    <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> <span data-i18n="myReservations">Rezervasyonlarım</span></div>
                     <div class="info-card-content">
                         <div style="margin-bottom: 12px;">
                             <strong>Oda:</strong> <span id="reservationRoomNumber">-</span>
@@ -1566,18 +1661,18 @@
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> A'la Carte Restoran Rezervasyonları</div>
+                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">A'la Carte Restoran Rezervasyonları</span></div>
                     <div class="info-card-content" id="restaurantReservations">
-                        <div style="text-align: center; padding: 20px; color: #667781;">
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
                             Henüz restoran rezervasyonunuz bulunmamaktadır.
                         </div>
                     </div>
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> Spa Rezervasyonları</div>
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Spa Rezervasyonları</span></div>
                     <div class="info-card-content" id="spaReservations">
-                        <div style="text-align: center; padding: 20px; color: #667781;">
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
                             Henüz spa rezervasyonunuz bulunmamaktadır.
                         </div>
                     </div>
@@ -1596,7 +1691,7 @@
                             </video>
                             <div class="story-avatar-placeholder"><i data-lucide="waves" class="icon icon-xl"></i></div>
                         </div>
-                        <div class="story-label">Yüzme Havuzu</div>
+                        <div class="story-label" data-i18n="swimmingPool">Yüzme Havuzu</div>
                     </div>
                     <div class="activity-story" onclick="openActivityStory(2)">
                         <div class="story-avatar">
@@ -1605,7 +1700,7 @@
                             </video>
                             <div class="story-avatar-placeholder"><i data-lucide="sun" class="icon icon-xl"></i></div>
                         </div>
-                        <div class="story-label">Plaj</div>
+                        <div class="story-label" data-i18n="beach">Plaj</div>
                     </div>
                     <div class="activity-story" onclick="openActivityStory(3)">
                         <div class="story-avatar">
@@ -1614,7 +1709,7 @@
                             </video>
                             <div class="story-avatar-placeholder"><i data-lucide="utensils-crossed" class="icon icon-xl"></i></div>
                         </div>
-                        <div class="story-label">Restoran</div>
+                        <div class="story-label" data-i18n="restaurant">Restoran</div>
                     </div>
                     <div class="activity-story" onclick="openActivityStory(4)">
                         <div class="story-avatar">
@@ -1623,7 +1718,7 @@
                             </video>
                             <div class="story-avatar-placeholder"><i data-lucide="sparkles" class="icon icon-xl"></i></div>
                         </div>
-                        <div class="story-label">Spa</div>
+                        <div class="story-label" data-i18n="spa">Spa</div>
                     </div>
                     <div class="activity-story" onclick="openActivityStory(5)">
                         <div class="story-avatar">
@@ -1632,7 +1727,7 @@
                             </video>
                             <div class="story-avatar-placeholder"><i data-lucide="party-popper" class="icon icon-xl"></i></div>
                         </div>
-                        <div class="story-label">Aktiviteler</div>
+                        <div class="story-label" data-i18n="activities">Aktiviteler</div>
                     </div>
                 </div>
                 
@@ -1851,8 +1946,40 @@
             </div>
         </div>
 
-        <div class="content-section" id="profileSection">
-            <div class="profile-section">
+        <div class="content-section" id="mapSection">
+            <div class="map-section">
+                <div class="info-card">
+                    <div class="info-card-title" data-i18n="map">Harita</div>
+                    <div class="info-card-content">
+                        <div class="map-search">
+                            <div class="map-search-label" data-i18n="mapSearchLabel">Gitmek istediğiniz yer</div>
+                            <div class="map-search-input-wrapper">
+                                <input
+                                    type="text"
+                                    id="mapSearchInput"
+                                    class="map-search-input"
+                                    placeholder="Oda numarası veya alan adı yazın"
+                                    data-i18n-placeholder="mapSearchPlaceholder"
+                                />
+                            </div>
+                            <div class="map-suggestions">
+                                <button type="button" class="map-chip" data-map-target="room" data-value="101">Oda 101</button>
+                                <button type="button" class="map-chip" data-map-target="room" data-value="102">Oda 102</button>
+                                <button type="button" class="map-chip" data-map-target="outlet" data-value="lobby">Lobby</button>
+                                <button type="button" class="map-chip" data-map-target="outlet" data-value="restaurant">Ana Restoran</button>
+                                <button type="button" class="map-chip" data-map-target="outlet" data-value="spa">SPA</button>
+                            </div>
+                        </div>
+                        <div id="mapContainer" class="map-container">
+                            <div data-i18n="mapLoading">Harita yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="settingsSection">
+            <div class="settings-section">
                 <div class="profile-header">
                     <div class="profile-avatar-large" id="profileAvatarLarge">
                         <i data-lucide="user" class="icon icon-xl"></i>
@@ -1863,37 +1990,25 @@
                     </div>
                 </div>
                 <div class="info-card">
-                    <div class="info-card-title">Kişisel Bilgiler</div>
+                    <div class="info-card-title" data-i18n="personalInfo">Kişisel Bilgiler</div>
                     <div class="info-card-content">
-                        <div style="margin-bottom: 8px;"><strong>Ad:</strong> <span id="profileGuestName">-</span></div>
-                        <div style="margin-bottom: 8px;"><strong>Soyad:</strong> <span id="profileGuestSurname">-</span></div>
-                        <div style="margin-bottom: 8px;"><strong>Oda:</strong> <span id="profileRoomNumber">-</span></div>
-                        <div style="margin-bottom: 16px;"><strong>Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="name">Ad:</strong> <span id="profileGuestName">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="surname">Soyad:</strong> <span id="profileGuestSurname">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="room">Oda:</strong> <span id="profileRoomNumber">-</span></div>
+                        <div style="margin-bottom: 16px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
                     </div>
                 </div>
-                <div class="settings-item" onclick="handleGuestLogout()" style="margin-top: 8px;">
-                    <div class="settings-item-left">
-                        <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label">Çıkış Yap</div>
-                    </div>
-                    <div class="settings-item-right">›</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-section" id="settingsSection">
-            <div class="settings-section">
                 <div class="settings-item" onclick="showPhotoModal()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label">Profil Fotoğrafı Değiştir</div>
+                        <div class="settings-item-label" data-i18n="changeProfilePhoto">Profil Fotoğrafı Değiştir</div>
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
                 <div class="settings-item" onclick="toggleNotifications()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="bell" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label">Bildirimler</div>
+                        <div class="settings-item-label" data-i18n="notifications">Bildirimler</div>
                     </div>
                     <div class="settings-item-right">
                         <label class="toggle-switch">
@@ -1902,6 +2017,48 @@
                         </label>
                     </div>
                 </div>
+                <div class="settings-item" onclick="openLanguageSelector()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="languages" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="language">Dil</div>
+                    </div>
+                    <div class="settings-item-right">
+                        <span id="currentLanguageDisplay">Türkçe</span> ›
+                    </div>
+                </div>
+                <div class="settings-item" onclick="handleGuestLogout()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="logout">Çıkış Yap</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language Selector Modal -->
+        <div class="photo-modal" id="languageModal">
+            <div class="photo-modal-content">
+                <div class="photo-modal-title" data-i18n="selectLanguage">Dil Seçin</div>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+                    <button class="photo-modal-btn" onclick="changeLanguage('tr')" style="justify-content: space-between;">
+                        <span>🇹🇷 Türkçe</span>
+                        <span id="langCheckTr" style="display: none;">✓</span>
+                    </button>
+                    <button class="photo-modal-btn" onclick="changeLanguage('en')" style="justify-content: space-between;">
+                        <span>🇬🇧 English</span>
+                        <span id="langCheckEn" style="display: none;">✓</span>
+                    </button>
+                    <button class="photo-modal-btn" onclick="changeLanguage('de')" style="justify-content: space-between;">
+                        <span>🇩🇪 Deutsch</span>
+                        <span id="langCheckDe" style="display: none;">✓</span>
+                    </button>
+                    <button class="photo-modal-btn" onclick="changeLanguage('ru')" style="justify-content: space-between;">
+                        <span>🇷🇺 Русский</span>
+                        <span id="langCheckRu" style="display: none;">✓</span>
+                    </button>
+                </div>
+                <button class="photo-modal-btn cancel" onclick="closeLanguageSelector()" style="margin-top: 20px;" data-i18n="cancel">İptal</button>
             </div>
         </div>
 
@@ -1909,23 +2066,23 @@
         <div class="bottom-nav">
             <button class="nav-item" onclick="switchSection('info')" data-section="info">
                 <div class="nav-item-icon"><i data-lucide="info" class="icon icon-lg"></i></div>
-                <div class="nav-item-label">Info</div>
-            </button>
-            <button class="nav-item" onclick="switchSection('reservations')" data-section="reservations">
-                <div class="nav-item-icon"><i data-lucide="calendar" class="icon icon-lg"></i></div>
-                <div class="nav-item-label">Reservations</div>
+                <div class="nav-item-label" data-i18n="info">Info</div>
             </button>
             <button class="nav-item active" onclick="switchSection('chat')" data-section="chat">
                 <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                <div class="nav-item-label">Chat</div>
+                <div class="nav-item-label" data-i18n="chat">Chat</div>
             </button>
-            <button class="nav-item" onclick="switchSection('profile')" data-section="profile">
-                <div class="nav-item-icon"><i data-lucide="user" class="icon icon-lg"></i></div>
-                <div class="nav-item-label">Profile</div>
+            <button class="nav-item" onclick="switchSection('reservations')" data-section="reservations">
+                <div class="nav-item-icon"><i data-lucide="calendar" class="icon icon-lg"></i></div>
+                <div class="nav-item-label" data-i18n="reservations">Reservations</div>
+            </button>
+            <button class="nav-item" onclick="switchSection('map')" data-section="map">
+                <div class="nav-item-icon"><i data-lucide="map" class="icon icon-lg"></i></div>
+                <div class="nav-item-label" data-i18n="map">Harita</div>
             </button>
             <button class="nav-item" onclick="switchSection('settings')" data-section="settings">
                 <div class="nav-item-icon"><i data-lucide="settings" class="icon icon-lg"></i></div>
-                <div class="nav-item-label">Settings</div>
+                <div class="nav-item-label" data-i18n="settings">Settings</div>
             </button>
         </div>
 
@@ -2230,7 +2387,7 @@
             }
             
             if (statusText) {
-                statusText.textContent = GUEST_UNIQUE_ID ? `ID: ${GUEST_UNIQUE_ID.substring(0, 16)}...` : 'Bağlanıyor...';
+                statusText.textContent = GUEST_UNIQUE_ID ? `ID: ${GUEST_UNIQUE_ID.substring(0, 16)}...` : t('connecting');
             }
             
             // Update header hotel icon with team avatar if available
@@ -2687,7 +2844,7 @@
                 
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
-                    statusText.textContent = 'Çevrimiçi';
+                    statusText.textContent = t('online');
                 }
                 
                 // Initialize message observer for read status
@@ -2717,7 +2874,7 @@
                 console.log('🔄 Server URL:', SERVER_URL);
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
-                    statusText.textContent = 'Bağlanıyor...';
+                    statusText.textContent = t('connecting');
                 }
             });
 
@@ -2730,11 +2887,11 @@
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
                     if (reason === 'io server disconnect') {
-                        statusText.textContent = 'Sunucu bağlantıyı kapattı';
+                        statusText.textContent = t('serverDisconnected');
                     } else if (reason === 'io client disconnect') {
-                        statusText.textContent = 'Bağlantı kesildi';
+                        statusText.textContent = t('connectionLost');
                     } else {
-                        statusText.textContent = 'Yeniden bağlanıyor...';
+                        statusText.textContent = t('reconnecting');
                     }
                 }
             });
@@ -2753,7 +2910,7 @@
                 
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
-                    statusText.textContent = `Bağlantı hatası: ${error.message || 'Bilinmeyen hata'}`;
+                    statusText.textContent = `${t('connectionError')}: ${error.message || t('unknownError')}`;
                 }
             });
 
@@ -2761,7 +2918,7 @@
                 console.log('🔄 Reconnected after', attemptNumber, 'attempts');
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
-                    statusText.textContent = 'Çevrimiçi';
+                    statusText.textContent = t('online');
                 }
                 socket.emit('join_room', {
                     guestUniqueId: GUEST_UNIQUE_ID
@@ -2776,7 +2933,7 @@
                 console.error('❌ Reconnection failed');
                 const statusText = document.getElementById('statusText');
                 if (statusText) {
-                    statusText.textContent = 'Bağlantı başarısız';
+                    statusText.textContent = t('connectionFailed');
                 }
             });
 
@@ -2786,7 +2943,7 @@
                     console.error('❌ Connection timeout - socket not connected after 20 seconds');
                     const statusText = document.getElementById('statusText');
                     if (statusText) {
-                        statusText.textContent = 'Bağlantı zaman aşımı';
+                        statusText.textContent = t('connectionTimeout');
                     }
                     // Retry connection
                     console.log('🔄 Retrying connection...');
@@ -3904,8 +4061,8 @@
                 navItem.classList.add('active');
             }
             
-            // Update profile info when switching to profile section
-            if (section === 'profile') {
+            // Update profile info when switching to settings section
+            if (section === 'settings') {
                 updateProfileInfo();
             }
             
@@ -4110,6 +4267,33 @@
             }
         }
 
+        // Klavye açıldığında input container pozisyonunu koru
+        function setupKeyboardHandling() {
+            const inputContainer = document.querySelector('.input-container');
+            const messageInput = document.getElementById('messageInput');
+            const chatContainer = document.querySelector('.chat-container');
+            
+            if (!inputContainer || !messageInput || !chatContainer) return;
+            
+            // Visual Viewport API ile klavye yüksekliğini takip et
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    // Input focus olduğunda scroll'u en alta al
+                    setTimeout(() => {
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }, 100);
+                });
+            }
+            
+            // Input focus/blur event'leri
+            messageInput.addEventListener('focus', () => {
+                // Input focus olduğunda scroll'u en alta al
+                setTimeout(() => {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }, 300);
+            });
+        }
+
         // PWA standalone mode değişikliğini dinle ve safe area'yı güncelle
         function setupPWASafeAreaRefresh() {
             // İlk yükleme
@@ -4177,8 +4361,320 @@
             }
         }
 
+        // ========== ÇEVİRİ SİSTEMİ ==========
+        let currentLanguage = localStorage.getItem('appLanguage') || 'tr';
+        
+        const translations = {
+            tr: {
+                // Navigation
+                'info': 'Info',
+                'reservations': 'Rezervasyonlar',
+                'chat': 'Chat',
+                'map': 'Harita',
+                'settings': 'Ayarlar',
+                
+                // Settings
+                'changeProfilePhoto': 'Profil Fotoğrafı Değiştir',
+                'notifications': 'Bildirimler',
+                'language': 'Dil',
+                'selectLanguage': 'Dil Seçin',
+                'cancel': 'İptal',
+                'logout': 'Çıkış Yap',
+                
+                // Profile
+                'personalInfo': 'Kişisel Bilgiler',
+                'name': 'Ad',
+                'surname': 'Soyad',
+                'room': 'Oda',
+                'checkinDate': 'Giriş Tarihi',
+                'checkoutDate': 'Çıkış Tarihi',
+                
+                // Reservations
+                'myReservations': 'Rezervasyonlarım',
+                'restaurantReservations': 'A\'la Carte Restoran Rezervasyonları',
+                'spaReservations': 'Spa Rezervasyonları',
+                'noRestaurantReservations': 'Henüz restoran rezervasyonunuz bulunmamaktadır.',
+                'noSpaReservations': 'Henüz spa rezervasyonunuz bulunmamaktadır.',
+                
+                // Chat
+                'typeMessage': 'Mesajınızı yazın...',
+                'connecting': 'Bağlanıyor...',
+                'online': 'Çevrimiçi',
+                'offline': 'Çevrimdışı',
+                'reconnecting': 'Yeniden bağlanıyor...',
+                'serverDisconnected': 'Sunucu bağlantıyı kapattı',
+                'connectionLost': 'Bağlantı kesildi',
+                'connectionError': 'Bağlantı hatası',
+                'connectionFailed': 'Bağlantı başarısız',
+                'connectionTimeout': 'Bağlantı zaman aşımı',
+                'unknownError': 'Bilinmeyen hata',
+                
+                // Info
+                'swimmingPool': 'Yüzme Havuzu',
+                'beach': 'Plaj',
+                'restaurant': 'Restoran',
+                'spa': 'Spa',
+                'activities': 'Aktiviteler',
+                
+                // Map
+                'mapLoading': 'Harita yükleniyor...',
+                'mapSearchLabel': 'Gitmek istediğiniz yer',
+                'mapSearchPlaceholder': 'Oda numarası veya alan adı yazın',
+                
+                // Common
+                'loading': 'Yükleniyor...',
+                'now': 'Şimdi',
+                'viewComments': 'Yorumları görüntüle',
+                'likesLoading': 'Beğenmeler yükleniyor...'
+            },
+            en: {
+                // Navigation
+                'info': 'Info',
+                'reservations': 'Reservations',
+                'chat': 'Chat',
+                'map': 'Map',
+                'settings': 'Settings',
+                
+                // Settings
+                'changeProfilePhoto': 'Change Profile Photo',
+                'notifications': 'Notifications',
+                'language': 'Language',
+                'selectLanguage': 'Select Language',
+                'cancel': 'Cancel',
+                'logout': 'Logout',
+                
+                // Profile
+                'personalInfo': 'Personal Information',
+                'name': 'Name',
+                'surname': 'Surname',
+                'room': 'Room',
+                'checkinDate': 'Check-in Date',
+                'checkoutDate': 'Check-out Date',
+                
+                // Reservations
+                'myReservations': 'My Reservations',
+                'restaurantReservations': 'A la Carte Restaurant Reservations',
+                'spaReservations': 'Spa Reservations',
+                'noRestaurantReservations': 'You do not have any restaurant reservations yet.',
+                'noSpaReservations': 'You do not have any spa reservations yet.',
+                
+                // Chat
+                'typeMessage': 'Type your message...',
+                'connecting': 'Connecting...',
+                'online': 'Online',
+                'offline': 'Offline',
+                'reconnecting': 'Reconnecting...',
+                
+                // Info
+                'swimmingPool': 'Swimming Pool',
+                'beach': 'Beach',
+                'restaurant': 'Restaurant',
+                'spa': 'Spa',
+                'activities': 'Activities',
+                
+                // Map
+                'mapLoading': 'Loading map...',
+                'mapSearchLabel': 'Where do you want to go?',
+                'mapSearchPlaceholder': 'Type room number or area name',
+                
+                // Common
+                'loading': 'Loading...',
+                'now': 'Now',
+                'viewComments': 'View comments',
+                'likesLoading': 'Likes loading...'
+            },
+            de: {
+                // Navigation
+                'info': 'Info',
+                'reservations': 'Reservierungen',
+                'chat': 'Chat',
+                'map': 'Karte',
+                'settings': 'Einstellungen',
+                
+                // Settings
+                'changeProfilePhoto': 'Profilfoto ändern',
+                'notifications': 'Benachrichtigungen',
+                'language': 'Sprache',
+                'selectLanguage': 'Sprache auswählen',
+                'cancel': 'Abbrechen',
+                'logout': 'Abmelden',
+                
+                // Profile
+                'personalInfo': 'Persönliche Informationen',
+                'name': 'Vorname',
+                'surname': 'Nachname',
+                'room': 'Zimmer',
+                'checkinDate': 'Check-in Datum',
+                'checkoutDate': 'Check-out Datum',
+                
+                // Reservations
+                'myReservations': 'Meine Reservierungen',
+                'restaurantReservations': 'A la Carte Restaurant Reservierungen',
+                'spaReservations': 'Spa Reservierungen',
+                'noRestaurantReservations': 'Sie haben noch keine Restaurantreservierungen.',
+                'noSpaReservations': 'Sie haben noch keine Spa-Reservierungen.',
+                
+                // Chat
+                'typeMessage': 'Geben Sie Ihre Nachricht ein...',
+                'connecting': 'Verbinden...',
+                'online': 'Online',
+                'offline': 'Offline',
+                'reconnecting': 'Wiederverbinden...',
+                'serverDisconnected': 'Server getrennt',
+                'connectionLost': 'Verbindung verloren',
+                'connectionError': 'Verbindungsfehler',
+                'connectionFailed': 'Verbindung fehlgeschlagen',
+                'connectionTimeout': 'Verbindungszeitüberschreitung',
+                'unknownError': 'Unbekannter Fehler',
+                
+                // Info
+                'swimmingPool': 'Schwimmbad',
+                'beach': 'Strand',
+                'restaurant': 'Restaurant',
+                'spa': 'Spa',
+                'activities': 'Aktivitäten',
+                
+                // Map
+                'mapLoading': 'Karte wird geladen...',
+                'mapSearchLabel': 'Wohin möchten Sie gehen?',
+                'mapSearchPlaceholder': 'Zimmernummer oder Bereich eingeben',
+                
+                // Common
+                'loading': 'Lädt...',
+                'now': 'Jetzt',
+                'viewComments': 'Kommentare anzeigen',
+                'likesLoading': 'Likes werden geladen...'
+            },
+            ru: {
+                // Navigation
+                'info': 'Инфо',
+                'reservations': 'Бронирования',
+                'chat': 'Чат',
+                'map': 'Карта',
+                'settings': 'Настройки',
+                
+                // Settings
+                'changeProfilePhoto': 'Изменить фото профиля',
+                'notifications': 'Уведомления',
+                'language': 'Язык',
+                'selectLanguage': 'Выберите язык',
+                'cancel': 'Отмена',
+                'logout': 'Выйти',
+                
+                // Profile
+                'personalInfo': 'Личная информация',
+                'name': 'Имя',
+                'surname': 'Фамилия',
+                'room': 'Номер',
+                'checkinDate': 'Дата заезда',
+                'checkoutDate': 'Дата выезда',
+                
+                // Reservations
+                'myReservations': 'Мои бронирования',
+                'restaurantReservations': 'Бронирования ресторана A la Carte',
+                'spaReservations': 'Бронирования SPA',
+                'noRestaurantReservations': 'У вас пока нет бронирований ресторана.',
+                'noSpaReservations': 'У вас пока нет бронирований SPA.',
+                
+                // Chat
+                'typeMessage': 'Введите ваше сообщение...',
+                'connecting': 'Подключение...',
+                'online': 'Онлайн',
+                'offline': 'Офлайн',
+                'reconnecting': 'Переподключение...',
+                'serverDisconnected': 'Сервер отключил соединение',
+                'connectionLost': 'Соединение потеряно',
+                'connectionError': 'Ошибка соединения',
+                'connectionFailed': 'Соединение не удалось',
+                'connectionTimeout': 'Тайм-аут соединения',
+                'unknownError': 'Неизвестная ошибка',
+                
+                // Info
+                'swimmingPool': 'Бассейн',
+                'beach': 'Пляж',
+                'restaurant': 'Ресторан',
+                'spa': 'СПА',
+                'activities': 'Активности',
+                
+                // Map
+                'mapLoading': 'Загрузка карты...',
+                'mapSearchLabel': 'Куда вы хотите пойти?',
+                'mapSearchPlaceholder': 'Введите номер комнаты или название зоны',
+                
+                // Common
+                'loading': 'Загрузка...',
+                'now': 'Сейчас',
+                'viewComments': 'Просмотреть комментарии',
+                'likesLoading': 'Загрузка лайков...'
+            }
+        };
+        
+        function t(key) {
+            return translations[currentLanguage][key] || translations['tr'][key] || key;
+        }
+        
+        function applyTranslations() {
+            // Tüm data-i18n attribute'larına sahip elementleri bul ve çevir
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (key) {
+                    element.textContent = t(key);
+                }
+            });
+            
+            // Placeholder'ları çevir
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                if (key) {
+                    element.placeholder = t(key);
+                }
+            });
+            
+            // Mevcut dili göster
+            const langNames = {
+                'tr': 'Türkçe',
+                'en': 'English',
+                'de': 'Deutsch',
+                'ru': 'Русский'
+            };
+            const currentLangDisplay = document.getElementById('currentLanguageDisplay');
+            if (currentLangDisplay) {
+                currentLangDisplay.textContent = langNames[currentLanguage] || 'Türkçe';
+            }
+            
+            // Dil seçim modal'ındaki check işaretlerini güncelle
+            ['tr', 'en', 'de', 'ru'].forEach(lang => {
+                const checkEl = document.getElementById(`langCheck${lang.charAt(0).toUpperCase() + lang.slice(1)}`);
+                if (checkEl) {
+                    checkEl.style.display = (lang === currentLanguage) ? 'inline' : 'none';
+                }
+            });
+        }
+        
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('appLanguage', lang);
+            applyTranslations();
+            closeLanguageSelector();
+        }
+        
+        function openLanguageSelector() {
+            const modal = document.getElementById('languageModal');
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+        
+        function closeLanguageSelector() {
+            const modal = document.getElementById('languageModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
             await checkGuestAuth();
+            applyTranslations(); // Sayfa yüklendiğinde çevirileri uygula
         });
 
         window.addEventListener('load', async () => {
@@ -4193,6 +4689,9 @@
             
             // Setup PWA safe area refresh (ana ekrana eklendiğinde safe area'yı güncelle)
             setupPWASafeAreaRefresh();
+            
+            // Klavye açıldığında input container pozisyonunu koru
+            setupKeyboardHandling();
             
             // Initialize socket connection if guest is authenticated
             if (GUEST_UNIQUE_ID) {
@@ -4223,4 +4722,5 @@
     </script>
 </body>
 </html>
+
 
