@@ -61,7 +61,7 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f8f9fa;
+            background: white;
             color: var(--text-dark);
             line-height: 1.6;
         }
@@ -267,7 +267,7 @@
         }
 
         .table tr:hover {
-            background: #f8f9fa;
+            background: white;
         }
 
         .badge {
@@ -705,8 +705,8 @@
             </div>
             <div style="text-align: center;">
                 <img id="team-qr-code-image" src="" alt="QR Code" style="max-width: 300px; width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin: 20px 0;">
-                <div class="qr-link" id="team-qr-link" style="margin-top: 20px; padding: 12px; background: #f0f2f5; border-radius: 8px; word-break: break-all; font-size: 12px; color: #667781;"></div>
-                <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 8px; font-size: 14px; color: #1976d2;">
+                <div class="qr-link" id="team-qr-link" style="margin-top: 20px; padding: 12px; background: white; border-radius: 8px; word-break: break-all; font-size: 12px; color: #667781;"></div>
+                <div style="margin-top: 16px; padding: 12px; background: white; border-radius: 8px; font-size: 14px; color: #1976d2;">
                     <strong><i data-lucide="info" class="icon icon-sm"></i> Bilgi:</strong> Bu QR kodu okutan assistant otomatik olarak takıma katılacaktır.
                 </div>
             </div>
@@ -1042,7 +1042,7 @@
                                             const key = `${r.room_number}_${r.checkin_date}`;
                                             const roomAssignments = assignmentMap.get(key) || [];
                                             return roomAssignments.map(a => `
-                                                <tr style="background: #f0f9f4;">
+                                                <tr style="background: white;">
                                                     <td>${a.team_name}</td>
                                                     <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || '-'}</td>
                                                     <td>
@@ -1093,7 +1093,7 @@
                                     </thead>
                                     <tbody>
                                         ${unassignedRooms.map(r => `
-                                            <tr style="background: #fff3cd;">
+                                            <tr style="background: white;">
                                                 <td style="font-family: monospace; font-size: 11px;">${r.guest_unique_id || '-'}</td>
                                                 <td>
                                                     ${r.profile_photo ? `
@@ -1163,7 +1163,7 @@
                     <div style="margin-bottom: 16px;">
                         <button class="btn btn-primary" onclick="openAssignmentModal()">+ Yeni Eşleştirme</button>
                     </div>
-                    <div style="margin-bottom: 16px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">
+                    <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #2196F3;">
                         <strong><i data-lucide="info" class="icon icon-sm"></i> Bilgi:</strong> Tüm eşleştirmeler gösteriliyor. Belirli bir tarih için filtrelemek için tarih seçin.
                     </div>
                     <table class="table">
@@ -2365,7 +2365,7 @@
                 const sortedDates = Object.keys(roomsByDate).sort();
                 
                 let html = `
-                    <div style="margin-bottom: 16px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ff9800;">
+                    <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #ff9800;">
                         <strong>⚠️ Toplam ${unassignedRooms.length} eşleşmemiş oda bulundu</strong>
                     </div>
                 `;
@@ -2374,7 +2374,7 @@
                     const dateRooms = roomsByDate[date];
                     html += `
                         <div style="margin-bottom: 24px;">
-                            <h3 style="margin-bottom: 12px; color: #ff9800; font-size: 16px; padding: 8px; background: #fff3cd; border-radius: 6px;">
+                            <h3 style="margin-bottom: 12px; color: #ff9800; font-size: 16px; padding: 8px; background: white; border-radius: 6px;">
                                 📅 ${formatDate(date)} - ${dateRooms.length} Oda
                             </h3>
                             <table class="table">
@@ -2394,7 +2394,7 @@
                                 </thead>
                                 <tbody>
                                     ${dateRooms.map(r => `
-                                        <tr style="background: #fff3cd; cursor: pointer;" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}', '${r.room_number || ''}', '${r.checkin_date || ''}')">
+                                        <tr style="background: white; cursor: pointer;" onclick="openAssignmentModalForRoomByGuestId('${r.guest_unique_id || ''}', '${r.room_number || ''}', '${r.checkin_date || ''}')">
                                             <td style="font-family: monospace; font-size: 11px;"><strong>${r.guest_unique_id || '-'}</strong></td>
                                             <td>
                                                 ${r.profile_photo ? `
