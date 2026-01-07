@@ -2607,7 +2607,143 @@
             <div class="section-header">
                 <h1 class="section-header-title" data-i18n="settings">Ayarlar</h1>
             </div>
-            <div class="settings-section">
+            
+            <!-- Login Screen (shown when not authenticated) -->
+            <div class="settings-section" id="loginScreen">
+                <div style="padding: 40px 20px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🏨</div>
+                    <h2 style="font-size: 24px; font-weight: 600; color: #111b21; margin-bottom: 8px;">Voyage Sorgun</h2>
+                    <p style="font-size: 14px; color: #667781; margin-bottom: 32px;">Hoş geldiniz! Devam etmek için giriş yapın.</p>
+                    
+                    <div class="info-card" style="text-align: left;">
+                        <div class="info-card-title">Giriş Yap</div>
+                        <div class="info-card-content">
+                            <form id="loginForm" onsubmit="handleLogin(event)">
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Oda Numarası</label>
+                                    <input 
+                                        type="text" 
+                                        id="loginRoomNumber" 
+                                        placeholder="Örn: 101" 
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Ad</label>
+                                    <input 
+                                        type="text" 
+                                        id="loginFirstName" 
+                                        placeholder="Adınız" 
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 24px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Soyad</label>
+                                    <input 
+                                        type="text" 
+                                        id="loginLastName" 
+                                        placeholder="Soyadınız" 
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Giriş Tarihi</label>
+                                    <input 
+                                        type="date" 
+                                        id="loginCheckinDate"
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 24px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Çıkış Tarihi</label>
+                                    <input 
+                                        type="date" 
+                                        id="loginCheckoutDate"
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    id="loginSubmitBtn"
+                                    style="
+                                        width: 100%;
+                                        padding: 14px;
+                                        background: #008069;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 8px;
+                                        font-size: 16px;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                    "
+                                >
+                                    Giriş Yap
+                                </button>
+                            </form>
+                            
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e4e6e9; text-align: center;">
+                                <button 
+                                    onclick="continueAsGuest()"
+                                    style="
+                                        background: none;
+                                        border: none;
+                                        color: #008069;
+                                        font-size: 14px;
+                                        font-weight: 500;
+                                        cursor: pointer;
+                                        text-decoration: underline;
+                                    "
+                                >
+                                    Misafir olarak devam et
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Content (shown when authenticated) -->
+            <div class="settings-section" id="settingsContent" style="display: none;">
                 <div class="profile-header">
                     <div class="profile-avatar-large" id="profileAvatarLarge">
                         <i data-lucide="user" class="icon icon-xl"></i>
@@ -2743,13 +2879,14 @@
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
-                <div class="settings-item" onclick="handleGuestLogout()">
+                <div class="settings-item" id="logoutBtn" onclick="handleLogout()" style="display: none;">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
                         <div class="settings-item-label" data-i18n="logout">Çıkış Yap</div>
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -2838,6 +2975,7 @@
         let GUEST_SURNAME = null;
         let GUEST_UNIQUE_ID = null;
         let CHECKIN_DATE = null;
+        let IS_AUTHENTICATED = false; // Session state
         let CHECKOUT_DATE = null;
         let TEAM_ID = null;
         const SERVER_URL = window.location.origin;
@@ -4756,6 +4894,226 @@
             console.log('✅ Guest logged out');
         }
 
+        // ============================================
+        // Settings Session Management (Login in Settings)
+        // Must use existing guest_unique_id format (name+surname+checkin+checkout+sha256)
+        // ============================================
+
+        async function checkAuthStatus() {
+            const loginScreen = document.getElementById('loginScreen');
+            const settingsContent = document.getElementById('settingsContent');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            try {
+                const resp = await fetch('/api/guest/me', { credentials: 'include' });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data?.success && data?.guest?.guest_unique_id) {
+                        IS_AUTHENTICATED = true;
+                        GUEST_UNIQUE_ID = data.guest.guest_unique_id;
+                        GUEST_NAME = data.guest.guest_name || 'Misafir';
+                        GUEST_SURNAME = data.guest.guest_surname || null;
+                        CHECKIN_DATE = data.guest.checkin_date || null;
+                        CHECKOUT_DATE = data.guest.checkout_date || null;
+                        ROOM_NUMBER = data.guest.room_number || null;
+                        TEAM_ID = data.guest.team_id || null;
+
+                        if (loginScreen) loginScreen.style.display = 'none';
+                        if (settingsContent) settingsContent.style.display = 'block';
+                        if (logoutBtn) logoutBtn.style.display = 'flex';
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.error('Auth status check failed:', e);
+            }
+
+            IS_AUTHENTICATED = false;
+            if (loginScreen) loginScreen.style.display = 'block';
+            if (settingsContent) settingsContent.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            return false;
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const firstName = document.getElementById('loginFirstName')?.value?.trim();
+            const lastName = document.getElementById('loginLastName')?.value?.trim();
+            const checkinDate = document.getElementById('loginCheckinDate')?.value;
+            const checkoutDate = document.getElementById('loginCheckoutDate')?.value;
+            const submitBtn = document.getElementById('loginSubmitBtn');
+
+            if (!firstName || !lastName || !checkinDate || !checkoutDate) {
+                alert('Lütfen ad, soyad, giriş tarihi ve çıkış tarihini girin.');
+                return;
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Giriş yapılıyor...';
+            }
+
+            try {
+                // IMPORTANT: Backend generates guest_unique_id using generateGuestUniqueId + sha256
+                const response = await fetch('/api/guest/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: firstName,
+                        surname: lastName,
+                        checkin_date: checkinDate,
+                        checkout_date: checkoutDate
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data?.success) {
+                    alert(data?.error || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
+                    return;
+                }
+
+                // Session vars
+                IS_AUTHENTICATED = true;
+                GUEST_UNIQUE_ID = data.guest_unique_id;
+                GUEST_NAME = data.guest_name || firstName || 'Misafir';
+                GUEST_SURNAME = data.guest_surname || lastName || null;
+                CHECKIN_DATE = data.checkin_date || checkinDate;
+                CHECKOUT_DATE = data.checkout_date || checkoutDate;
+                ROOM_NUMBER = data.room_number || null;
+                TEAM_ID = data.team_id || null;
+
+                // Backup to localStorage
+                localStorage.setItem('guest_unique_id', GUEST_UNIQUE_ID);
+                localStorage.setItem('guest_name', GUEST_NAME);
+                localStorage.setItem('guest_surname', GUEST_SURNAME || '');
+                localStorage.setItem('checkin_date', CHECKIN_DATE);
+                localStorage.setItem('checkout_date', CHECKOUT_DATE);
+                if (ROOM_NUMBER) localStorage.setItem('room_number', ROOM_NUMBER);
+                if (TEAM_ID) localStorage.setItem('team_id', TEAM_ID);
+
+                // Update settings UI + profile
+                await checkAuthStatus();
+                updateProfileInfo();
+
+                showWelcomePopup(`${GUEST_NAME} ${GUEST_SURNAME || ''}`.trim());
+                setTimeout(() => switchSection('info'), 600);
+
+                // Start socket (chat)
+                try {
+                    await initializeSocket();
+                } catch (e) {
+                    console.warn('Socket init skipped/failed:', e);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Giriş Yap';
+                }
+            }
+        }
+
+        function continueAsGuest() {
+            IS_AUTHENTICATED = false;
+            switchSection('info');
+            alert('Misafir modu: İçerikleri görüntüleyebilirsiniz, ancak beğeni/yorum/kaydet gibi işlemler için giriş yapmanız gerekiyor.');
+        }
+
+        async function handleLogout() {
+            if (!confirm('Çıkış yapmak istediğinize emin misiniz?')) return;
+
+            try {
+                await fetch('/api/guest/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (e) {
+                console.warn('Logout request failed:', e);
+            }
+
+            // Clear session vars
+            IS_AUTHENTICATED = false;
+            GUEST_UNIQUE_ID = null;
+            GUEST_NAME = 'Misafir';
+            GUEST_SURNAME = null;
+            CHECKIN_DATE = null;
+            CHECKOUT_DATE = null;
+            ROOM_NUMBER = null;
+            TEAM_ID = null;
+
+            // Clear localStorage backup
+            localStorage.removeItem('guest_unique_id');
+            localStorage.removeItem('guest_name');
+            localStorage.removeItem('guest_surname');
+            localStorage.removeItem('checkin_date');
+            localStorage.removeItem('checkout_date');
+            localStorage.removeItem('room_number');
+            localStorage.removeItem('team_id');
+
+            // Disconnect socket if connected
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+
+            await checkAuthStatus();
+            switchSection('info');
+        }
+
+        function requireAuth() {
+            if (!IS_AUTHENTICATED || !GUEST_UNIQUE_ID) {
+                alert('Bu işlem için giriş yapmanız gerekiyor. (Ayarlar > Giriş Yap)');
+                switchSection('settings');
+                return false;
+            }
+            return true;
+        }
+
+        function showWelcomePopup(displayName) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.35);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 340px;
+                width: 100%;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+                text-align: center;
+            `;
+            content.innerHTML = `
+                <div style="font-size: 40px; margin-bottom: 12px;">👋</div>
+                <div style="font-size: 18px; font-weight: 700; color: #111b21; margin-bottom: 6px;">Hoş Geldiniz!</div>
+                <div style="font-size: 14px; color: #667781; margin-bottom: 16px;">${displayName}</div>
+                <div style="font-size: 13px; color: #667781; line-height: 1.5;">
+                    Aktiviteler, harita ve otel duyuruları için uygulamayı keşfedin.
+                </div>
+            `;
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            setTimeout(() => modal.remove(), 1200);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+
         // Initialize on load
         // Check authentication on page load
         // Navigation functions
@@ -4811,7 +5169,10 @@
             
             // Update profile info when switching to settings section
             if (section === 'settings') {
-                updateProfileInfo();
+                checkAuthStatus(); // Check auth state first
+                if (IS_AUTHENTICATED) {
+                    updateProfileInfo();
+                }
             }
             
             // Update reservations info when switching to reservations section
@@ -5359,6 +5720,9 @@
         }
 
         async function handlePostLike(postId, postElement) {
+            // Check authentication first
+            if (!requireAuth()) return;
+            
             try {
                 const response = await fetch(`/api/info-posts/${postId}/like`, {
                     method: 'POST',
@@ -5403,6 +5767,9 @@
         }
 
         async function handlePostBookmark(postId, postElement) {
+            // Check authentication first
+            if (!requireAuth()) return;
+            
             try {
                 const response = await fetch(`/api/info-posts/${postId}/bookmark`, {
                     method: 'POST',
@@ -5603,6 +5970,9 @@
         }
 
         async function openDMModal(postId) {
+            // Check authentication first
+            if (!requireAuth()) return;
+            
             const modal = document.createElement('div');
             modal.id = 'dmModal';
             modal.style.cssText = `
@@ -7757,6 +8127,9 @@
 
         // Toggle favorite
         function toggleFavorite(activityId) {
+            // Check authentication first
+            if (!requireAuth()) return;
+            
             // TODO: Implement favorite functionality with database
             const btn = event.target.closest('.activity-action-btn');
             btn.classList.toggle('active');
@@ -7813,6 +8186,9 @@
                 lucide.createIcons();
             }
             console.log('🚀 Voyage Sorgun Chat initialized');
+
+            // Settings login/session state (uses guest_unique_id cookie)
+            await checkAuthStatus();
             
             // Setup PWA fullscreen support
             setupPWAFullscreen();

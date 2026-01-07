@@ -1605,6 +1605,101 @@ app.get('/api/location/users', async (req, res) => {
 });
 
 // Get current guest info (for session check)
+// ============================================
+// Guest Authentication Routes
+// ============================================
+
+// Login endpoint - authenticate guest
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { roomNumber, firstName, lastName } = req.body;
+    
+    if (!roomNumber || !firstName || !lastName) {
+      return res.status(400).json({ success: false, error: 'Room number, first name, and last name are required' });
+    }
+    
+    // Find guest by room number and name
+    const result = await pool.query(`
+      SELECT *
+      FROM rooms
+      WHERE room_number = $1
+        AND LOWER(guest_name) = LOWER($2)
+        AND LOWER(guest_surname) = LOWER($3)
+        AND is_active = true
+        AND checkin_date <= CURRENT_DATE
+        AND (checkout_date IS NULL OR checkout_date >= CURRENT_DATE)
+      ORDER BY checkin_date DESC
+      LIMIT 1
+    `, [roomNumber, firstName, lastName]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Guest not found. Please check your room number and name.' 
+      });
+    }
+    
+    const guest = result.rows[0];
+    
+    // Set cookie with guest_unique_id
+    res.cookie('guest_unique_id', guest.guest_unique_id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+    
+    // Set authentication flag
+    res.cookie('is_authenticated', 'true', {
+      httpOnly: false, // Allow JS to read this
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+    
+    logInfo(`✅ Guest logged in: ${guest.guest_name} ${guest.guest_surname} (Room ${guest.room_number})`);
+    
+    res.json({
+      success: true,
+      guest: {
+        id: guest.id,
+        room_number: guest.room_number,
+        guest_name: guest.guest_name,
+        guest_surname: guest.guest_surname,
+        checkin_date: guest.checkin_date,
+        checkout_date: guest.checkout_date,
+        guest_unique_id: guest.guest_unique_id,
+        avatar_seed: guest.avatar_seed,
+        avatar_style: guest.avatar_style,
+        ghost_mode: guest.ghost_mode
+      }
+    });
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('guest_unique_id');
+  res.clearCookie('is_authenticated');
+  logInfo('✅ Guest logged out');
+  res.json({ success: true });
+});
+
+// Check authentication status
+app.get('/api/auth/status', (req, res) => {
+  const guestUniqueId = req.cookies?.guest_unique_id;
+  const isAuthenticated = req.cookies?.is_authenticated === 'true';
+  
+  res.json({
+    success: true,
+    isAuthenticated,
+    hasSession: !!guestUniqueId
+  });
+});
+
 app.get('/api/guest/me', async (req, res) => {
   try {
     const guestUniqueId = req.cookies?.guest_unique_id;
