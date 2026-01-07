@@ -2511,14 +2511,7 @@
                                 <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 32px;" id="avatarPreviewPlaceholder">👤</div>
                             </div>
                             
-                            <div class="avatar-style-selector" id="avatarStyleSelector">
-                                <button class="avatar-style-btn active" onclick="switchAvatarStyle('avataaars')">Avataaars</button>
-                                <button class="avatar-style-btn" onclick="switchAvatarStyle('big-smile')">Big Smile</button>
-                                <button class="avatar-style-btn" onclick="switchAvatarStyle('bottts')">Robots</button>
-                                <button class="avatar-style-btn" onclick="switchAvatarStyle('fun-emoji')">Fun</button>
-                                <button class="avatar-style-btn" onclick="switchAvatarStyle('lorelei')">Lorelei</button>
-                                <button class="avatar-style-btn" onclick="switchAvatarStyle('personas')">Personas</button>
-                            </div>
+                            <!-- Avatar style selector removed - only avataaars style available -->
                             
                             <div class="avatar-grid" id="avatarGrid">
                                 <!-- Avatars will be loaded here -->
@@ -2593,6 +2586,8 @@
                         </label>
                     </div>
                 </div>
+                <!-- Konum İzni butonu gizlendi (kafa karıştırıcı) -->
+                <!--
                 <div class="settings-item" onclick="requestLocationPermission()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="map-pin" class="icon icon-lg"></i></div>
@@ -2602,6 +2597,7 @@
                         <span id="locationPermissionStatus" style="font-size: 12px; color: #667781;" data-i18n="locationPermissionStatus">İzin ver</span> ›
                     </div>
                 </div>
+                -->
                 <div class="settings-item" onclick="openLanguageSelector()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="languages" class="icon icon-lg"></i></div>
@@ -7106,7 +7102,7 @@
         // Avatar Selection Functions
         // ============================================
 
-        let currentAvatarStyle = 'avataaars';
+        let currentAvatarStyle = 'avataaars'; // Always use avataaars style
         let currentAvatarSeed = null;
 
         // Load avatar selection
@@ -7117,38 +7113,51 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.guest) {
-                        // TODO: Fetch avatar_seed and avatar_style from guest data
-                        // For now, generate a seed if not exists
-                        currentAvatarSeed = data.guest.avatar_seed || GUEST_NAME || 'user';
-                        currentAvatarStyle = data.guest.avatar_style || 'avataaars';
+                        // Always use avataaars style
+                        currentAvatarSeed = data.guest.avatar_seed || 'avatar-1';
+                        currentAvatarStyle = 'avataaars';
                     }
                 }
             } catch (error) {
                 console.error('Error loading avatar data:', error);
             }
             
-            generateAvatars(currentAvatarStyle);
+            // Always generate avataaars avatars
+            generateAvatars('avataaars');
             updateAvatarPreview();
         }
 
-        // Generate avatars for a style
+        // Generate avatars for a style (only avataaars, 36 unique avatars)
         function generateAvatars(style) {
             const grid = document.getElementById('avatarGrid');
             if (!grid) return;
             
             grid.innerHTML = '';
             
-            // Generate 36 avatars (6x6 grid)
+            // Always use avataaars style
+            const avatarStyle = 'avataaars';
+            
+            // Generate 36 unique avatars with different seeds (6x6 grid)
+            // Use unique seeds for variety: user name + index + common words
+            const seeds = [
+                'avatar-1', 'avatar-2', 'avatar-3', 'avatar-4', 'avatar-5', 'avatar-6',
+                'person-1', 'person-2', 'person-3', 'person-4', 'person-5', 'person-6',
+                'user-1', 'user-2', 'user-3', 'user-4', 'user-5', 'user-6',
+                'human-1', 'human-2', 'human-3', 'human-4', 'human-5', 'human-6',
+                'character-1', 'character-2', 'character-3', 'character-4', 'character-5', 'character-6',
+                'profile-1', 'profile-2', 'profile-3', 'profile-4', 'profile-5', 'profile-6'
+            ];
+            
             for (let i = 0; i < 36; i++) {
-                const seed = `${GUEST_NAME || 'user'}-${i}-${Date.now()}`;
-                const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+                const seed = seeds[i] || `avatar-${i + 1}`;
+                const avatarUrl = `https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${seed}`;
                 
                 const avatarItem = document.createElement('div');
                 avatarItem.className = 'avatar-item';
                 if (currentAvatarSeed && seed === currentAvatarSeed) {
                     avatarItem.classList.add('selected');
                 }
-                avatarItem.onclick = () => selectAvatar(seed, style);
+                avatarItem.onclick = () => selectAvatar(seed, avatarStyle);
                 
                 const img = document.createElement('img');
                 img.src = avatarUrl;
@@ -7159,20 +7168,11 @@
             }
         }
 
-        // Switch avatar style
+        // Switch avatar style (deprecated - always use avataaars)
         function switchAvatarStyle(style) {
-            currentAvatarStyle = style;
-            
-            // Update active button
-            document.querySelectorAll('.avatar-style-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent.toLowerCase().includes(style.toLowerCase()) || 
-                    (style === 'avataaars' && btn.textContent === 'Avataaars')) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            generateAvatars(style);
+            // Always use avataaars style
+            currentAvatarStyle = 'avataaars';
+            generateAvatars('avataaars');
         }
 
         // Select avatar
