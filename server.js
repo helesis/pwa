@@ -2657,8 +2657,8 @@ app.get('/api/admin/activities', async (req, res) => {
   }
 });
 
-// Get single activity (admin)
-app.get('/api/admin/activities/:id', requireAssistant, async (req, res) => {
+// Get single activity (admin) - No auth required for viewing
+app.get('/api/admin/activities/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM activities WHERE id = $1', [id]);
@@ -2879,7 +2879,8 @@ app.get('/api/admin/info-posts', async (req, res) => {
 });
 
 // Get single info post (admin)
-app.get('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
+// Get single info post (admin) - No auth required for viewing
+app.get('/api/admin/info-posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM info_posts WHERE id = $1', [id]);
