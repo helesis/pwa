@@ -2182,24 +2182,30 @@
             <div class="info-section">
                 <div class="info-card">
                     <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> <span data-i18n="myReservations">Rezervasyonlarım</span></div>
-                    <div class="info-card-content">
-                        <div style="margin-bottom: 12px;">
-                            <strong>Oda:</strong> <span id="reservationRoomNumber">-</span>
+                    <div class="info-card-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 14px;">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Oda</span>
+                            <span id="reservationRoomNumber" style="font-weight: 500;">-</span>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <strong>Giriş Tarihi:</strong> <span id="reservationCheckinDate">-</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Giriş Tarihi</span>
+                            <span id="reservationCheckinDate" style="font-weight: 500;">-</span>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <strong>Çıkış Tarihi:</strong> <span id="reservationCheckoutDate">-</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Çıkış Tarihi</span>
+                            <span id="reservationCheckoutDate" style="font-weight: 500;">-</span>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <strong>Yetişkin Sayısı:</strong> <span id="reservationAdultCount">-</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Yetişkin</span>
+                            <span id="reservationAdultCount" style="font-weight: 500;">-</span>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <strong>Çocuk Sayısı:</strong> <span id="reservationChildCount">-</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Çocuk</span>
+                            <span id="reservationChildCount" style="font-weight: 500;">-</span>
                         </div>
-                        <div style="margin-bottom: 20px;">
-                            <strong>Acenta:</strong> <span id="reservationAgency">-</span>
+                        <div style="display: flex; flex-direction: column; grid-column: 1 / -1;">
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Acenta</span>
+                            <span id="reservationAgency" style="font-weight: 500;">-</span>
                         </div>
                     </div>
                 </div>
@@ -2237,25 +2243,25 @@
                 <!-- Instagram Post Format Sections -->
                 <div class="info-posts-container" id="infoPostsContainer">
                     <!-- Posts will be loaded dynamically from database -->
-                </div>
-            </div>
-        </div>
+                            </div>
+                            </div>
+                    </div>
 
         <!-- Activities Section -->
         <div class="content-section" id="activitiesSection">
             <div class="section-header">
                 <h1 class="section-header-title" data-i18n="activities">Aktiviteler</h1>
-            </div>
+                            </div>
             <div class="activities-section">
                 <!-- Now Playing Banner -->
                 <div class="now-playing-banner" id="nowPlayingBanner">
                     <div class="now-playing-banner-header">
                         <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>
                         <span data-i18n="nowPlaying">ŞİMDİ OYNANIYOR</span>
-                    </div>
+                            </div>
                     <div class="now-playing-banner-title" id="nowPlayingTitle"></div>
                     <div class="now-playing-banner-time" id="nowPlayingTime"></div>
-                </div>
+                    </div>
 
                 <!-- Date Navigation -->
                 <div class="date-navigation">
@@ -2265,7 +2271,7 @@
                     <button class="date-nav-btn" id="tomorrowBtn" onclick="switchActivityDate('tomorrow')">
                         <span id="tomorrowLabel" data-i18n="tomorrow">Yarın</span>
                     </button>
-                </div>
+                    </div>
 
                 <!-- Category Filters -->
                 <div class="category-filters">
@@ -2274,22 +2280,22 @@
                     <button class="category-filter-chip" onclick="filterByCategory('Spor')" data-i18n="sport">Spor</button>
                     <button class="category-filter-chip" onclick="filterByCategory('Gösteri')" data-i18n="show">Gösteri</button>
                     <button class="category-filter-chip" onclick="filterByCategory('Akşam')" data-i18n="evening">Akşam</button>
-                </div>
+                    </div>
 
                 <!-- Timeline -->
                 <div class="timeline-container" id="timelineContainer">
                     <div class="empty-timeline">
                         <div class="empty-timeline-icon">📅</div>
                         <div class="empty-timeline-text" data-i18n="activitiesLoading">Aktiviteler yükleniyor...</div>
+                            </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
         <div class="content-section" id="mapSection">
             <div class="section-header">
                 <h1 class="section-header-title" data-i18n="map">Harita</h1>
-            </div>
+                            </div>
             <div class="map-section">
                 <!-- Permission Banner (shown when permission not yet asked or denied) -->
                 <div id="locationPermissionBanner" class="location-permission-banner" style="display: none;">
@@ -2301,9 +2307,9 @@
                             </div>
                             <div style="font-size: 12px; color: #667781;" id="permissionBannerMessage">
                                 Haritada konumunuzu göstermek için konum iznine ihtiyacımız var.
-                            </div>
                         </div>
-                    </div>
+                        </div>
+                        </div>
                     <button id="permissionBannerBtn" onclick="handlePermissionBannerClick()" style="
                         padding: 8px 16px;
                         background: #008069;
@@ -2317,8 +2323,8 @@
                     ">
                         Konum Ver
                     </button>
-                </div>
-                
+                    </div>
+
                 <div class="info-card">
                     <div class="info-card-title" data-i18n="map">Harita</div>
                     <div class="info-card-content">
