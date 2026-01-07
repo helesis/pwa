@@ -2306,8 +2306,8 @@
                             <span class="post-caption-username">Restoranlar</span>
                             Lezzet dolu bir yolculuk sizi bekliyor! 🍽️
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
 
                     <!-- Plaj ve Havuzlar -->
@@ -2336,8 +2336,8 @@
                             <span class="post-caption-username">Plaj ve Havuzlar</span>
                             Serin sular ve altın kumlar sizi bekliyor! 🏖️
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
 
                     <!-- Sağlıklı Yaşam -->
@@ -2366,8 +2366,8 @@
                             <span class="post-caption-username">Sağlıklı Yaşam</span>
                             Sağlıklı yaşam için tesislerimiz sizlerle! 💪
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
 
                     <!-- Sense Spa -->
@@ -2396,8 +2396,8 @@
                             <span class="post-caption-username">Sense Spa</span>
                             Ruhunuzu ve bedeninizi yenileyin! 💆
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
 
                     <!-- Çocuklar -->
@@ -2426,8 +2426,8 @@
                             <span class="post-caption-username">Çocuklar</span>
                             Çocuklarınız için eğlence dolu aktiviteler! 👶
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
 
                     <!-- Voyage Asistan -->
@@ -2456,8 +2456,8 @@
                             <span class="post-caption-username">Voyage Asistan</span>
                             Size yardımcı olmak için buradayız! 🤖
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
 
                     <!-- Ödüller -->
@@ -2486,8 +2486,8 @@
                             <span class="post-caption-username">Ödüller</span>
                             Ödüllerinizi keşfedin ve kazanın! 🏆
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     </div>
                 </div>
             </div>
@@ -2496,14 +2496,14 @@
         <!-- Activities Section -->
         <div class="content-section" id="activitiesSection">
             <div class="section-header">
-                <h1 class="section-header-title">Aktiviteler</h1>
+                <h1 class="section-header-title" data-i18n="activities">Aktiviteler</h1>
             </div>
             <div class="activities-section">
                 <!-- Now Playing Banner -->
                 <div class="now-playing-banner" id="nowPlayingBanner">
                     <div class="now-playing-banner-header">
                         <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>
-                        <span>ŞİMDİ OYNANIYOR</span>
+                        <span data-i18n="nowPlaying">ŞİMDİ OYNANIYOR</span>
                     </div>
                     <div class="now-playing-banner-title" id="nowPlayingTitle"></div>
                     <div class="now-playing-banner-time" id="nowPlayingTime"></div>
@@ -2512,27 +2512,27 @@
                 <!-- Date Navigation -->
                 <div class="date-navigation">
                     <button class="date-nav-btn active" id="todayBtn" onclick="switchActivityDate('today')">
-                        <span id="todayLabel">Bugün</span>
+                        <span id="todayLabel" data-i18n="today">Bugün</span>
                     </button>
                     <button class="date-nav-btn" id="tomorrowBtn" onclick="switchActivityDate('tomorrow')">
-                        <span id="tomorrowLabel">Yarın</span>
+                        <span id="tomorrowLabel" data-i18n="tomorrow">Yarın</span>
                     </button>
                 </div>
 
                 <!-- Category Filters -->
                 <div class="category-filters">
-                    <button class="category-filter-chip active" onclick="filterByCategory('Tümü')">Tümü</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Çocuk')">Çocuk</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Spor')">Spor</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Gösteri')">Gösteri</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Akşam')">Akşam</button>
+                    <button class="category-filter-chip active" onclick="filterByCategory('Tümü')" data-i18n="all">Tümü</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Çocuk')" data-i18n="kids">Çocuk</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Spor')" data-i18n="sport">Spor</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Gösteri')" data-i18n="show">Gösteri</button>
+                    <button class="category-filter-chip" onclick="filterByCategory('Akşam')" data-i18n="evening">Akşam</button>
                 </div>
 
                 <!-- Timeline -->
                 <div class="timeline-container" id="timelineContainer">
                     <div class="empty-timeline">
                         <div class="empty-timeline-icon">📅</div>
-                        <div class="empty-timeline-text">Aktiviteler yükleniyor...</div>
+                        <div class="empty-timeline-text" data-i18n="activitiesLoading">Aktiviteler yükleniyor...</div>
                     </div>
                 </div>
             </div>
@@ -2586,11 +2586,11 @@
                                 />
                             </div>
                             <div class="map-suggestions">
-                                <button type="button" class="map-chip" data-map-target="room" data-value="101">Oda 101</button>
-                                <button type="button" class="map-chip" data-map-target="room" data-value="102">Oda 102</button>
-                                <button type="button" class="map-chip" data-map-target="outlet" data-value="lobby">Lobby</button>
-                                <button type="button" class="map-chip" data-map-target="outlet" data-value="restaurant">Ana Restoran</button>
-                                <button type="button" class="map-chip" data-map-target="outlet" data-value="spa">SPA</button>
+                                <button type="button" class="map-chip" data-map-target="room" data-value="101" data-i18n-room="101"></button>
+                                <button type="button" class="map-chip" data-map-target="room" data-value="102" data-i18n-room="102"></button>
+                                <button type="button" class="map-chip" data-map-target="outlet" data-value="lobby" data-i18n="lobby"></button>
+                                <button type="button" class="map-chip" data-map-target="outlet" data-value="restaurant" data-i18n="mainRestaurant"></button>
+                                <button type="button" class="map-chip" data-map-target="outlet" data-value="spa" data-i18n="spa"></button>
                             </div>
                         </div>
                         <div class="map-container" style="height: 500px; min-height: 500px;">
@@ -2776,7 +2776,7 @@
                 <div class="settings-item" onclick="toggleGhostMode()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="ghost" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label">Hayalet Modu</div>
+                        <div class="settings-item-label" data-i18n="ghostMode">Hayalet Modu</div>
                     </div>
                     <div class="settings-item-right">
                         <label class="toggle-switch">
@@ -5620,7 +5620,7 @@
                             </div>
                             <div class="post-header-info">
                                 <div class="post-username">${post.title}</div>
-                                <div class="post-location">Voyage Sorgun</div>
+                                <div class="post-location">${post.location || t('voyageSorgun')}</div>
                             </div>
                             <div class="post-more">⋯</div>
                         </div>
@@ -5641,13 +5641,13 @@
                             <div class="post-action dm-btn"><i data-lucide="send" class="icon icon-lg"></i></div>
                             <div class="post-action save bookmark-btn"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
                         </div>
-                        <div class="post-likes">${post.likes_count || 0} beğeni</div>
+                        <div class="post-likes">${post.likes_count || 0} <span data-i18n="likes">beğeni</span></div>
                         <div class="post-caption">
                             <span class="post-caption-username">${post.title}</span>
                             ${post.caption || ''}
                         </div>
-                        <div class="post-comments">Yorumları görüntüle</div>
-                        <div class="post-time">Şimdi</div>
+                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
+                        <div class="post-time" data-i18n="now">Şimdi</div>
                     `;
                     container.appendChild(postEl);
                 });
@@ -5660,6 +5660,9 @@
                 
                 // Setup actions after posts are loaded
                 setupPostActions();
+                
+                // Apply translations to dynamically loaded content
+                applyTranslations();
             } catch (error) {
                 console.error('Error loading info posts:', error);
             }
@@ -7579,11 +7582,37 @@
                 'mapLoading': 'Harita yükleniyor...',
                 'mapSearchLabel': 'Gitmek istediğiniz yer',
                 'mapSearchPlaceholder': 'Oda numarası veya alan adı yazın',
+                'room': 'Oda',
+                'lobby': 'Lobby',
+                'mainRestaurant': 'Ana Restoran',
+                'spa': 'SPA',
+                'voyageSorgun': 'Voyage Sorgun',
+                
+                // Activities
+                'activities': 'Aktiviteler',
+                'nowPlaying': 'ŞİMDİ OYNANIYOR',
+                'today': 'Bugün',
+                'tomorrow': 'Yarın',
+                'all': 'Tümü',
+                'kids': 'Çocuk',
+                'sport': 'Spor',
+                'show': 'Gösteri',
+                'evening': 'Akşam',
+                'morning': 'Sabah',
+                'noon': 'Öğle',
+                'other': 'Diğer',
+                'noActivitiesForDate': 'Bu tarihte aktivite bulunmuyor',
+                'activitiesLoadingError': 'Aktiviteler yüklenirken hata oluştu',
+                'activitiesLoading': 'Aktiviteler yükleniyor...',
+                
+                // Settings
+                'ghostMode': 'Hayalet Modu',
                 
                 // Common
                 'loading': 'Yükleniyor...',
                 'now': 'Şimdi',
                 'viewComments': 'Yorumları görüntüle',
+                'likes': 'beğeni',
                 'likesLoading': 'Beğenmeler yükleniyor...'
             },
             en: {
@@ -7638,11 +7667,37 @@
                 'mapLoading': 'Loading map...',
                 'mapSearchLabel': 'Where do you want to go?',
                 'mapSearchPlaceholder': 'Type room number or area name',
+                'room': 'Room',
+                'lobby': 'Lobby',
+                'mainRestaurant': 'Main Restaurant',
+                'spa': 'SPA',
+                'voyageSorgun': 'Voyage Sorgun',
+                
+                // Activities
+                'activities': 'Activities',
+                'nowPlaying': 'NOW PLAYING',
+                'today': 'Today',
+                'tomorrow': 'Tomorrow',
+                'all': 'All',
+                'kids': 'Kids',
+                'sport': 'Sport',
+                'show': 'Show',
+                'evening': 'Evening',
+                'morning': 'Morning',
+                'noon': 'Noon',
+                'other': 'Other',
+                'noActivitiesForDate': 'No activities for this date',
+                'activitiesLoadingError': 'Error loading activities',
+                'activitiesLoading': 'Loading activities...',
+                
+                // Settings
+                'ghostMode': 'Ghost Mode',
                 
                 // Common
                 'loading': 'Loading...',
                 'now': 'Now',
                 'viewComments': 'View comments',
+                'likes': 'likes',
                 'likesLoading': 'Likes loading...'
             },
             de: {
@@ -7703,11 +7758,37 @@
                 'mapLoading': 'Karte wird geladen...',
                 'mapSearchLabel': 'Wohin möchten Sie gehen?',
                 'mapSearchPlaceholder': 'Zimmernummer oder Bereich eingeben',
+                'room': 'Zimmer',
+                'lobby': 'Lobby',
+                'mainRestaurant': 'Hauptrestaurant',
+                'spa': 'SPA',
+                'voyageSorgun': 'Voyage Sorgun',
+                
+                // Activities
+                'activities': 'Aktivitäten',
+                'nowPlaying': 'LÄUFT GERADE',
+                'today': 'Heute',
+                'tomorrow': 'Morgen',
+                'all': 'Alle',
+                'kids': 'Kinder',
+                'sport': 'Sport',
+                'show': 'Show',
+                'evening': 'Abend',
+                'morning': 'Morgen',
+                'noon': 'Mittag',
+                'other': 'Andere',
+                'noActivitiesForDate': 'Keine Aktivitäten für dieses Datum',
+                'activitiesLoadingError': 'Fehler beim Laden der Aktivitäten',
+                'activitiesLoading': 'Aktivitäten werden geladen...',
+                
+                // Settings
+                'ghostMode': 'Geistermodus',
                 
                 // Common
                 'loading': 'Lädt...',
                 'now': 'Jetzt',
                 'viewComments': 'Kommentare anzeigen',
+                'likes': 'Likes',
                 'likesLoading': 'Likes werden geladen...'
             },
             ru: {
@@ -7768,11 +7849,37 @@
                 'mapLoading': 'Загрузка карты...',
                 'mapSearchLabel': 'Куда вы хотите пойти?',
                 'mapSearchPlaceholder': 'Введите номер комнаты или название зоны',
+                'room': 'Комната',
+                'lobby': 'Лобби',
+                'mainRestaurant': 'Главный ресторан',
+                'spa': 'СПА',
+                'voyageSorgun': 'Voyage Sorgun',
+                
+                // Activities
+                'activities': 'Активности',
+                'nowPlaying': 'СЕЙЧАС ИГРАЕТ',
+                'today': 'Сегодня',
+                'tomorrow': 'Завтра',
+                'all': 'Все',
+                'kids': 'Дети',
+                'sport': 'Спорт',
+                'show': 'Шоу',
+                'evening': 'Вечер',
+                'morning': 'Утро',
+                'noon': 'Полдень',
+                'other': 'Другое',
+                'noActivitiesForDate': 'На эту дату нет активностей',
+                'activitiesLoadingError': 'Ошибка при загрузке активностей',
+                'activitiesLoading': 'Загрузка активностей...',
+                
+                // Settings
+                'ghostMode': 'Режим призрака',
                 
                 // Common
                 'loading': 'Загрузка...',
                 'now': 'Сейчас',
                 'viewComments': 'Просмотреть комментарии',
+                'likes': 'лайков',
                 'likesLoading': 'Загрузка лайков...'
             }
         };
@@ -7788,6 +7895,13 @@
                 if (key) {
                     element.textContent = t(key);
                 }
+            });
+            
+            // Map chips için özel işlem (Oda 101, Oda 102, vs.)
+            document.querySelectorAll('[data-i18n-room]').forEach(element => {
+                const roomNumber = element.getAttribute('data-i18n-room');
+                const roomText = t('room');
+                element.textContent = `${roomText} ${roomNumber}`;
             });
             
             // Placeholder'ları çevir
@@ -7893,14 +8007,17 @@
                 renderActivitiesTimeline();
                 updateNowPlayingBanner();
                 updateDateLabels();
+                // Apply translations after loading
+                applyTranslations();
             } catch (error) {
                 console.error('Error loading activities:', error);
                 document.getElementById('timelineContainer').innerHTML = `
                     <div class="empty-timeline">
                         <div class="empty-timeline-icon">⚠️</div>
-                        <div class="empty-timeline-text">Aktiviteler yüklenirken hata oluştu</div>
+                        <div class="empty-timeline-text" data-i18n="activitiesLoadingError">Aktiviteler yüklenirken hata oluştu</div>
                     </div>
                 `;
+                applyTranslations();
             }
         }
 
@@ -7912,9 +8029,10 @@
                 container.innerHTML = `
                     <div class="empty-timeline">
                         <div class="empty-timeline-icon">📅</div>
-                        <div class="empty-timeline-text">Bu tarihte aktivite bulunmuyor</div>
+                        <div class="empty-timeline-text" data-i18n="noActivitiesForDate">Bu tarihte aktivite bulunmuyor</div>
                     </div>
                 `;
+                applyTranslations();
                 return;
             }
             
@@ -7931,6 +8049,12 @@
             });
             
             let html = '';
+            const categoryMap = {
+                'Sabah': 'morning',
+                'Öğle': 'noon',
+                'Akşam': 'evening',
+                'Diğer': 'other'
+            };
             const categories = ['Sabah', 'Öğle', 'Akşam', 'Diğer'];
             
             categories.forEach(cat => {
@@ -7938,7 +8062,7 @@
                 
                 html += `
                     <div class="time-period">
-                        <div class="time-period-header">${cat.toUpperCase()}</div>
+                        <div class="time-period-header" data-i18n="${categoryMap[cat]}">${cat.toUpperCase()}</div>
                         ${grouped[cat].map(activity => {
                             const startTime = formatTime(activity.start_time);
                             const endTime = formatTime(activity.end_time);
@@ -8004,9 +8128,12 @@
             container.innerHTML = html || `
                 <div class="empty-timeline">
                     <div class="empty-timeline-icon">📅</div>
-                    <div class="empty-timeline-text">Bu tarihte aktivite bulunmuyor</div>
+                    <div class="empty-timeline-text" data-i18n="noActivitiesForDate">Bu tarihte aktivite bulunmuyor</div>
                 </div>
             `;
+            
+            // Apply translations to dynamically loaded content
+            applyTranslations();
             
             // Re-initialize Lucide icons
             if (typeof lucide !== 'undefined') {
