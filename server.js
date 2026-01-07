@@ -370,6 +370,30 @@ async function addNewTablesIfNeeded() {
       );
     `);
     
+    // Add recurring columns to activities table if they don't exist
+    if (activitiesCheck.rows[0].exists) {
+      const recurringColumnsToAdd = [
+        { name: 'recurring_rule', type: 'VARCHAR(50)' },
+        { name: 'recurring_until', type: 'DATE' },
+        { name: 'end_date', type: 'DATE' },
+        { name: 'is_story', type: 'BOOLEAN DEFAULT false' }
+      ];
+      for (const col of recurringColumnsToAdd) {
+        const columnCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'activities' 
+            AND column_name = $1
+          );
+        `, [col.name]);
+        if (!columnCheck.rows[0].exists) {
+          await pool.query(`ALTER TABLE activities ADD COLUMN ${col.name} ${col.type};`);
+          console.log(`✅ Added column ${col.name} to activities table`);
+        }
+      }
+    }
+    
     if (!activitiesCheck.rows[0].exists) {
       await pool.query(`
         CREATE TABLE activities (
@@ -404,6 +428,7 @@ async function addNewTablesIfNeeded() {
         { name: 'activity_date', type: 'DATE' },
         { name: 'start_time', type: 'TIME' },
         { name: 'end_time', type: 'TIME' },
+        { name: 'end_date', type: 'DATE' },
         { name: 'description', type: 'TEXT' },
         { name: 'category', type: 'VARCHAR(50)' },
         { name: 'type', type: 'VARCHAR(50)' },
@@ -413,7 +438,10 @@ async function addNewTablesIfNeeded() {
         { name: 'capacity', type: 'INTEGER' },
         { name: 'featured', type: 'BOOLEAN DEFAULT false' },
         { name: 'map_latitude', type: 'DECIMAL(10, 8)' },
-        { name: 'map_longitude', type: 'DECIMAL(11, 8)' }
+        { name: 'map_longitude', type: 'DECIMAL(11, 8)' },
+        { name: 'recurring_rule', type: 'VARCHAR(50)' },
+        { name: 'recurring_until', type: 'DATE' },
+        { name: 'is_story', type: 'BOOLEAN DEFAULT false' }
       ];
       
       for (const col of columnsToAdd) {
@@ -2644,7 +2672,7 @@ async function requireAssistant(req, res, next) {
 // Get all activities (for timeline and story tray) - Public
 app.get('/api/activities', async (req, res) => {
   try {
-    const { date, type, category } = req.query;
+    const { date, type, category, year, is_story } = req.query;
     let query = `
       SELECT * FROM activities 
       WHERE is_active = true
@@ -2655,6 +2683,21 @@ app.get('/api/activities', async (req, res) => {
     if (date) {
       query += ` AND activity_date = $${paramCount++}`;
       params.push(date);
+    }
+    
+    // Filter by year
+    if (year) {
+      query += ` AND EXTRACT(YEAR FROM activity_date) = $${paramCount++}`;
+      params.push(parseInt(year));
+    }
+    
+    // Filter by is_story (for story tray vs timeline activities)
+    if (is_story !== undefined) {
+      query += ` AND is_story = $${paramCount++}`;
+      params.push(is_story === 'true');
+    } else {
+      // Default: exclude story tray items (only show timeline activities)
+      query += ` AND (is_story = false OR is_story IS NULL)`;
     }
     
     if (type && type !== 'Tümü') {
@@ -2716,9 +2759,10 @@ app.get('/api/admin/activities/:id', async (req, res) => {
 app.post('/api/admin/activities', requireAssistant, async (req, res) => {
   try {
     const { 
-      title, icon, display_order, is_active, activity_date, start_time, end_time,
+      title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
-      featured, map_latitude, map_longitude, video_url, image_url
+      featured, map_latitude, map_longitude, video_url, image_url,
+      recurring_rule, recurring_until, is_story
     } = req.body;
     
     if (!title) {
@@ -2727,11 +2771,12 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
     
     const result = await pool.query(`
       INSERT INTO activities (
-        title, icon, display_order, is_active, activity_date, start_time, end_time,
+        title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
         description, category, type, location, instructor_name, age_group, capacity,
-        featured, map_latitude, map_longitude, video_url, image_url
+        featured, map_latitude, map_longitude, video_url, image_url,
+        recurring_rule, recurring_until, is_story
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
       RETURNING *
     `, [
       title.trim(),
@@ -2741,6 +2786,7 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
       activity_date || null,
       start_time || null,
       end_time || null,
+      end_date || null,
       description || null,
       category || null,
       type || null,
@@ -2752,7 +2798,10 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
       map_latitude || null,
       map_longitude || null,
       video_url || null,
-      image_url || null
+      image_url || null,
+      recurring_rule || null,
+      recurring_until || null,
+      is_story !== undefined ? is_story : false
     ]);
     
     res.json(result.rows[0]);
@@ -2767,9 +2816,10 @@ app.put('/api/admin/activities/:id', requireAssistant, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
-      title, icon, display_order, is_active, activity_date, start_time, end_time,
+      title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
-      featured, map_latitude, map_longitude, video_url, image_url
+      featured, map_latitude, map_longitude, video_url, image_url,
+      recurring_rule, recurring_until, is_story
     } = req.body;
     
     const result = await pool.query(`
@@ -2782,25 +2832,30 @@ app.put('/api/admin/activities/:id', requireAssistant, async (req, res) => {
         activity_date = COALESCE($5, activity_date),
         start_time = COALESCE($6, start_time),
         end_time = COALESCE($7, end_time),
-        description = COALESCE($8, description),
-        category = COALESCE($9, category),
-        type = COALESCE($10, type),
-        location = COALESCE($11, location),
-        instructor_name = COALESCE($12, instructor_name),
-        age_group = COALESCE($13, age_group),
-        capacity = COALESCE($14, capacity),
-        featured = COALESCE($15, featured),
-        map_latitude = COALESCE($16, map_latitude),
-        map_longitude = COALESCE($17, map_longitude),
-        video_url = COALESCE($18, video_url),
-        image_url = COALESCE($19, image_url),
+        end_date = COALESCE($8, end_date),
+        description = COALESCE($9, description),
+        category = COALESCE($10, category),
+        type = COALESCE($11, type),
+        location = COALESCE($12, location),
+        instructor_name = COALESCE($13, instructor_name),
+        age_group = COALESCE($14, age_group),
+        capacity = COALESCE($15, capacity),
+        featured = COALESCE($16, featured),
+        map_latitude = COALESCE($17, map_latitude),
+        map_longitude = COALESCE($18, map_longitude),
+        video_url = COALESCE($19, video_url),
+        image_url = COALESCE($20, image_url),
+        recurring_rule = COALESCE($21, recurring_rule),
+        recurring_until = COALESCE($22, recurring_until),
+        is_story = COALESCE($23, is_story),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $20
+      WHERE id = $24
       RETURNING *
     `, [
-      title, icon, display_order, is_active, activity_date, start_time, end_time,
+      title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
-      featured, map_latitude, map_longitude, video_url, image_url, id
+      featured, map_latitude, map_longitude, video_url, image_url,
+      recurring_rule, recurring_until, is_story, id
     ]);
     
     if (result.rows.length === 0) {

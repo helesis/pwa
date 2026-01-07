@@ -542,6 +542,7 @@
             <button class="tab" onclick="switchTab('assignments')"><i data-lucide="link" class="icon icon-md"></i> Eşleştirmeler</button>
             <button class="tab" onclick="switchTab('unassigned')"><i data-lucide="alert-triangle" class="icon icon-md"></i> Eşleşmemiş Odalar</button>
             <button class="tab" onclick="switchTab('activities')"><i data-lucide="sparkles" class="icon icon-md"></i> Hikayeler</button>
+            <button class="tab" onclick="switchTab('activities-calendar')"><i data-lucide="calendar" class="icon icon-md"></i> Aktiviteler Takvimi</button>
             <button class="tab" onclick="switchTab('posts')"><i data-lucide="image" class="icon icon-md"></i> Postlar</button>
         </div>
 
@@ -621,6 +622,34 @@
                     <button class="btn btn-primary" onclick="openActivityModal()">+ Yeni Hikaye</button>
                 </div>
                 <div id="activities-list">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activities Calendar Tab -->
+        <div id="activities-calendar-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Aktiviteler Takvimi (Yıllık Görünüm)</h2>
+                    <button class="btn btn-primary" onclick="openActivityCalendarModal()">+ Yeni Aktivite</button>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div class="form-group" style="max-width: 300px;">
+                        <label class="form-label">Yıl Seç</label>
+                        <select id="calendar-year-select" class="form-select" onchange="loadActivitiesCalendar()">
+                            ${(() => {
+                                const currentYear = new Date().getFullYear();
+                                let options = '';
+                                for (let year = currentYear - 1; year <= currentYear + 1; year++) {
+                                    options += `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`;
+                                }
+                                return options;
+                            })()}
+                        </select>
+                    </div>
+                </div>
+                <div id="activities-calendar-list">
                     <div class="loading">Yükleniyor...</div>
                 </div>
             </div>
@@ -893,6 +922,105 @@
         </div>
     </div>
 
+    <!-- Activity Calendar Modal -->
+    <div id="activity-calendar-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="activity-calendar-modal-title">Yeni Aktivite</h3>
+                <button class="close-btn" onclick="closeActivityCalendarModal()">&times;</button>
+            </div>
+            <form id="activity-calendar-form" onsubmit="saveActivityCalendar(event)">
+                <div class="form-group">
+                    <label class="form-label">Başlık *</label>
+                    <input type="text" id="calendar-activity-title" class="form-input" required>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="form-label">Başlangıç Tarihi *</label>
+                        <input type="date" id="calendar-activity-start-date" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Bitiş Tarihi</label>
+                        <input type="date" id="calendar-activity-end-date" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="form-label">Başlangıç Saati</label>
+                        <input type="time" id="calendar-activity-start-time" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">Bitiş Saati</label>
+                        <input type="time" id="calendar-activity-end-time" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <input type="text" id="calendar-activity-category" class="form-input" placeholder="Örn: Sabah / Öğle / Akşam">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tür</label>
+                    <input type="text" id="calendar-activity-type" class="form-input" placeholder="Örn: Spor / Çocuk / Gösteri">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Lokasyon</label>
+                    <input type="text" id="calendar-activity-location" class="form-input" placeholder="Örn: Ana Sahne / Havuz">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <textarea id="calendar-activity-description" class="form-input" rows="3"></textarea>
+                </div>
+                
+                <!-- Tekrar Seçenekleri -->
+                <div class="form-group" style="border-top: 2px solid var(--voyage-light-blue); padding-top: 16px; margin-top: 16px;">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 12px;">Tekrar Seçenekleri</label>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="radio" name="recurring-type" id="recurring-none" value="none" checked onchange="toggleRecurringOptions()">
+                            Tek seferlik (tekrar yok)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="radio" name="recurring-type" id="recurring-daily" value="daily" onchange="toggleRecurringOptions()">
+                            Her gün
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="radio" name="recurring-type" id="recurring-weekly" value="weekly" onchange="toggleRecurringOptions()">
+                            Her hafta (aynı gün)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="radio" name="recurring-type" id="recurring-biweekly" value="biweekly" onchange="toggleRecurringOptions()">
+                            Her 14 günde 1
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="radio" name="recurring-type" id="recurring-monthly" value="monthly" onchange="toggleRecurringOptions()">
+                            Her ay (aynı gün)
+                        </label>
+                    </div>
+                    <div class="form-group" id="recurring-until-group" style="display: none;">
+                        <label class="form-label">Tekrar Son Tarihi (Opsiyonel)</label>
+                        <input type="date" id="recurring-until-date" class="form-input">
+                        <div style="font-size: 12px; color: #667781; margin-top: 4px;">
+                            Boş bırakılırsa seçilen yılın sonuna kadar tekrar eder
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeActivityCalendarModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Post Modal -->
     <div id="post-modal" class="modal">
         <div class="modal-content">
@@ -966,6 +1094,7 @@
             if (tabName === 'assignments') loadAssignments();
             if (tabName === 'unassigned') loadUnassignedRooms();
             if (tabName === 'activities') loadActivities();
+            if (tabName === 'activities-calendar') loadActivitiesCalendar();
             if (tabName === 'posts') loadPosts();
         }
 
