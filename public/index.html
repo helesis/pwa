@@ -68,7 +68,7 @@
             /* Safe area top + status bar alanı (tüm üst alan) */
             height: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px);
             min-height: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px);
-            background: #008069; /* Chat header yeşil rengi */
+            background: white; /* Chat header beyaz rengi */
             z-index: 10001; /* Navigation bar'ın üstünde sabit kalacak */
             pointer-events: none;
         }
@@ -105,8 +105,8 @@
         }
 
         .header {
-            background: #008069;
-            color: white;
+            background: white;
+            color: #111b21;
             padding: 10px 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
@@ -644,7 +644,7 @@
             justify-content: center;
             min-height: 100vh;
             min-height: 100dvh;
-            background: linear-gradient(135deg, #008069 0%, #1A4D6D 100%);
+            background: white;
             padding: 20px;
         }
 
@@ -703,9 +703,9 @@
         }
 
         .guest-login-btn {
-            background: #008069;
-            color: white;
-            border: none;
+            background: white;
+            color: #111b21;
+            border: 1px solid #e4e6e9;
             padding: 14px;
             border-radius: 8px;
             font-size: 16px;
@@ -715,7 +715,7 @@
         }
 
         .guest-login-btn:hover {
-            background: #006b56;
+            background: white;
         }
 
         .guest-login-btn:disabled {
@@ -799,26 +799,26 @@
         .send-btn {
             width: 42px;
             height: 42px;
-            background: #008069;
-            border: none;
+            background: white;
+            border: 1px solid #e4e6e9;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            color: white;
+            color: #111b21;
             flex-shrink: 0;
         }
 
         .send-btn:hover {
-            background: #006d58;
+            background: white;
             transform: scale(1.05);
         }
 
         .send-btn:active {
             transform: scale(0.95);
-            background: #005a4a;
+            background: white;
         }
 
         .send-btn.disabled {
@@ -915,12 +915,13 @@
         }
 
         .photo-modal-btn.camera {
-            background: #008069;
-            color: white;
+            background: white;
+            color: #111b21;
+            border: 1px solid #e4e6e9;
         }
 
         .photo-modal-btn.camera:hover {
-            background: #006d58;
+            background: white;
         }
 
         .photo-modal-btn.gallery {
@@ -1428,7 +1429,8 @@
         }
 
         .toggle-switch input:checked + .toggle-slider {
-            background-color: #008069;
+            background-color: white;
+            border: 1px solid #e4e6e9;
         }
 
         .toggle-switch input:checked + .toggle-slider:before {
