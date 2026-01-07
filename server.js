@@ -8,6 +8,8 @@ import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import { randomBytes, createHash } from 'crypto';
 import cookieParser from 'cookie-parser';
+import multer from 'multer';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -44,6 +46,42 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json());
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = file.originalname.split('.').pop();
+    cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images and videos
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and video files are allowed'), false);
+    }
+  }
+});
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(uploadsDir));
 
 // Service worker should never be cached
 app.get('/service-worker.js', (req, res) => {
@@ -2794,14 +2832,27 @@ app.delete('/api/admin/activities/:id', requireAssistant, async (req, res) => {
   }
 });
 
-// Upload photo/video for activity
-app.post('/api/admin/activities/:id/upload', requireAssistant, async (req, res) => {
+// Upload photo/video for activity (supports both file upload and URL)
+app.post('/api/admin/activities/:id/upload', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { image_url, video_url, file_type } = req.body;
+    let image_url = req.body.image_url;
+    let video_url = req.body.video_url;
+    
+    // If file was uploaded, use the file path
+    if (req.file) {
+      const fileUrl = `/uploads/${req.file.filename}`;
+      if (req.file.mimetype.startsWith('image/')) {
+        image_url = fileUrl;
+        video_url = null;
+      } else if (req.file.mimetype.startsWith('video/')) {
+        video_url = fileUrl;
+        image_url = null;
+      }
+    }
     
     if (!image_url && !video_url) {
-      return res.status(400).json({ error: 'image_url or video_url is required' });
+      return res.status(400).json({ error: 'image_url, video_url, or file is required' });
     }
     
     const updateFields = [];
@@ -2841,7 +2892,7 @@ app.post('/api/admin/activities/:id/upload', requireAssistant, async (req, res) 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error uploading media for activity:', error);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', message: error.message });
   }
 });
 
@@ -3004,14 +3055,27 @@ app.delete('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
   }
 });
 
-// Upload photo/video for info post
-app.post('/api/admin/info-posts/:id/upload', requireAssistant, async (req, res) => {
+// Upload photo/video for info post (supports both file upload and URL)
+app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { image_url, video_url } = req.body;
+    let image_url = req.body.image_url;
+    let video_url = req.body.video_url;
+    
+    // If file was uploaded, use the file path
+    if (req.file) {
+      const fileUrl = `/uploads/${req.file.filename}`;
+      if (req.file.mimetype.startsWith('image/')) {
+        image_url = fileUrl;
+        video_url = null;
+      } else if (req.file.mimetype.startsWith('video/')) {
+        video_url = fileUrl;
+        image_url = null;
+      }
+    }
     
     if (!image_url && !video_url) {
-      return res.status(400).json({ error: 'image_url or video_url is required' });
+      return res.status(400).json({ error: 'image_url, video_url, or file is required' });
     }
 
     const updateFields = [];
@@ -3045,7 +3109,7 @@ app.post('/api/admin/info-posts/:id/upload', requireAssistant, async (req, res) 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error uploading media for info post:', error);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', message: error.message });
   }
 });
 

@@ -2864,12 +2864,16 @@
             content.innerHTML = `
                 <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Fotoğraf veya Video Yükle</div>
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Fotoğraf (URL veya Base64)</label>
-                    <input type="text" id="activity-image-url" class="form-input" placeholder="https://... veya data:image/...">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Fotoğraf Dosyası</label>
+                    <input type="file" id="activity-image-file" accept="image/*" class="form-input" style="padding: 8px;">
+                    <div style="font-size: 12px; color: #667781; margin-top: 4px;">veya</div>
+                    <input type="text" id="activity-image-url" class="form-input" placeholder="Fotoğraf URL (opsiyonel)" style="margin-top: 8px;">
                 </div>
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Video (URL veya Base64)</label>
-                    <input type="text" id="activity-video-url" class="form-input" placeholder="https://... veya data:video/...">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Video Dosyası</label>
+                    <input type="file" id="activity-video-file" accept="video/*" class="form-input" style="padding: 8px;">
+                    <div style="font-size: 12px; color: #667781; margin-top: 4px;">veya</div>
+                    <input type="text" id="activity-video-url" class="form-input" placeholder="Video URL (opsiyonel)" style="margin-top: 8px;">
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button id="cancel-upload-btn" class="btn btn-secondary" style="flex: 1;">İptal</button>
@@ -2882,27 +2886,44 @@
             
             document.getElementById('cancel-upload-btn').onclick = () => modal.remove();
             document.getElementById('upload-activity-btn').onclick = async () => {
+                const imageFile = document.getElementById('activity-image-file').files[0];
+                const videoFile = document.getElementById('activity-video-file').files[0];
                 const imageUrl = document.getElementById('activity-image-url').value.trim();
                 const videoUrl = document.getElementById('activity-video-url').value.trim();
                 
-                if (!imageUrl && !videoUrl) {
-                    alert('Fotoğraf veya video URL\'si gerekli');
+                if (!imageFile && !videoFile && !imageUrl && !videoUrl) {
+                    alert('Fotoğraf veya video dosyası/URL\'si gerekli');
                     return;
                 }
                 
                 try {
+                    const formData = new FormData();
+                    
+                    // Add file if selected
+                    if (imageFile) {
+                        formData.append('file', imageFile);
+                    } else if (videoFile) {
+                        formData.append('file', videoFile);
+                    }
+                    
+                    // Add URL if provided (as fallback or alternative)
+                    if (imageUrl && !imageFile) {
+                        formData.append('image_url', imageUrl);
+                    }
+                    if (videoUrl && !videoFile) {
+                        formData.append('video_url', videoUrl);
+                    }
+                    
                     const response = await fetch(`/api/admin/activities/${activityId}/upload`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ 
-                            image_url: imageUrl || null,
-                            video_url: videoUrl || null,
-                            file_type: imageUrl ? 'image' : 'video'
-                        })
+                        body: formData
                     });
                     
-                    if (!response.ok) throw new Error('Failed to upload');
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Failed to upload' }));
+                        throw new Error(errorData.error || 'Failed to upload');
+                    }
                     
                     modal.remove();
                     loadActivities();
@@ -2978,13 +2999,19 @@
                                 </div>
                                 <div style="border-top: 1px solid #e4e6e9; padding-top: 16px; margin-top: 16px;">
                                     <label style="display: block; margin-bottom: 8px; font-weight: 500; color: var(--voyage-navy);">Fotoğraf/Video Ekle</label>
-                                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                                        <input type="text" id="post-image-url-${p.id}" class="form-input" placeholder="Fotoğraf URL veya Base64" style="flex: 1;">
-                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id}, 'image')" style="padding: 8px 16px;">📷 Foto Yükle</button>
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #667781;">Fotoğraf Dosyası</label>
+                                        <input type="file" id="post-image-file-${p.id}" accept="image/*" class="form-input" style="padding: 8px; margin-bottom: 4px;">
+                                        <div style="font-size: 11px; color: #999; margin-bottom: 8px;">veya</div>
+                                        <input type="text" id="post-image-url-${p.id}" class="form-input" placeholder="Fotoğraf URL (opsiyonel)" style="margin-bottom: 8px;">
+                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id}, 'image')" style="padding: 8px 16px; width: 100%;">📷 Foto Yükle</button>
                                     </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" id="post-video-url-${p.id}" class="form-input" placeholder="Video URL" style="flex: 1;">
-                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id}, 'video')" style="padding: 8px 16px;">🎬 Video Yükle</button>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #667781;">Video Dosyası</label>
+                                        <input type="file" id="post-video-file-${p.id}" accept="video/*" class="form-input" style="padding: 8px; margin-bottom: 4px;">
+                                        <div style="font-size: 11px; color: #999; margin-bottom: 8px;">veya</div>
+                                        <input type="text" id="post-video-url-${p.id}" class="form-input" placeholder="Video URL (opsiyonel)" style="margin-bottom: 8px;">
+                                        <button class="btn btn-primary" onclick="uploadPostMedia(${p.id}, 'video')" style="padding: 8px 16px; width: 100%;">🎬 Video Yükle</button>
                                     </div>
                                 </div>
                             </div>
@@ -3103,33 +3130,57 @@
         }
 
         async function uploadPostMedia(postId, type) {
+            const imageFileInput = document.getElementById(`post-image-file-${postId}`);
+            const videoFileInput = document.getElementById(`post-video-file-${postId}`);
             const imageUrlInput = document.getElementById(`post-image-url-${postId}`);
             const videoUrlInput = document.getElementById(`post-video-url-${postId}`);
-            const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
-            const videoUrl = videoUrlInput ? videoUrlInput.value.trim() : '';
-
-            if (type === 'video') {
-                if (!videoUrl) {
-                    alert('Video URL gerekli');
-                    return;
-                }
-            } else {
-                if (!imageUrl) {
-                    alert('Fotoğraf URL gerekli');
-                    return;
-                }
+            
+            const imageFile = imageFileInput?.files[0];
+            const videoFile = videoFileInput?.files[0];
+            const imageUrl = imageUrlInput?.value.trim() || '';
+            const videoUrl = videoUrlInput?.value.trim() || '';
+            
+            if (type === 'image' && !imageFile && !imageUrl) {
+                alert('Fotoğraf dosyası veya URL gerekli');
+                return;
+            }
+            
+            if (type === 'video' && !videoFile && !videoUrl) {
+                alert('Video dosyası veya URL gerekli');
+                return;
             }
             
             try {
+                const formData = new FormData();
+                
+                if (type === 'image') {
+                    if (imageFile) {
+                        formData.append('file', imageFile);
+                    } else if (imageUrl) {
+                        formData.append('image_url', imageUrl);
+                    }
+                } else if (type === 'video') {
+                    if (videoFile) {
+                        formData.append('file', videoFile);
+                    } else if (videoUrl) {
+                        formData.append('video_url', videoUrl);
+                    }
+                }
+                
                 const response = await fetch(`/api/admin/info-posts/${postId}/upload`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify(type === 'video' ? { video_url: videoUrl } : { image_url: imageUrl })
+                    body: formData
                 });
                 
-                if (!response.ok) throw new Error('Failed to upload');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Failed to upload' }));
+                    throw new Error(errorData.error || 'Failed to upload');
+                }
                 
+                // Clear inputs
+                if (imageFileInput) imageFileInput.value = '';
+                if (videoFileInput) videoFileInput.value = '';
                 if (imageUrlInput) imageUrlInput.value = '';
                 if (videoUrlInput) videoUrlInput.value = '';
                 loadPosts();
