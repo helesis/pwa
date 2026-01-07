@@ -590,9 +590,155 @@ async function addNewTablesIfNeeded() {
       `);
       console.log('✅ Created direct_messages table');
     }
+
+    // Seed initial data if tables are empty
+    await seedInitialData();
   } catch (error) {
     console.error('❌ Error adding new tables:', error);
     // Don't throw, just log - existing tables might have foreign key constraints
+  }
+}
+
+// Seed initial data for activities (stories) and info_posts
+async function seedInitialData() {
+  try {
+    // Check if activities table exists and has data
+    const activitiesCheck = await pool.query('SELECT COUNT(*) as count FROM activities');
+    const activitiesCount = parseInt(activitiesCheck.rows[0]?.count || 0);
+
+    // Seed activities (for story tray) if empty
+    if (activitiesCount === 0) {
+      const storyActivities = [
+        {
+          title: 'Yüzme Havuzu',
+          icon: 'waves',
+          display_order: 1,
+          is_active: true,
+          activity_date: null  // NULL for story tray items
+        },
+        {
+          title: 'Plaj',
+          icon: 'sun',
+          display_order: 2,
+          is_active: true,
+          activity_date: null
+        },
+        {
+          title: 'Restoran',
+          icon: 'utensils-crossed',
+          display_order: 3,
+          is_active: true,
+          activity_date: null
+        },
+        {
+          title: 'Spa',
+          icon: 'sparkles',
+          display_order: 4,
+          is_active: true,
+          activity_date: null
+        },
+        {
+          title: 'Aktiviteler',
+          icon: 'party-popper',
+          display_order: 5,
+          is_active: true,
+          activity_date: null
+        }
+      ];
+
+      for (const activity of storyActivities) {
+        await pool.query(`
+          INSERT INTO activities (title, icon, display_order, is_active, activity_date)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [activity.title, activity.icon, activity.display_order, activity.is_active, activity.activity_date]);
+      }
+      console.log('✅ Seeded initial activities (story tray)');
+    }
+
+    // Check if info_posts table exists and has data
+    const postsCheck = await pool.query('SELECT COUNT(*) as count FROM info_posts');
+    const postsCount = parseInt(postsCheck.rows[0]?.count || 0);
+
+    // Seed info posts if empty
+    if (postsCount === 0) {
+      const posts = [
+        {
+          post_id: 'restaurants',
+          title: 'Restoranlar',
+          icon: 'utensils-crossed',
+          caption: 'Lezzet dolu bir yolculuk sizi bekliyor! 🍽️',
+          location: 'Voyage Sorgun',
+          display_order: 1,
+          is_active: true
+        },
+        {
+          post_id: 'beach-pools',
+          title: 'Plaj ve Havuzlar',
+          icon: 'sun',
+          caption: 'Serin sular ve altın kumlar sizi bekliyor! 🏖️',
+          location: 'Voyage Sorgun',
+          display_order: 2,
+          is_active: true
+        },
+        {
+          post_id: 'wellness',
+          title: 'Sağlıklı Yaşam',
+          icon: 'dumbbell',
+          caption: 'Sağlıklı yaşam için tesislerimiz sizlerle! 💪',
+          location: 'Voyage Sorgun',
+          display_order: 3,
+          is_active: true
+        },
+        {
+          post_id: 'sense-spa',
+          title: 'Sense Spa',
+          icon: 'sparkles',
+          caption: 'Ruhunuzu ve bedeninizi yenileyin! 💆',
+          location: 'Voyage Sorgun',
+          display_order: 4,
+          is_active: true
+        },
+        {
+          post_id: 'kids',
+          title: 'Çocuklar',
+          icon: 'baby',
+          caption: 'Çocuklarınız için eğlence dolu aktiviteler! 👶',
+          location: 'Voyage Sorgun',
+          display_order: 5,
+          is_active: true
+        },
+        {
+          post_id: 'voyage-assistant',
+          title: 'Voyage Asistan',
+          icon: 'bot',
+          caption: 'Size yardımcı olmak için buradayız! 🤖',
+          location: 'Voyage Sorgun',
+          display_order: 6,
+          is_active: true
+        },
+        {
+          post_id: 'rewards',
+          title: 'Ödüller',
+          icon: 'trophy',
+          caption: 'Ödüllerinizi keşfedin ve kazanın! 🏆',
+          location: 'Voyage Sorgun',
+          display_order: 7,
+          is_active: true
+        }
+      ];
+
+      for (const post of posts) {
+        await pool.query(`
+          INSERT INTO info_posts (post_id, title, icon, caption, location, display_order, is_active)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (post_id) DO NOTHING
+        `, [post.post_id, post.title, post.icon, post.caption, post.location, post.display_order, post.is_active]);
+      }
+      console.log('✅ Seeded initial info posts');
+    }
+  } catch (error) {
+    console.error('❌ Error seeding initial data:', error);
+    // Don't throw, just log - this is optional initialization
   }
 }
 

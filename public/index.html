@@ -2230,265 +2230,13 @@
             </div>
             <div class="info-section">
                 <!-- Instagram Story Tray Style Activity Notifications -->
-                <div class="activity-stories-tray">
-                    <div class="activity-story" onclick="openActivityStory(1)">
-                        <div class="story-avatar">
-                            <video class="story-video" muted loop>
-                                <source src="" type="video/mp4">
-                            </video>
-                            <div class="story-avatar-placeholder"><i data-lucide="waves" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="story-label" data-i18n="swimmingPool">Yüzme Havuzu</div>
-                    </div>
-                    <div class="activity-story" onclick="openActivityStory(2)">
-                        <div class="story-avatar">
-                            <video class="story-video" muted loop>
-                                <source src="" type="video/mp4">
-                            </video>
-                            <div class="story-avatar-placeholder"><i data-lucide="sun" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="story-label" data-i18n="beach">Plaj</div>
-                    </div>
-                    <div class="activity-story" onclick="openActivityStory(3)">
-                        <div class="story-avatar">
-                            <video class="story-video" muted loop>
-                                <source src="" type="video/mp4">
-                            </video>
-                            <div class="story-avatar-placeholder"><i data-lucide="utensils-crossed" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="story-label" data-i18n="restaurant">Restoran</div>
-                    </div>
-                    <div class="activity-story" onclick="openActivityStory(4)">
-                        <div class="story-avatar">
-                            <video class="story-video" muted loop>
-                                <source src="" type="video/mp4">
-                            </video>
-                            <div class="story-avatar-placeholder"><i data-lucide="sparkles" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="story-label" data-i18n="spa">Spa</div>
-                    </div>
-                    <div class="activity-story" onclick="openActivityStory(5)">
-                        <div class="story-avatar">
-                            <video class="story-video" muted loop>
-                                <source src="" type="video/mp4">
-                            </video>
-                            <div class="story-avatar-placeholder"><i data-lucide="party-popper" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="story-label" data-i18n="activities">Aktiviteler</div>
-                    </div>
+                <div class="activity-stories-tray" id="activityStoriesTray">
+                    <!-- Stories will be loaded dynamically from database -->
                 </div>
                 
                 <!-- Instagram Post Format Sections -->
-                <div class="info-posts-container">
-                    <!-- Restoranlar -->
-                    <div class="info-post" data-post-id="restaurants">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="utensils-crossed" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Restoranlar</div>
-                                <div class="post-location">${post.location || 'Voyage Sorgun'}</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="utensils-crossed" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Restoranlar</span>
-                            Lezzet dolu bir yolculuk sizi bekliyor! 🍽️
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
-
-                    <!-- Plaj ve Havuzlar -->
-                    <div class="info-post" data-post-id="beach-pools">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="sun" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Plaj ve Havuzlar</div>
-                                <div class="post-location">Voyage Sorgun</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="sun" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Plaj ve Havuzlar</span>
-                            Serin sular ve altın kumlar sizi bekliyor! 🏖️
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
-
-                    <!-- Sağlıklı Yaşam -->
-                    <div class="info-post" data-post-id="wellness">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="dumbbell" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Sağlıklı Yaşam</div>
-                                <div class="post-location">Voyage Sorgun</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="dumbbell" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Sağlıklı Yaşam</span>
-                            Sağlıklı yaşam için tesislerimiz sizlerle! 💪
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
-
-                    <!-- Sense Spa -->
-                    <div class="info-post" data-post-id="sense-spa">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="sparkles" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Sense Spa</div>
-                                <div class="post-location">Voyage Sorgun</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="sparkles" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Sense Spa</span>
-                            Ruhunuzu ve bedeninizi yenileyin! 💆
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
-
-                    <!-- Çocuklar -->
-                    <div class="info-post" data-post-id="kids">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="baby" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Çocuklar</div>
-                                <div class="post-location">Voyage Sorgun</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="baby" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Çocuklar</span>
-                            Çocuklarınız için eğlence dolu aktiviteler! 👶
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
-
-                    <!-- Voyage Asistan -->
-                    <div class="info-post" data-post-id="voyage-assistant">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="bot" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Voyage Asistan</div>
-                                <div class="post-location">Voyage Sorgun</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="bot" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Voyage Asistan</span>
-                            Size yardımcı olmak için buradayız! 🤖
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
-
-                    <!-- Ödüller -->
-                    <div class="info-post" data-post-id="rewards">
-                        <div class="post-header">
-                            <div class="post-avatar">
-                                <div class="post-avatar-inner"><i data-lucide="trophy" class="icon icon-lg"></i></div>
-                            </div>
-                            <div class="post-header-info">
-                                <div class="post-username">Ödüller</div>
-                                <div class="post-location">Voyage Sorgun</div>
-                            </div>
-                            <div class="post-more">⋯</div>
-                        </div>
-                        <div class="post-image">
-                            <div class="post-image-placeholder"><i data-lucide="trophy" class="icon icon-xl"></i></div>
-                        </div>
-                        <div class="post-actions">
-                            <div class="post-action"><i data-lucide="heart" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
-                            <div class="post-action"><i data-lucide="send" class="icon icon-lg"></i></div>
-                            <div class="post-action save"><i data-lucide="bookmark" class="icon icon-lg"></i></div>
-                        </div>
-                        <div class="post-likes">Beğenmeler yükleniyor...</div>
-                        <div class="post-caption">
-                            <span class="post-caption-username">Ödüller</span>
-                            Ödüllerinizi keşfedin ve kazanın! 🏆
-                        </div>
-                        <div class="post-comments" data-i18n="viewComments">Yorumları görüntüle</div>
-                        <div class="post-time" data-i18n="now">Şimdi</div>
-                    </div>
+                <div class="info-posts-container" id="infoPostsContainer">
+                    <!-- Posts will be loaded dynamically from database -->
                 </div>
             </div>
         </div>
@@ -5527,19 +5275,27 @@
         // Load activity story videos
         async function loadActivityStories() {
             try {
-                const response = await fetch('/api/activities');
+                const response = await fetch('/api/activities?is_story=true');
                 if (!response.ok) {
-                    console.warn('Failed to load activities, using static data');
+                    console.warn('Failed to load activity stories');
                     return;
                 }
                 const activities = await response.json();
                 
-                const tray = document.querySelector('.activity-stories-tray');
-                if (!tray || activities.length === 0) return;
+                const tray = document.getElementById('activityStoriesTray');
+                if (!tray) return;
+                
+                if (activities.length === 0) {
+                    tray.innerHTML = '';
+                    return;
+                }
                 
                 tray.innerHTML = '';
                 
-                activities.forEach(activity => {
+                // Sort by display_order
+                activities.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                
+                activities.forEach((activity, index) => {
                     const storyEl = document.createElement('div');
                     storyEl.className = 'activity-story';
                     storyEl.onclick = () => openActivityStory(activity.id);
@@ -5553,7 +5309,7 @@
                                 <i data-lucide="${activity.icon || 'circle'}" class="icon icon-xl"></i>
                             </div>
                         </div>
-                        <div class="story-label">${activity.title}</div>
+                        <div class="story-label">${activity.title || ''}</div>
                     `;
                     tray.appendChild(storyEl);
                 });
@@ -5564,7 +5320,7 @@
                     }, 100);
                 }
             } catch (error) {
-                console.error('Error loading activities:', error);
+                console.error('Error loading activity stories:', error);
             }
         }
 
