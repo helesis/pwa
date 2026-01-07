@@ -2632,8 +2632,13 @@
 
         async function loadActivities() {
             try {
-                const response = await fetch('/api/admin/activities');
-                if (!response.ok) throw new Error('Failed to load activities');
+                const response = await fetch('/api/admin/activities', {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Failed to load activities' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}: Failed to load activities`);
+                }
                 const activities = await response.json();
                 
                 const listEl = document.getElementById('activities-list');
@@ -2683,7 +2688,7 @@
             } catch (error) {
                 console.error('Error loading activities:', error);
                 document.getElementById('activities-list').innerHTML = `
-                    <div class="alert alert-error">Hikayeler yüklenirken hata oluştu</div>
+                    <div class="alert alert-error">Hikayeler yüklenirken hata oluştu: ${error.message}</div>
                 `;
             }
         }
@@ -2984,7 +2989,7 @@
             } catch (error) {
                 console.error('Error loading posts:', error);
                 document.getElementById('posts-list').innerHTML = `
-                    <div class="alert alert-error">Postlar yüklenirken hata oluştu</div>
+                    <div class="alert alert-error">Postlar yüklenirken hata oluştu: ${error.message}</div>
                 `;
             }
         }
