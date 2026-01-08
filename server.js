@@ -99,9 +99,12 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 20, // Production'da daha az connection (Render.com limitleri için)
+  idleTimeoutMillis: process.env.NODE_ENV === 'production' ? 60000 : 30000, // Production'da daha uzun idle timeout
+  connectionTimeoutMillis: process.env.NODE_ENV === 'production' ? 10000 : 2000, // Production'da daha uzun connection timeout
+  allowExitOnIdle: false, // Pool'u açık tut
+  statement_timeout: 30000, // Query timeout (30 saniye)
+  query_timeout: 30000, // Query timeout (30 saniye)
 });
 
 // Test database connection - sadece ilk connection'da log
@@ -118,6 +121,29 @@ pool.on('error', (err) => {
   console.error('❌ [ERROR] PostgreSQL pool error:', err.message);
   console.error('   Stack:', err.stack);
 });
+
+// Retry helper function for database queries
+async function retryQuery(queryFn, maxRetries = 3, delay = 1000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      const isTimeoutError = error.message?.includes('timeout') || 
+                            error.message?.includes('Connection terminated') ||
+                            error.message?.includes('Connection terminated due to connection timeout');
+      
+      if (isTimeoutError && attempt < maxRetries) {
+        const waitTime = delay * attempt;
+        console.warn(`⚠️ Database query timeout (attempt ${attempt}/${maxRetries}), retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // Last attempt or non-timeout error - throw it
+      throw error;
+    }
+  }
+}
 
 // Initialize database tables
 async function initializeDatabase() {
@@ -1862,10 +1888,12 @@ app.post('/api/location/update', async (req, res) => {
       return res.status(400).json({ error: 'latitude and longitude are required' });
     }
     
-    // Check if ghost mode is enabled
-    const roomResult = await pool.query(`
-      SELECT ghost_mode FROM rooms WHERE guest_unique_id = $1
-    `, [guest_unique_id]);
+    // Check if ghost mode is enabled (with retry)
+    const roomResult = await retryQuery(() => 
+      pool.query(`
+        SELECT ghost_mode FROM rooms WHERE guest_unique_id = $1
+      `, [guest_unique_id])
+    );
     
     if (roomResult.rows.length === 0) {
       return res.status(404).json({ error: 'Guest not found' });
@@ -1873,29 +1901,34 @@ app.post('/api/location/update', async (req, res) => {
     
     // Only save location if ghost mode is disabled
     if (!roomResult.rows[0].ghost_mode) {
-      await pool.query(`
-        INSERT INTO user_locations (guest_unique_id, latitude, longitude, accuracy)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT DO NOTHING
-      `, [guest_unique_id, latitude, longitude, accuracy || null]);
+      await retryQuery(() =>
+        pool.query(`
+          INSERT INTO user_locations (guest_unique_id, latitude, longitude, accuracy)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT DO NOTHING
+        `, [guest_unique_id, latitude, longitude, accuracy || null])
+      );
       
       // Keep only last location per user (delete old ones)
-      await pool.query(`
-        DELETE FROM user_locations 
-        WHERE guest_unique_id = $1 
-        AND id NOT IN (
-          SELECT id FROM user_locations 
+      await retryQuery(() =>
+        pool.query(`
+          DELETE FROM user_locations 
           WHERE guest_unique_id = $1 
-          ORDER BY timestamp DESC 
-          LIMIT 1
-        )
-      `, [guest_unique_id]);
+          AND id NOT IN (
+            SELECT id FROM user_locations 
+            WHERE guest_unique_id = $1 
+            ORDER BY timestamp DESC 
+            LIMIT 1
+          )
+        `, [guest_unique_id])
+      );
     }
     
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating location:', error);
-    res.status(500).json({ error: 'Database error' });
+    // Don't expose database errors to client
+    res.status(500).json({ error: 'Failed to update location' });
   }
 });
 
@@ -2039,19 +2072,21 @@ app.get('/api/guest/me', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
-    // Find guest by unique_id
-    const result = await pool.query(`
-      SELECT 
-        r.*,
-        tra.team_id,
-        t.name as team_name
-      FROM rooms r
-      LEFT JOIN team_room_assignments tra ON r.guest_unique_id = tra.guest_unique_id AND tra.is_active = true
-      LEFT JOIN teams t ON tra.team_id = t.id AND t.is_active = true
-      WHERE r.guest_unique_id = $1
-        AND r.is_active = true
-      LIMIT 1
-    `, [guestUniqueId]);
+    // Find guest by unique_id (with retry)
+    const result = await retryQuery(() =>
+      pool.query(`
+        SELECT 
+          r.*,
+          tra.team_id,
+          t.name as team_name
+        FROM rooms r
+        LEFT JOIN team_room_assignments tra ON r.guest_unique_id = tra.guest_unique_id AND tra.is_active = true
+        LEFT JOIN teams t ON tra.team_id = t.id AND t.is_active = true
+        WHERE r.guest_unique_id = $1
+          AND r.is_active = true
+        LIMIT 1
+      `, [guestUniqueId])
+    );
     
     if (result.rows.length === 0) {
       res.clearCookie('guest_unique_id');
@@ -2078,7 +2113,8 @@ app.get('/api/guest/me', async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting guest info:', error);
-    res.status(500).json({ success: false, error: 'Database error' });
+    // Don't expose database errors to client
+    res.status(500).json({ success: false, error: 'Failed to retrieve guest information' });
   }
 });
 
@@ -2842,7 +2878,7 @@ app.get('/api/activities', async (req, res) => {
       
       query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
       
-      const result = await pool.query(query, params);
+      const result = await retryQuery(() => pool.query(query, params));
       console.log(`📊 Query: ${query}`);
       console.log(`📊 Params:`, params);
       console.log(`📊 Total activities from DB: ${result.rows.length}`);
@@ -2973,7 +3009,35 @@ app.get('/api/activities', async (req, res) => {
     }
   } catch (error) {
     console.error('Error fetching activities:', error);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Failed to load activities' });
+  }
+});
+
+// Get story tray items (for info section)
+app.get('/api/story-tray-items', async (req, res) => {
+  try {
+    const result = await retryQuery(() =>
+      pool.query(`
+        SELECT 
+          id,
+          title,
+          icon,
+          video_url,
+          image_url,
+          display_order,
+          is_active,
+          created_at,
+          updated_at
+        FROM story_tray_items
+        WHERE is_active = true
+        ORDER BY display_order ASC, created_at DESC
+      `)
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching story tray items:', error);
+    res.status(500).json({ error: 'Failed to load story tray items' });
   }
 });
 
