@@ -2775,8 +2775,30 @@ app.get('/api/activities', async (req, res) => {
       console.log(`📅 Filtering activities by date: ${dateStr}`);
       
       // Import RRule dynamically (ES module)
-      const rruleModule = await import('rrule');
-      const { RRule } = rruleModule.default || rruleModule;
+      let RRule;
+      try {
+        const rruleModule = await import('rrule');
+        // rrule package exports RRule in default export
+        if (rruleModule.default && rruleModule.default.RRule) {
+          RRule = rruleModule.default.RRule;
+        } else if (rruleModule.RRule) {
+          RRule = rruleModule.RRule;
+        } else if (rruleModule.default) {
+          // If default is the module itself
+          RRule = rruleModule.default;
+        } else {
+          console.error('❌ RRule not found in rrule module:', Object.keys(rruleModule));
+          RRule = null;
+        }
+      } catch (e) {
+        console.error('❌ Error importing rrule:', e.message);
+        RRule = null;
+      }
+      
+      if (!RRule) {
+        console.warn('⚠️ RRule not available, skipping recurring pattern checks');
+      }
+      
       const selectedDate = new Date(dateStr + 'T00:00:00');
       
       // Get all activities (including recurring ones)
