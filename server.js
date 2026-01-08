@@ -2844,16 +2844,34 @@ app.get('/api/activities', async (req, res) => {
       const result = await pool.query(query, params);
       console.log(`📊 Total activities from DB: ${result.rows.length}`);
       
+      if (result.rows.length > 0) {
+        console.log(`🔍 Sample activity:`, {
+          id: result.rows[0].id,
+          title: result.rows[0].title,
+          activity_date: result.rows[0].activity_date,
+          activity_date_type: typeof result.rows[0].activity_date,
+          rrule: result.rows[0].rrule,
+          recurring_until: result.rows[0].recurring_until
+        });
+      }
+      
       // Filter results: include activities that match the date either:
       // 1. Exact date match (activity_date = selected date)
       // 2. Recurring pattern match (rrule includes selected date)
       const filteredActivities = result.rows.filter(activity => {
         // Exact date match - normalize dates for comparison
-        const activityDateStr = activity.activity_date ? 
-          (activity.activity_date instanceof Date ? 
-            activity.activity_date.toISOString().split('T')[0] : 
-            String(activity.activity_date).split('T')[0]) : 
-          null;
+        let activityDateStr = null;
+        if (activity.activity_date) {
+          if (activity.activity_date instanceof Date) {
+            activityDateStr = activity.activity_date.toISOString().split('T')[0];
+          } else {
+            // PostgreSQL returns date as string in format 'YYYY-MM-DD'
+            const dateStr = String(activity.activity_date);
+            activityDateStr = dateStr.split('T')[0].split(' ')[0]; // Handle both 'YYYY-MM-DD' and 'YYYY-MM-DD HH:MM:SS'
+          }
+        }
+        
+        console.log(`🔍 Checking activity ${activity.id} (${activity.title}): activity_date="${activityDateStr}", searching for="${dateStr}"`);
         
         if (activityDateStr === dateStr) {
           console.log(`✅ Exact match found for activity ${activity.id}: ${activity.title}`);
