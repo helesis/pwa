@@ -2823,8 +2823,9 @@ app.get('/api/activities', async (req, res) => {
       const params = [];
       let paramCount = 1;
       
-      // Filter by year (skip if all=true)
-      if (req.query.all !== 'true' && year) {
+      // Filter by year (skip if all=true OR if date is specified)
+      // When date is specified, we need all activities to check recurring patterns
+      if (req.query.all !== 'true' && year && !date) {
         query += ` AND (activity_date IS NULL OR EXTRACT(YEAR FROM activity_date) = $${paramCount++})`;
         params.push(parseInt(year));
       }
@@ -2842,6 +2843,8 @@ app.get('/api/activities', async (req, res) => {
       query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
       
       const result = await pool.query(query, params);
+      console.log(`📊 Query: ${query}`);
+      console.log(`📊 Params:`, params);
       console.log(`📊 Total activities from DB: ${result.rows.length}`);
       
       if (result.rows.length > 0) {
