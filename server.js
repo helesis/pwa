@@ -2779,24 +2779,38 @@ app.get('/api/activities', async (req, res) => {
       try {
         const rruleModule = await import('rrule');
         // rrule package exports RRule in default export
-        if (rruleModule.default && rruleModule.default.RRule) {
-          RRule = rruleModule.default.RRule;
+        // Test showed: rruleModule.default.RRule exists
+        if (rruleModule.default) {
+          if (rruleModule.default.RRule) {
+            RRule = rruleModule.default.RRule;
+          } else if (typeof rruleModule.default.fromString === 'function') {
+            // If default IS the RRule class itself
+            RRule = rruleModule.default;
+          } else {
+            console.error('❌ RRule not found in default export. Keys:', Object.keys(rruleModule.default));
+            RRule = null;
+          }
         } else if (rruleModule.RRule) {
           RRule = rruleModule.RRule;
-        } else if (rruleModule.default) {
-          // If default is the module itself
-          RRule = rruleModule.default;
         } else {
-          console.error('❌ RRule not found in rrule module:', Object.keys(rruleModule));
+          console.error('❌ RRule not found in rrule module. Available keys:', Object.keys(rruleModule));
+          RRule = null;
+        }
+        
+        // Verify RRule has fromString method
+        if (RRule && typeof RRule.fromString !== 'function') {
+          console.error('❌ RRule.fromString is not a function. RRule type:', typeof RRule);
           RRule = null;
         }
       } catch (e) {
-        console.error('❌ Error importing rrule:', e.message);
+        console.error('❌ Error importing rrule:', e.message, e.stack);
         RRule = null;
       }
       
       if (!RRule) {
         console.warn('⚠️ RRule not available, skipping recurring pattern checks');
+      } else {
+        console.log('✅ RRule imported successfully');
       }
       
       const selectedDate = new Date(dateStr + 'T00:00:00');
