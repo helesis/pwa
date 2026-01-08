@@ -4926,6 +4926,11 @@
             
             // Load activities timeline when switching to activities section
             if (section === 'activities') {
+                // Ensure date picker is initialized with current date
+                const datePicker = document.getElementById('activity-date-selector');
+                if (datePicker && !datePicker.value) {
+                    datePicker.value = currentActivityDate;
+                }
                 loadActivitiesTimeline();
             }
             
