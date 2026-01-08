@@ -3004,7 +3004,7 @@ app.get('/api/activities', async (req, res) => {
       
       query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
       
-      const result = await pool.query(query, params);
+      const result = await retryQuery(() => pool.query(query, params));
       res.json(result.rows);
     }
   } catch (error) {
@@ -3042,20 +3042,175 @@ app.get('/api/story-tray-items', async (req, res) => {
 });
 
 // ============================================
+// Admin Endpoints for Story Tray Items
+// ============================================
+
+// Get all story tray items (admin - includes inactive)
+app.get('/api/admin/story-tray-items', async (req, res) => {
+  try {
+    const result = await retryQuery(() =>
+      pool.query(`
+        SELECT * FROM story_tray_items 
+        ORDER BY display_order ASC, created_at DESC
+      `)
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching story tray items (admin):', error);
+    res.status(500).json({ error: 'Failed to load story tray items' });
+  }
+});
+
+// Get single story tray item (admin)
+app.get('/api/admin/story-tray-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await retryQuery(() =>
+      pool.query('SELECT * FROM story_tray_items WHERE id = $1', [id])
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching story tray item (admin):', error);
+    res.status(500).json({ error: 'Failed to load story tray item' });
+  }
+});
+
+// Create story tray item
+app.post('/api/admin/story-tray-items', async (req, res) => {
+  try {
+    const { title, icon, display_order, is_active, video_url, image_url } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    const result = await retryQuery(() =>
+      pool.query(`
+        INSERT INTO story_tray_items (
+          title, icon, display_order, is_active, video_url, image_url
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [title, icon || null, display_order || 0, is_active !== false, video_url || null, image_url || null])
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating story tray item:', error);
+    res.status(500).json({ error: 'Failed to create story tray item' });
+  }
+});
+
+// Update story tray item
+app.put('/api/admin/story-tray-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, icon, display_order, is_active, video_url, image_url } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    const result = await retryQuery(() =>
+      pool.query(`
+        UPDATE story_tray_items
+        SET title = $1, icon = $2, display_order = $3, is_active = $4, 
+            video_url = $5, image_url = $6, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $7
+        RETURNING *
+      `, [title, icon || null, display_order || 0, is_active !== false, video_url || null, image_url || null, id])
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating story tray item:', error);
+    res.status(500).json({ error: 'Failed to update story tray item' });
+  }
+});
+
+// Delete story tray item
+app.delete('/api/admin/story-tray-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await retryQuery(() =>
+      pool.query('DELETE FROM story_tray_items WHERE id = $1 RETURNING *', [id])
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    res.json({ success: true, message: 'Story tray item deleted' });
+  } catch (error) {
+    console.error('Error deleting story tray item:', error);
+    res.status(500).json({ error: 'Failed to delete story tray item' });
+  }
+});
+
+// Upload photo/video for story tray item
+app.post('/api/admin/story-tray-items/:id/upload', upload.single('file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    let image_url = req.body.image_url;
+    let video_url = req.body.video_url;
+    
+    // If file was uploaded, use the file path
+    if (req.file) {
+      const fileUrl = `/uploads/${req.file.filename}`;
+      if (req.file.mimetype.startsWith('image/')) {
+        image_url = fileUrl;
+      } else if (req.file.mimetype.startsWith('video/')) {
+        video_url = fileUrl;
+      }
+    }
+    
+    const result = await retryQuery(() =>
+      pool.query(`
+        UPDATE story_tray_items
+        SET image_url = $1, video_url = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING *
+      `, [image_url || null, video_url || null, id])
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error uploading file for story tray item:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+// ============================================
 // Admin Endpoints for Activities
 // ============================================
 
 // Get all activities (admin - includes inactive) - No auth required for viewing
 app.get('/api/admin/activities', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT * FROM activities 
-      ORDER BY display_order ASC, created_at DESC
-    `);
+    const result = await retryQuery(() =>
+      pool.query(`
+        SELECT * FROM activities 
+        ORDER BY display_order ASC, created_at DESC
+      `)
+    );
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching activities (admin):', error);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Failed to load activities' });
   }
 });
 
