@@ -4054,7 +4054,6 @@ async function initializeTestData() {
 
 // Initialize database and start server
 // Initialize database and start server
-const serverStartTime = Date.now();
 console.log('');
 console.log('🚀 [STARTUP] Starting Voyage Sorgun Chat Server...');
 console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -4404,6 +4403,7 @@ app.get('/join-team', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+const serverStartTime = Date.now(); // Track server startup time
 
 httpServer.listen(PORT, () => {
   const totalStartupTime = ((Date.now() - serverStartTime) / 1000).toFixed(3);
