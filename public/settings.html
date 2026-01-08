@@ -3470,9 +3470,27 @@
         // Initialize FullCalendar
         function initFullCalendar() {
             const calendarEl = document.getElementById('activities-fullcalendar');
-            if (!calendarEl) return;
+            if (!calendarEl) {
+                console.warn('⚠️ Calendar element not found');
+                return;
+            }
 
-            calendar = new FullCalendar.Calendar(calendarEl, {
+            // Check if FullCalendar is loaded
+            if (typeof FullCalendar === 'undefined') {
+                console.error('❌ FullCalendar library not loaded. Waiting...');
+                setTimeout(() => {
+                    if (typeof FullCalendar !== 'undefined') {
+                        initFullCalendar();
+                    } else {
+                        console.error('❌ FullCalendar still not loaded after timeout');
+                        calendarEl.innerHTML = '<div class="alert alert-error">FullCalendar kütüphanesi yüklenemedi. Lütfen sayfayı yenileyin.</div>';
+                    }
+                }, 500);
+                return;
+            }
+
+            try {
+                calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'tr',
                 headerToolbar: {
@@ -3569,10 +3587,15 @@
                         `
                     };
                 }
-            });
+                });
 
-            calendar.render();
-            loadActivitiesCalendar();
+                calendar.render();
+                console.log('✅ FullCalendar initialized successfully');
+                loadActivitiesCalendar();
+            } catch (error) {
+                console.error('❌ Error initializing FullCalendar:', error);
+                calendarEl.innerHTML = `<div class="alert alert-error">Takvim başlatılırken hata oluştu: ${error.message}</div>`;
+            }
         }
 
         // Load activities calendar
@@ -3884,7 +3907,11 @@
                 } else if (rruleString) {
                     // Parse RRule and generate dates
                     try {
-                        const rruleObj = RRule.fromString(rruleString);
+                        if (typeof RRule === 'undefined') {
+                            console.warn('⚠️ RRule library not loaded, using simple generation');
+                            dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
+                        } else {
+                            const rruleObj = RRule.fromString(rruleString);
                         const startDateTime = new Date(startDate);
                         if (startTime) {
                             const [hours, minutes] = startTime.split(':');
@@ -3894,8 +3921,9 @@
                         if (recurringUntilDate) {
                             rruleObj.options.until = new Date(recurringUntilDate + 'T23:59:59');
                         }
-                        const allDates = rruleObj.all();
-                        dates = allDates.map(d => d.toISOString().split('T')[0]);
+                            const allDates = rruleObj.all();
+                            dates = allDates.map(d => d.toISOString().split('T')[0]);
+                        }
                     } catch (e) {
                         console.warn('Error parsing RRule, using simple generation:', e);
                         dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);

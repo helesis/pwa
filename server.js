@@ -2782,7 +2782,7 @@ app.get('/api/admin/activities/:id', async (req, res) => {
 });
 
 // Create activity
-app.post('/api/admin/activities', requireAssistant, async (req, res) => {
+app.post('/api/admin/activities', async (req, res) => {
   try {
     const { 
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
@@ -2839,7 +2839,7 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
 });
 
 // Update activity
-app.put('/api/admin/activities/:id', requireAssistant, async (req, res) => {
+app.put('/api/admin/activities/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -2916,7 +2916,7 @@ app.delete('/api/admin/activities/:id', requireAssistant, async (req, res) => {
 });
 
 // Update activity date/time (for drag and drop)
-app.patch('/api/admin/activities/:id/move', requireAssistant, async (req, res) => {
+app.patch('/api/admin/activities/:id/move', async (req, res) => {
   try {
     const { id } = req.params;
     const { activity_date, start_time, end_time } = req.body;
@@ -2948,7 +2948,7 @@ app.patch('/api/admin/activities/:id/move', requireAssistant, async (req, res) =
 });
 
 // Upload photo/video for activity (supports both file upload and URL)
-app.post('/api/admin/activities/:id/upload', requireAssistant, upload.single('file'), async (req, res) => {
+app.post('/api/admin/activities/:id/upload', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
     let image_url = req.body.image_url;
