@@ -2871,22 +2871,25 @@ app.get('/api/activities', async (req, res) => {
           }
         }
         
-        console.log(`🔍 Checking activity ${activity.id} (${activity.title}): activity_date="${activityDateStr}", searching for="${dateStr}"`);
+        // Debug log for first few activities
+        if (activity.id <= 3) {
+          console.log(`🔍 Activity ${activity.id} (${activity.title}): activity_date="${activityDateStr}", searching for="${dateStr}", rrule="${activity.rrule}"`);
+        }
         
+        // Exact date match
         if (activityDateStr === dateStr) {
-          console.log(`✅ Exact match found for activity ${activity.id}: ${activity.title}`);
+          console.log(`✅ Exact match: ${activity.id} - ${activity.title}`);
           return true;
         }
         
         // Check recurring pattern
         if (activity.rrule && activity.activity_date && RRule) {
           try {
-            const rrule = RRule.fromString(activity.rrule);
-            const startDate = new Date(activity.activity_date + 'T00:00:00');
+            const startDate = new Date(activityDateStr + 'T00:00:00');
             
-            // Check if selected date is in the recurring pattern
-            // and is between start date and recurring_until (if exists)
+            // Check if selected date is within recurring range
             if (selectedDate >= startDate) {
+              // Check recurring_until limit
               if (activity.recurring_until) {
                 const untilDate = new Date(activity.recurring_until + 'T23:59:59');
                 if (selectedDate > untilDate) {
@@ -2894,8 +2897,15 @@ app.get('/api/activities', async (req, res) => {
                 }
               }
               
-              // Check if the date matches the pattern
-              // Use between to get occurrences up to and including the selected date
+              // For DAILY frequency, simple range check is sufficient
+              // Since it repeats every day, any date >= start_date and <= recurring_until should match
+              if (activity.rrule.includes('FREQ=DAILY')) {
+                console.log(`✅ Recurring DAILY match: ${activity.id} - ${activity.title} (start: ${activityDateStr}, until: ${activity.recurring_until})`);
+                return true;
+              }
+              
+              // For other frequencies (WEEKLY, MONTHLY, etc.), use RRule to check
+              const rrule = RRule.fromString(activity.rrule);
               const endCheckDate = new Date(selectedDate);
               endCheckDate.setHours(23, 59, 59, 999);
               const occurrences = rrule.between(startDate, endCheckDate, true);
@@ -2906,7 +2916,7 @@ app.get('/api/activities', async (req, res) => {
               });
               
               if (matches) {
-                console.log(`✅ Recurring match found for activity ${activity.id}: ${activity.title} (rrule: ${activity.rrule})`);
+                console.log(`✅ Recurring match: ${activity.id} - ${activity.title} (rrule: ${activity.rrule})`);
               }
               
               return matches;
