@@ -81,7 +81,40 @@ const upload = multer({
 });
 
 // Serve uploaded files statically
-app.use('/uploads', express.static(uploadsDir));
+// Note: Render.com uses ephemeral storage - files are lost on server restart
+// For production, consider using cloud storage (S3, Cloudinary, etc.)
+app.use('/uploads', (req, res, next) => {
+  // Check if file exists first before trying to serve
+  const filename = req.path.substring(1); // Remove leading slash
+  if (filename) {
+    const filePath = join(uploadsDir, filename);
+    if (!fs.existsSync(filePath)) {
+      // File not found - log warning
+      console.warn(`⚠️ Uploaded file not found: ${filename}`);
+      console.warn(`   Looking in: ${uploadsDir}`);
+      console.warn(`   Uploads directory exists: ${fs.existsSync(uploadsDir)}`);
+      if (fs.existsSync(uploadsDir)) {
+        const files = fs.readdirSync(uploadsDir);
+        console.warn(`   Available files (${files.length}):`, files.slice(0, 10).join(', '));
+      }
+      // Return 404 with proper error message
+      // Note: Render.com uses ephemeral storage, files are lost on server restart
+      return res.status(404).json({ 
+        error: 'File not found',
+        message: 'The requested file may have been removed or the server was restarted. Please re-upload the file.',
+        filename: filename,
+        note: 'Render.com uses ephemeral storage - files are lost on server restart'
+      });
+    }
+  }
+  // File exists or no filename, let static middleware handle it
+  next();
+}, express.static(uploadsDir, {
+  setHeaders: (res, path) => {
+    // Set proper cache headers for uploaded files
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+  }
+}));
 
 // Service worker should never be cached
 app.get('/service-worker.js', (req, res) => {
@@ -3167,6 +3200,17 @@ app.post('/api/admin/story-tray-items/:id/upload', upload.single('file'), async 
     // If file was uploaded, use the file path
     if (req.file) {
       const fileUrl = `/uploads/${req.file.filename}`;
+      const filePath = join(uploadsDir, req.file.filename);
+      
+      // Verify file was actually saved
+      if (fs.existsSync(filePath)) {
+        console.log(`✅ File uploaded successfully: ${req.file.filename}`);
+        console.log(`   Path: ${filePath}`);
+        console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
+      } else {
+        console.error(`❌ File upload failed: ${req.file.filename} not found in ${uploadsDir}`);
+      }
+      
       if (req.file.mimetype.startsWith('image/')) {
         image_url = fileUrl;
       } else if (req.file.mimetype.startsWith('video/')) {
@@ -3405,6 +3449,17 @@ app.post('/api/admin/activities/:id/upload', upload.single('file'), async (req, 
     // If file was uploaded, use the file path
     if (req.file) {
       const fileUrl = `/uploads/${req.file.filename}`;
+      const filePath = join(uploadsDir, req.file.filename);
+      
+      // Verify file was actually saved
+      if (fs.existsSync(filePath)) {
+        console.log(`✅ File uploaded successfully: ${req.file.filename}`);
+        console.log(`   Path: ${filePath}`);
+        console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
+      } else {
+        console.error(`❌ File upload failed: ${req.file.filename} not found in ${uploadsDir}`);
+      }
+      
       if (req.file.mimetype.startsWith('image/')) {
         image_url = fileUrl;
         video_url = null;
@@ -3628,6 +3683,17 @@ app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, 
     // If file was uploaded, use the file path
     if (req.file) {
       const fileUrl = `/uploads/${req.file.filename}`;
+      const filePath = join(uploadsDir, req.file.filename);
+      
+      // Verify file was actually saved
+      if (fs.existsSync(filePath)) {
+        console.log(`✅ File uploaded successfully: ${req.file.filename}`);
+        console.log(`   Path: ${filePath}`);
+        console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
+      } else {
+        console.error(`❌ File upload failed: ${req.file.filename} not found in ${uploadsDir}`);
+      }
+      
       if (req.file.mimetype.startsWith('image/')) {
         image_url = fileUrl;
         video_url = null;
