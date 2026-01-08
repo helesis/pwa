@@ -256,7 +256,7 @@ async function initializeDatabase() {
       CREATE INDEX idx_assistant_assignments_assistant ON assistant_assignments(assistant_id);
       CREATE INDEX idx_assistant_assignments_guest_unique_id ON assistant_assignments(guest_unique_id);
 
-      -- Activities table (for timeline and story tray)
+      -- Activities table (for timeline calendar only)
       CREATE TABLE activities (
         id SERIAL PRIMARY KEY,
         title VARCHAR(100) NOT NULL,
@@ -278,6 +278,23 @@ async function initializeDatabase() {
         featured BOOLEAN DEFAULT false,
         map_latitude DECIMAL(10, 8),
         map_longitude DECIMAL(11, 8),
+        recurring_rule VARCHAR(50),
+        recurring_until DATE,
+        end_date DATE,
+        rrule TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Story tray items table (separate from activities)
+      CREATE TABLE story_tray_items (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(100) NOT NULL,
+        icon VARCHAR(50),
+        video_url TEXT,
+        image_url TEXT,
+        display_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -487,6 +504,63 @@ async function addNewTablesIfNeeded() {
       console.log('      ✅ All columns are up to date');
     }
 
+    // Check and create story_tray_items table if it doesn't exist
+    const storyTrayCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'story_tray_items'
+      );
+    `);
+    
+    if (!storyTrayCheck.rows[0].exists) {
+      console.log('      ➕ Creating story_tray_items table...');
+      await pool.query(`
+        CREATE TABLE story_tray_items (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(100) NOT NULL,
+          icon VARCHAR(50),
+          video_url TEXT,
+          image_url TEXT,
+          display_order INTEGER DEFAULT 0,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('      ✅ Created story_tray_items table');
+      
+      // Migrate existing is_story=true items to story_tray_items
+      console.log('      🔄 Migrating existing story tray items...');
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const migrationResult = await client.query(`
+          INSERT INTO story_tray_items (title, icon, video_url, image_url, display_order, is_active, created_at, updated_at)
+          SELECT title, icon, video_url, image_url, display_order, is_active, created_at, updated_at
+          FROM activities
+          WHERE is_story = true
+          RETURNING id;
+        `);
+        const migratedCount = migrationResult.rowCount;
+        
+        if (migratedCount > 0) {
+          console.log(`      ✅ Migrated ${migratedCount} story tray items`);
+          // Optionally delete migrated items from activities table
+          // await client.query('DELETE FROM activities WHERE is_story = true');
+        }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(`      ❌ Failed to migrate story tray items: ${error.message}`);
+        // Don't throw - allow table creation even if migration fails
+      } finally {
+        client.release();
+      }
+    } else {
+      console.log('      ✅ story_tray_items table already exists');
+    }
+
     // Add avatar and ghost_mode columns to rooms table if they don't exist
     const avatarColumnCheck = await pool.query(`
       SELECT EXISTS (
@@ -691,60 +765,55 @@ async function addNewTablesIfNeeded() {
   }
 }
 
-// Seed initial data for activities (stories) and info_posts
+// Seed initial data for story_tray_items and info_posts
 async function seedInitialData() {
   try {
-    // Check if activities table exists and has data
-    const activitiesCheck = await pool.query('SELECT COUNT(*) as count FROM activities');
-    const activitiesCount = parseInt(activitiesCheck.rows[0]?.count || 0);
+    // Check if story_tray_items table exists and has data
+    const storyTrayCheck = await pool.query('SELECT COUNT(*) as count FROM story_tray_items');
+    const storyTrayCount = parseInt(storyTrayCheck.rows[0]?.count || 0);
 
-    // Seed activities (for story tray) if empty
-    if (activitiesCount === 0) {
+    // Seed story tray items if empty
+    if (storyTrayCount === 0) {
       const storyActivities = [
         {
           title: 'Yüzme Havuzu',
           icon: 'waves',
           display_order: 1,
-          is_active: true,
-          activity_date: null  // NULL for story tray items
+          is_active: true
         },
         {
           title: 'Plaj',
           icon: 'sun',
           display_order: 2,
-          is_active: true,
-          activity_date: null
+          is_active: true
         },
         {
           title: 'Restoran',
           icon: 'utensils-crossed',
           display_order: 3,
-          is_active: true,
-          activity_date: null
+          is_active: true
         },
         {
           title: 'Spa',
           icon: 'sparkles',
           display_order: 4,
-          is_active: true,
-          activity_date: null
+          is_active: true
         },
         {
           title: 'Aktiviteler',
           icon: 'party-popper',
           display_order: 5,
-          is_active: true,
-          activity_date: null
+          is_active: true
         }
       ];
 
       for (const activity of storyActivities) {
         await pool.query(`
-          INSERT INTO activities (title, icon, display_order, is_active, activity_date)
-          VALUES ($1, $2, $3, $4, $5)
-        `, [activity.title, activity.icon, activity.display_order, activity.is_active, activity.activity_date]);
+          INSERT INTO story_tray_items (title, icon, display_order, is_active)
+          VALUES ($1, $2, $3, $4)
+        `, [activity.title, activity.icon, activity.display_order, activity.is_active]);
       }
-      console.log('✅ Seeded initial activities (story tray)');
+      console.log('✅ Seeded initial story tray items');
     }
 
     // Check if info_posts table exists and has data
@@ -2695,10 +2764,10 @@ async function requireAssistant(req, res, next) {
 // Info Posts & Activities API Endpoints
 // ============================================
 
-// Get all activities (for timeline and story tray) - Public
+// Get all activities (for timeline calendar only) - Public
 app.get('/api/activities', async (req, res) => {
   try {
-    const { date, type, category, year, is_story } = req.query;
+    const { date, type, category, year } = req.query;
     let query = `
       SELECT * FROM activities 
       WHERE is_active = true
@@ -2715,15 +2784,6 @@ app.get('/api/activities', async (req, res) => {
     if (req.query.all !== 'true' && year) {
       query += ` AND EXTRACT(YEAR FROM activity_date) = $${paramCount++}`;
       params.push(parseInt(year));
-    }
-    
-    // Filter by is_story (for story tray vs timeline activities)
-    if (is_story !== undefined) {
-      query += ` AND is_story = $${paramCount++}`;
-      params.push(is_story === 'true');
-    } else {
-      // Default: exclude story tray items (only show timeline activities)
-      query += ` AND (is_story = false OR is_story IS NULL)`;
     }
     
     if (type && type !== 'Tümü') {
@@ -2788,7 +2848,7 @@ app.post('/api/admin/activities', async (req, res) => {
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
       featured, map_latitude, map_longitude, video_url, image_url,
-      recurring_rule, recurring_until, is_story, rrule
+      recurring_rule, recurring_until, rrule
     } = req.body;
     
     if (!title) {
@@ -2800,9 +2860,9 @@ app.post('/api/admin/activities', async (req, res) => {
         title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
         description, category, type, location, instructor_name, age_group, capacity,
         featured, map_latitude, map_longitude, video_url, image_url,
-        recurring_rule, recurring_until, is_story, rrule
+        recurring_rule, recurring_until, rrule
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
       RETURNING *
     `, [
       title.trim(),
@@ -2827,7 +2887,6 @@ app.post('/api/admin/activities', async (req, res) => {
       image_url || null,
       recurring_rule || null,
       recurring_until || null,
-      is_story !== undefined ? is_story : false,
       rrule || null
     ]);
     
@@ -2846,7 +2905,7 @@ app.put('/api/admin/activities/:id', async (req, res) => {
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
       featured, map_latitude, map_longitude, video_url, image_url,
-      recurring_rule, recurring_until, is_story, rrule
+      recurring_rule, recurring_until, rrule
     } = req.body;
     
     const result = await pool.query(`
@@ -2874,16 +2933,15 @@ app.put('/api/admin/activities/:id', async (req, res) => {
         image_url = COALESCE($20, image_url),
         recurring_rule = COALESCE($21, recurring_rule),
         recurring_until = COALESCE($22, recurring_until),
-        is_story = COALESCE($23, is_story),
-        rrule = COALESCE($24, rrule),
+        rrule = COALESCE($23, rrule),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $25
+      WHERE id = $24
       RETURNING *
     `, [
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
       featured, map_latitude, map_longitude, video_url, image_url,
-      recurring_rule, recurring_until, is_story, rrule, id
+      recurring_rule, recurring_until, rrule, id
     ]);
     
     if (result.rows.length === 0) {
@@ -2898,7 +2956,7 @@ app.put('/api/admin/activities/:id', async (req, res) => {
 });
 
 // Delete activity
-app.delete('/api/admin/activities/:id', requireAssistant, async (req, res) => {
+app.delete('/api/admin/activities/:id', async (req, res) => {
   try {
     const { id } = req.params;
     

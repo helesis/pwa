@@ -2853,7 +2853,7 @@
 
         async function loadActivities() {
             try {
-                const response = await fetch('/api/admin/activities', {
+                const response = await fetch('/api/admin/story-tray-items', {
                     credentials: 'include'
                 });
                 if (!response.ok) {
@@ -2920,26 +2920,16 @@
             document.getElementById('activity-modal').classList.add('active');
             
             if (id) {
-                fetch(`/api/admin/activities/${id}`)
+                fetch(`/api/admin/story-tray-items/${id}`)
                     .then(res => res.json())
                     .then(data => {
                         document.getElementById('activity-title').value = data.title || '';
                         document.getElementById('activity-icon').value = data.icon || '';
-                        document.getElementById('activity-date').value = data.activity_date ? String(data.activity_date).split('T')[0] : '';
-                        document.getElementById('activity-start-time').value = data.start_time ? String(data.start_time).slice(0,5) : '';
-                        document.getElementById('activity-end-time').value = data.end_time ? String(data.end_time).slice(0,5) : '';
-                        document.getElementById('activity-category').value = data.category || '';
-                        document.getElementById('activity-type').value = data.type || '';
-                        document.getElementById('activity-location').value = data.location || '';
-                        document.getElementById('activity-description').value = data.description || '';
-                        document.getElementById('activity-instructor').value = data.instructor_name || '';
-                        document.getElementById('activity-age-group').value = data.age_group || '';
-                        document.getElementById('activity-capacity').value = data.capacity ?? '';
-                        document.getElementById('activity-lat').value = data.map_latitude ?? '';
-                        document.getElementById('activity-lng').value = data.map_longitude ?? '';
-                        document.getElementById('activity-featured').checked = data.featured === true;
-                        document.getElementById('activity-image-url').value = data.image_url || '';
-                        document.getElementById('activity-video-url').value = data.video_url || '';
+                        // Story tray items only have: title, icon, image_url, video_url, display_order, is_active
+                        const imageUrlEl = document.getElementById('activity-image-url');
+                        const videoUrlEl = document.getElementById('activity-video-url');
+                        if (imageUrlEl) imageUrlEl.value = data.image_url || '';
+                        if (videoUrlEl) videoUrlEl.value = data.video_url || '';
                         document.getElementById('activity-display-order').value = data.display_order || 0;
                         document.getElementById('activity-is-active').checked = data.is_active !== false;
                     });
@@ -2947,7 +2937,6 @@
                 document.getElementById('activity-form').reset();
                 document.getElementById('activity-display-order').value = 0;
                 document.getElementById('activity-is-active').checked = true;
-                document.getElementById('activity-featured').checked = false;
             }
         }
 
@@ -2991,8 +2980,8 @@
             
             try {
                 const url = currentActivityId 
-                    ? `/api/admin/activities/${currentActivityId}`
-                    : '/api/admin/activities';
+                    ? `/api/admin/story-tray-items/${currentActivityId}`
+                    : '/api/admin/story-tray-items';
                 const method = currentActivityId ? 'PUT' : 'POST';
                 
                 const response = await fetch(url, {
@@ -3004,19 +2993,6 @@
                         icon,
                         display_order,
                         is_active,
-                        activity_date,
-                        start_time,
-                        end_time,
-                        description,
-                        category,
-                        type,
-                        location,
-                        instructor_name,
-                        age_group,
-                        capacity,
-                        featured,
-                        map_latitude,
-                        map_longitude,
                         image_url,
                         video_url
                     })
@@ -3037,7 +3013,7 @@
             if (!confirm('Bu hikayeyi silmek istediğinize emin misiniz?')) return;
             
             try {
-                const response = await fetch(`/api/admin/activities/${id}`, { 
+                const response = await fetch(`/api/admin/story-tray-items/${id}`, { 
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -3135,7 +3111,7 @@
                         formData.append('video_url', videoUrl);
                     }
                     
-                    const response = await fetch(`/api/admin/activities/${activityId}/upload`, {
+                    const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload`, {
                         method: 'POST',
                         credentials: 'include',
                         body: formData
@@ -3634,7 +3610,7 @@
                 const events = [];
                 
                 for (const activity of activities) {
-                    if (!activity.activity_date || activity.is_story) continue;
+                    if (!activity.activity_date) continue;
                     
                     const startDate = new Date(activity.activity_date);
                     if (activity.start_time) {
@@ -3876,7 +3852,6 @@
                             recurring_rule: recurringType !== 'none' ? recurringType : null,
                             recurring_until: recurringType !== 'none' ? (recurringUntil || new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]) : null,
                             rrule: rruleString,
-                            is_story: false,
                             is_active: true
                         })
                     });
