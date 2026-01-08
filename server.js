@@ -2842,13 +2842,21 @@ app.get('/api/activities', async (req, res) => {
       query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
       
       const result = await pool.query(query, params);
+      console.log(`📊 Total activities from DB: ${result.rows.length}`);
       
       // Filter results: include activities that match the date either:
       // 1. Exact date match (activity_date = selected date)
       // 2. Recurring pattern match (rrule includes selected date)
       const filteredActivities = result.rows.filter(activity => {
-        // Exact date match
-        if (activity.activity_date === dateStr) {
+        // Exact date match - normalize dates for comparison
+        const activityDateStr = activity.activity_date ? 
+          (activity.activity_date instanceof Date ? 
+            activity.activity_date.toISOString().split('T')[0] : 
+            String(activity.activity_date).split('T')[0]) : 
+          null;
+        
+        if (activityDateStr === dateStr) {
+          console.log(`✅ Exact match found for activity ${activity.id}: ${activity.title}`);
           return true;
         }
         
@@ -2869,14 +2877,24 @@ app.get('/api/activities', async (req, res) => {
               }
               
               // Check if the date matches the pattern
-              const occurrences = rrule.between(startDate, new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000), true);
-              return occurrences.some(occ => {
+              // Use between to get occurrences up to and including the selected date
+              const endCheckDate = new Date(selectedDate);
+              endCheckDate.setHours(23, 59, 59, 999);
+              const occurrences = rrule.between(startDate, endCheckDate, true);
+              
+              const matches = occurrences.some(occ => {
                 const occDate = occ.toISOString().split('T')[0];
                 return occDate === dateStr;
               });
+              
+              if (matches) {
+                console.log(`✅ Recurring match found for activity ${activity.id}: ${activity.title} (rrule: ${activity.rrule})`);
+              }
+              
+              return matches;
             }
           } catch (e) {
-            console.warn('Error parsing RRule for activity', activity.id, ':', e.message);
+            console.warn(`⚠️ Error parsing RRule for activity ${activity.id} (${activity.title}):`, e.message);
             return false;
           }
         }
