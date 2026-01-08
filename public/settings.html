@@ -16,8 +16,8 @@
     <script src="https://unpkg.com/fullcalendar@6.1.10/index.global.min.js"></script>
     <!-- FullCalendar Turkish Locale -->
     <script src="https://unpkg.com/fullcalendar@6.1.10/locales/tr.global.min.js"></script>
-    <!-- RRule Library -->
-    <script src="https://cdn.jsdelivr.net/npm/rrule@2.8.1/dist/es5/rrule.min.js"></script>
+    <!-- RRule Library - using unpkg -->
+    <script src="https://unpkg.com/rrule@2.8.1/dist/es5/rrule.min.js"></script>
     
     <style>
         * {
@@ -3425,10 +3425,13 @@
             } else {
                 console.log('✅ FullCalendar library loaded');
             }
+            // Check RRule availability once
             if (typeof RRule === 'undefined') {
-                console.warn('⚠️ RRule library not loaded (optional)');
+                console.warn('⚠️ RRule library not loaded (optional - will use simple generation)');
+                rruleAvailable = false;
             } else {
                 console.log('✅ RRule library loaded');
+                rruleAvailable = true;
             }
             
             loadAssistants();
@@ -3478,6 +3481,7 @@
         let currentCalendarActivityId = null;
         let calendar = null;
         let activityFileToUpload = null;
+        let rruleAvailable = null; // Cache RRule availability check
 
         // Initialize FullCalendar
         function initFullCalendar() {
@@ -3919,8 +3923,15 @@
                 } else if (rruleString) {
                     // Parse RRule and generate dates
                     try {
-                        if (typeof RRule === 'undefined') {
-                            console.warn('⚠️ RRule library not loaded, using simple generation');
+                        // Check RRule availability once and cache it
+                        if (rruleAvailable === null) {
+                            rruleAvailable = typeof RRule !== 'undefined';
+                            if (!rruleAvailable) {
+                                console.warn('⚠️ RRule library not loaded, using simple generation for all recurring events');
+                            }
+                        }
+                        
+                        if (!rruleAvailable) {
                             dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
                         } else {
                             const rruleObj = RRule.fromString(rruleString);
