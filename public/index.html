@@ -1747,6 +1747,17 @@
             z-index: 1;
             flex-shrink: 0;
         }
+        
+        .story-avatar img {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: calc(100% - 4px);
+            height: calc(100% - 4px);
+            object-fit: cover;
+            border-radius: 50%;
+            z-index: 2;
+        }
 
         .story-label {
             font-size: 11px;
@@ -1842,11 +1853,22 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            position: relative;
+            z-index: 1;
         }
 
         .post-image-placeholder {
             font-size: 48px;
             color: #dbdbdb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
         }
 
         .post-actions {
@@ -2202,10 +2224,6 @@
                         <div style="display: flex; flex-direction: column;">
                             <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Çocuk</span>
                             <span id="reservationChildCount" style="font-weight: 500;">-</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column; grid-column: 1 / -1;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Acenta</span>
-                            <span id="reservationAgency" style="font-weight: 500;">-</span>
                         </div>
                     </div>
                 </div>
@@ -5307,19 +5325,43 @@
                     const storyEl = document.createElement('div');
                     storyEl.className = 'activity-story';
                     storyEl.onclick = () => openActivityStory(activity.id);
+                    const hasVideo = !!activity.video_url;
+                    const hasImage = !!activity.image_url;
                     storyEl.innerHTML = `
                         <div class="story-avatar">
-                            ${activity.video_url ? 
-                                `<video class="story-video" muted loop><source src="${activity.video_url}" type="video/mp4"></video>` : 
+                            ${hasVideo ? 
+                                `<video class="story-video active" muted loop autoplay playsinline><source src="${activity.video_url}" type="video/mp4"></video>` : 
                                 ''
                             }
-                            <div class="story-avatar-placeholder">
+                            ${hasImage && !hasVideo ? 
+                                `<img src="${activity.image_url}" alt="${activity.title || ''}" onload="this.style.display='block'; this.parentElement.querySelector('.story-avatar-placeholder').style.display='none';" onerror="this.style.display='none';">` :
+                                ''
+                            }
+                            <div class="story-avatar-placeholder" style="${hasVideo || hasImage ? 'display: none;' : ''}">
                                 <i data-lucide="${activity.icon || 'circle'}" class="icon icon-xl"></i>
                             </div>
                         </div>
                         <div class="story-label">${activity.title || ''}</div>
                     `;
                     tray.appendChild(storyEl);
+                    
+                    // If video exists, ensure it plays
+                    if (activity.video_url) {
+                        const video = storyEl.querySelector('.story-video');
+                        if (video) {
+                            video.addEventListener('loadeddata', () => {
+                                video.play().catch(err => {
+                                    console.warn('Video autoplay failed:', err);
+                                });
+                            });
+                            // Also try to play immediately if already loaded
+                            if (video.readyState >= 2) {
+                                video.play().catch(err => {
+                                    console.warn('Video autoplay failed:', err);
+                                });
+                            }
+                        }
+                    }
                 });
                 
                 if (typeof lucide !== 'undefined') {
@@ -5398,7 +5440,10 @@
                             ${post.video_url ? 
                                 `<video src="${post.video_url}" style="width: 100%; height: 100%; object-fit: cover;" controls playsinline></video>` :
                                 (post.image_url ? 
-                                    `<img src="${post.image_url}" alt="${post.title}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                                    `<img src="${post.image_url}" alt="${post.title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block';">
+                                    <div class="post-image-placeholder" style="display: none;">
+                                        <i data-lucide="${post.icon || 'circle'}" class="icon icon-xl"></i>
+                                    </div>` :
                                     `<div class="post-image-placeholder">
                                         <i data-lucide="${post.icon || 'circle'}" class="icon icon-xl"></i>
                                     </div>`
@@ -5989,6 +6034,7 @@
         let lastLocationUpdateTime = null;
         let locationUpdateInterval = null;
         let permissionState = null; // 'granted', 'denied', 'prompt'
+        let isCreatingUserMarker = false; // Race condition prevention flag
 
         // Mapbox access token
         const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWxpbXVyc2l0IiwiYSI6ImNtazRnYTRjZjAwa2IzZXF2cWJnaW9ocDcifQ.EL6OVUXoR22l0vrNPzVyoQ';
@@ -6466,7 +6512,25 @@
             // Always update marker on own map (even in ghost mode)
 
             // Update or create user marker
-            if (!userMarker) {
+            // Prevent race condition: check if marker creation is already in progress
+            if (!userMarker && !isCreatingUserMarker) {
+                isCreatingUserMarker = true; // Set flag to prevent concurrent marker creation
+                
+                // Remove any existing user markers from map (cleanup duplicates)
+                try {
+                    // Get all markers on the map and remove any that look like user markers
+                    const mapContainer = map.getContainer();
+                    const allMarkers = mapContainer.querySelectorAll('.mapboxgl-marker');
+                    allMarkers.forEach(markerElement => {
+                        const userMarkerContainer = markerElement.querySelector('.user-marker-container');
+                        if (userMarkerContainer) {
+                            markerElement.remove();
+                        }
+                    });
+                } catch (error) {
+                    console.warn('Error cleaning up existing markers:', error);
+                }
+
                 // Create user marker with pulse animation
                 const userMarkerContainer = document.createElement('div');
                 userMarkerContainer.className = 'user-marker-container';
@@ -6518,11 +6582,19 @@
                 userMarkerContainer.appendChild(markerEl);
                 lucide.createIcons();
 
-                userMarker = new mapboxgl.Marker(userMarkerContainer)
-                    .setLngLat([lng, lat])
-                    .setPopup(new mapboxgl.Popup().setHTML('<b>Siz</b><br>Konumunuz'))
-                    .addTo(map);
-            } else {
+                // Double-check userMarker is still null before creating (final race condition check)
+                if (!userMarker) {
+                    userMarker = new mapboxgl.Marker(userMarkerContainer)
+                        .setLngLat([lng, lat])
+                        .setPopup(new mapboxgl.Popup().setHTML('<b>Siz</b><br>Konumunuz'))
+                        .addTo(map);
+                } else {
+                    // Another call already created the marker, just update position of existing marker
+                    userMarker.setLngLat([lng, lat]);
+                }
+                
+                isCreatingUserMarker = false; // Reset flag
+            } else if (userMarker) {
                 // Marker exists - update position AND check/update avatar
                 // Check if avatar needs to be updated
                 try {
@@ -7019,7 +7091,6 @@
             const reservationCheckoutDateEl = document.getElementById('reservationCheckoutDate');
             const reservationAdultCountEl = document.getElementById('reservationAdultCount');
             const reservationChildCountEl = document.getElementById('reservationChildCount');
-            const reservationAgencyEl = document.getElementById('reservationAgency');
 
             if (reservationRoomNumberEl) {
                 reservationRoomNumberEl.textContent = ROOM_NUMBER || '-';
@@ -7043,17 +7114,13 @@
                 });
             }
 
-            // TODO: Get adult_count, child_count, agency from backend
+            // TODO: Get adult_count, child_count from backend
             if (reservationAdultCountEl) {
                 reservationAdultCountEl.textContent = '1'; // Default, will be updated from backend
             }
 
             if (reservationChildCountEl) {
                 reservationChildCountEl.textContent = '0'; // Default, will be updated from backend
-            }
-
-            if (reservationAgencyEl) {
-                reservationAgencyEl.textContent = '-'; // Default, will be updated from backend
             }
         }
 
