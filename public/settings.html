@@ -912,7 +912,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tür</label>
-                    <input type="text" id="activity-type" class="form-input" placeholder="Örn: Spor / Çocuk / Gösteri">
+                    <select id="activity-type" class="form-input">
+                        <option value="">Seçiniz</option>
+                        <option value="Kids" data-i18n="kids">Çocuk</option>
+                        <option value="Adult" data-i18n="adult">Yetişkin</option>
+                        <option value="All Ages" data-i18n="allAges">Tüm Yaşlar</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Lokasyon</label>

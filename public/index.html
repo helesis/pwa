@@ -2277,11 +2277,10 @@
 
                 <!-- Category Filters -->
                 <div class="category-filters">
-                    <button class="category-filter-chip active" onclick="filterByCategory('Tümü')" data-i18n="all">Tümü</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Çocuk')" data-i18n="kids">Çocuk</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Spor')" data-i18n="sport">Spor</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Gösteri')" data-i18n="show">Gösteri</button>
-                    <button class="category-filter-chip" onclick="filterByCategory('Akşam')" data-i18n="evening">Akşam</button>
+                    <button class="category-filter-chip active" onclick="filterByCategory(this)" data-category="All" data-i18n="all">Tümü</button>
+                    <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Kids" data-i18n="kids">Çocuk</button>
+                    <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
+                    <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="All Ages" data-i18n="allAges">Tüm Yaşlar</button>
                     </div>
 
                 <!-- Timeline -->
@@ -7851,7 +7850,7 @@
         // ============================================
 
         let currentActivityDate = new Date().toISOString().split('T')[0]; // Default: today's date
-        let currentActivityCategory = 'Tümü';
+        let currentActivityCategory = 'All'; // Backend category value
         let activitiesData = [];
 
         // Format time
@@ -7882,7 +7881,7 @@
                 console.log('📅 Loading activities for date:', dateStr);
                 let url = `/api/activities?date=${dateStr}`;
                 
-                if (currentActivityCategory !== 'Tümü') {
+                if (currentActivityCategory && currentActivityCategory !== 'All') {
                     url += `&type=${encodeURIComponent(currentActivityCategory)}`;
                 }
                 
@@ -8084,11 +8083,12 @@
         }
 
         // Filter by category
-        function filterByCategory(category) {
-            currentActivityCategory = category;
+        function filterByCategory(buttonElement) {
+            const backendCategory = buttonElement.getAttribute('data-category');
+            currentActivityCategory = backendCategory;
             
             document.querySelectorAll('.category-filter-chip').forEach(chip => chip.classList.remove('active'));
-            event.target.classList.add('active');
+            buttonElement.classList.add('active');
             
             loadActivitiesTimeline();
         }
