@@ -108,20 +108,26 @@ const pool = new Pool({
 let isFirstConnection = true;
 pool.on('connect', () => {
   if (isFirstConnection) {
-    console.log('✅ PostgreSQL pool initialized');
+    console.log('📊 [STEP 0/3] PostgreSQL connection pool initialized');
     isFirstConnection = false;
   }
   // Production'da her connection log'unu kaldır
 });
 
 pool.on('error', (err) => {
-  console.error('❌ PostgreSQL error:', err);
+  console.error('❌ [ERROR] PostgreSQL pool error:', err.message);
+  console.error('   Stack:', err.stack);
 });
 
 // Initialize database tables
 async function initializeDatabase() {
+  const initStartTime = Date.now();
+  console.log('📊 [STEP 1/3] Starting database initialization...');
+  
   try {
+    console.log('   🔍 [1.1] Checking if tables exist...');
     // Check if tables already exist
+    const checkStartTime = Date.now();
     const checkResult = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -129,16 +135,24 @@ async function initializeDatabase() {
         AND table_name = 'rooms'
       );
     `);
+    const checkTime = ((Date.now() - checkStartTime) / 1000).toFixed(3);
     
     const tablesExist = checkResult.rows[0].exists;
+    console.log(`   ${tablesExist ? '✅' : '🔄'} [1.2] Tables exist: ${tablesExist} (${checkTime}s)`);
     
     if (tablesExist) {
-      // Check if new tables exist, if not add them (silently, only log if changes made)
+      console.log('   🔄 [1.3] Checking for new tables and columns...');
+      const migrationStartTime = Date.now();
       await addNewTablesIfNeeded();
+      const migrationTime = ((Date.now() - migrationStartTime) / 1000).toFixed(3);
+      console.log(`   ✅ [1.4] Migration check completed (${migrationTime}s)`);
+      const totalTime = ((Date.now() - initStartTime) / 1000).toFixed(3);
+      console.log(`📊 [STEP 1/3] Database initialization completed in ${totalTime}s`);
       return;
     }
     
-    console.log('🔄 Creating database tables...');
+    console.log('   🔄 [1.3] Creating database tables...');
+    const createStartTime = Date.now();
     
     // Create tables with new structure
     await pool.query(`
@@ -349,18 +363,26 @@ async function initializeDatabase() {
       CREATE INDEX idx_user_locations_guest ON user_locations(guest_unique_id);
       CREATE INDEX idx_user_locations_timestamp ON user_locations(timestamp DESC);
     `);
+    const createTime = ((Date.now() - createStartTime) / 1000).toFixed(3);
+    console.log(`   ✅ [1.4] All tables and indexes created (${createTime}s)`);
     
-    console.log('✅ Database tables initialized');
+    const totalTime = ((Date.now() - initStartTime) / 1000).toFixed(3);
+    console.log(`📊 [STEP 1/3] Database initialization completed in ${totalTime}s`);
   } catch (error) {
-    console.error('❌ Database initialization error:', error);
+    const totalTime = ((Date.now() - initStartTime) / 1000).toFixed(3);
+    console.error(`❌ [STEP 1/3] Database initialization FAILED after ${totalTime}s`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Stack: ${error.stack}`);
     throw error;
   }
 }
 
 // Add new tables if they don't exist (for existing databases)
 async function addNewTablesIfNeeded() {
+  const migrationStartTime = Date.now();
   try {
     // Check and add activities table - optimized single query
+    console.log('      🔍 Checking activities table...');
     const activitiesCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -370,6 +392,7 @@ async function addNewTablesIfNeeded() {
     `);
     
     if (!activitiesCheck.rows[0].exists) {
+      console.log('      ➕ Creating activities table...');
       await pool.query(`
         CREATE TABLE activities (
           id SERIAL PRIMARY KEY,
@@ -401,11 +424,12 @@ async function addNewTablesIfNeeded() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('✅ Created activities table');
+      console.log('      ✅ Created activities table');
       return; // Table created, no need to check columns
     }
     
     // Check all missing columns in a single query (much faster)
+    console.log('      🔍 Checking activities table columns...');
     const existingColumns = await pool.query(`
       SELECT column_name 
       FROM information_schema.columns 
@@ -414,6 +438,7 @@ async function addNewTablesIfNeeded() {
     `);
     
     const existingColumnNames = new Set(existingColumns.rows.map(r => r.column_name));
+    console.log(`      📋 Found ${existingColumnNames.size} existing columns`);
     
     // Add missing columns in batch
     const columnsToAdd = [
@@ -440,21 +465,26 @@ async function addNewTablesIfNeeded() {
     const missingColumns = columnsToAdd.filter(col => !existingColumnNames.has(col.name));
     
     if (missingColumns.length > 0) {
+      console.log(`      ➕ Adding ${missingColumns.length} missing columns...`);
       // Add all missing columns in a single transaction
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
         for (const col of missingColumns) {
           await client.query(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS ${col.name} ${col.type};`);
-          console.log(`✅ Added column ${col.name} to activities table`);
+          console.log(`      ✅ Added column: ${col.name}`);
         }
         await client.query('COMMIT');
+        console.log(`      ✅ All ${missingColumns.length} columns added successfully`);
       } catch (error) {
         await client.query('ROLLBACK');
+        console.error(`      ❌ Failed to add columns: ${error.message}`);
         throw error;
       } finally {
         client.release();
       }
+    } else {
+      console.log('      ✅ All columns are up to date');
     }
 
     // Add avatar and ghost_mode columns to rooms table if they don't exist
@@ -4023,10 +4053,32 @@ async function initializeTestData() {
 }
 
 // Initialize database and start server
-initializeDatabase().then(() => {
-  console.log('✅ Database initialized, starting server...');
-  console.log('ℹ️ Test verisi oluşturmak için: /test-data.html sayfasını ziyaret edin');
-}).catch(console.error);
+// Initialize database and start server
+const serverStartTime = Date.now();
+console.log('');
+console.log('🚀 [STARTUP] Starting Voyage Sorgun Chat Server...');
+console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`   Node version: ${process.version}`);
+console.log(`   Started at: ${new Date().toISOString()}`);
+console.log('');
+
+initializeDatabase()
+  .then(() => {
+    const dbInitTime = ((Date.now() - serverStartTime) / 1000).toFixed(3);
+    console.log('');
+    console.log('📊 [STEP 2/3] Database initialization completed');
+    console.log(`   ⏱️  Database init time: ${dbInitTime}s`);
+    console.log('');
+    console.log('📊 [STEP 3/3] Starting HTTP server...');
+  })
+  .catch((error) => {
+    console.error('');
+    console.error('❌ [FATAL] Failed to initialize database');
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Stack: ${error.stack}`);
+    console.error('');
+    process.exit(1);
+  });
 
 // Health check
 
@@ -4354,6 +4406,7 @@ app.get('/join-team', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
+  const totalStartupTime = ((Date.now() - serverStartTime) / 1000).toFixed(3);
   console.log('');
   console.log('🏨 ════════════════════════════════════════════');
   console.log('   Voyage Sorgun Chat Server');
@@ -4362,15 +4415,19 @@ httpServer.listen(PORT, () => {
   console.log(`   🌐 Server: http://localhost:${PORT}`);
   console.log(`   🔌 WebSocket: ws://localhost:${PORT}`);
   console.log(`   📊 API: http://localhost:${PORT}/api`);
+  console.log(`   ❤️  Health: http://localhost:${PORT}/health`);
   console.log('');
   console.log(`   ✅ Database: PostgreSQL`);
   console.log('   ✅ Real-time: Socket.IO');
   console.log('   ✅ PWA: Enabled');
   console.log(`   ✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('');
+  console.log(`   ⏱️  Total startup time: ${totalStartupTime}s`);
+  console.log('');
   console.log('🏨 ════════════════════════════════════════════');
   console.log('');
-  console.log('ℹ️ Test verisi oluşturmak için: /test-data.html sayfasını ziyaret edin');
+  console.log('✅ [STARTUP] Server is ready and listening!');
+  console.log('ℹ️  Test verisi oluşturmak için: /test-data.html sayfasını ziyaret edin');
   console.log('');
 });
 
