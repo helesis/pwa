@@ -2263,15 +2263,17 @@
                     <div class="now-playing-banner-time" id="nowPlayingTime"></div>
                     </div>
 
-                <!-- Date Navigation -->
-                <div class="date-navigation">
-                    <button class="date-nav-btn active" id="todayBtn" onclick="switchActivityDate('today')">
-                        <span id="todayLabel" data-i18n="today">Bugün</span>
-                    </button>
-                    <button class="date-nav-btn" id="tomorrowBtn" onclick="switchActivityDate('tomorrow')">
-                        <span id="tomorrowLabel" data-i18n="tomorrow">Yarın</span>
-                    </button>
-                    </div>
+                <!-- Date Selection -->
+                <div class="date-navigation" style="display: flex; align-items: center; justify-content: center; padding: 12px 16px; gap: 12px;">
+                    <label for="activity-date-selector" style="font-size: 14px; font-weight: 500; color: #111b21; white-space: nowrap;">Tarih:</label>
+                    <input 
+                        type="date" 
+                        id="activity-date-selector" 
+                        class="form-input" 
+                        style="flex: 1; max-width: 200px; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; background: white;"
+                        onchange="switchActivityDate(this.value)"
+                    />
+                </div>
 
                 <!-- Category Filters -->
                 <div class="category-filters">
@@ -7843,7 +7845,7 @@
         // Activities Timeline Functions
         // ============================================
 
-        let currentActivityDate = 'today';
+        let currentActivityDate = new Date().toISOString().split('T')[0]; // Default: today's date
         let currentActivityCategory = 'Tümü';
         let activitiesData = [];
 
@@ -7863,22 +7865,15 @@
             return `${date.getDate()} ${months[date.getMonth()]} ${days[date.getDay()]}`;
         }
 
-        // Get date string for API
-        function getActivityDateString(dateType) {
-            const today = new Date();
-            const date = new Date(today);
-            
-            if (dateType === 'tomorrow') {
-                date.setDate(today.getDate() + 1);
-            }
-            
-            return date.toISOString().split('T')[0];
+        // Get date string for API (currentActivityDate is already a date string)
+        function getActivityDateString() {
+            return currentActivityDate || new Date().toISOString().split('T')[0];
         }
 
         // Load activities timeline
         async function loadActivitiesTimeline() {
             try {
-                const dateStr = getActivityDateString(currentActivityDate);
+                const dateStr = getActivityDateString();
                 let url = `/api/activities?date=${dateStr}`;
                 
                 if (currentActivityCategory !== 'Tümü') {
@@ -7891,7 +7886,6 @@
                 activitiesData = await response.json();
                 renderActivitiesTimeline();
                 updateNowPlayingBanner();
-                updateDateLabels();
                 // Apply translations after loading
                 applyTranslations();
             } catch (error) {
@@ -8061,19 +8055,27 @@
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
             
-            document.getElementById('todayLabel').textContent = `Bugün (${formatActivityDate(today.toISOString().split('T')[0])})`;
-            document.getElementById('tomorrowLabel').textContent = `Yarın (${formatActivityDate(tomorrow.toISOString().split('T')[0])})`;
-        }
-
         // Switch activity date
-        function switchActivityDate(dateType) {
-            currentActivityDate = dateType;
+        function switchActivityDate(selectedDate) {
+            // If called with 'today' or 'tomorrow' for backwards compatibility
+            if (selectedDate === 'today') {
+                selectedDate = new Date().toISOString().split('T')[0];
+            } else if (selectedDate === 'tomorrow') {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                selectedDate = tomorrow.toISOString().split('T')[0];
+            }
             
-            document.querySelectorAll('.date-nav-btn').forEach(btn => btn.classList.remove('active'));
-            if (dateType === 'today') {
-                document.getElementById('todayBtn').classList.add('active');
-            } else {
-                document.getElementById('tomorrowBtn').classList.add('active');
+            if (!selectedDate) {
+                selectedDate = new Date().toISOString().split('T')[0];
+            }
+            
+            currentActivityDate = selectedDate;
+            
+            // Update date picker if it exists
+            const datePicker = document.getElementById('activity-date-selector');
+            if (datePicker) {
+                datePicker.value = selectedDate;
             }
             
             loadActivitiesTimeline();
@@ -8177,7 +8179,12 @@
         window.addEventListener('DOMContentLoaded', async () => {
             // await checkGuestAuth(); // Geçici olarak devre dışı - tasarım görmek için
             applyTranslations(); // Sayfa yüklendiğinde çevirileri uygula
-            updateDateLabels(); // Update date labels on load
+            
+            // Initialize date picker with today's date
+            const datePicker = document.getElementById('activity-date-selector');
+            if (datePicker) {
+                datePicker.value = currentActivityDate;
+            }
         });
 
         window.addEventListener('load', async () => {
