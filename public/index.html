@@ -7889,6 +7889,14 @@
                 
                 activitiesData = await response.json();
                 console.log('✅ Loaded activities:', activitiesData.length, 'items');
+                if (activitiesData.length > 0) {
+                    console.log('🔍 Sample activity data:', {
+                        id: activitiesData[0].id,
+                        title: activitiesData[0].title,
+                        category: activitiesData[0].category,
+                        type: activitiesData[0].type
+                    });
+                }
                 renderActivitiesTimeline();
                 updateNowPlayingBanner();
                 // Apply translations after loading
@@ -7920,17 +7928,41 @@
                 return;
             }
             
-            // Group by category (Sabah, Öğle, Akşam)
+            // Group by category (Sabah, Öğle, Akşam) or use actual category from DB
             const grouped = {};
             const now = new Date();
             
             activitiesData.forEach(activity => {
-                const category = activity.category || 'Diğer';
+                // Use actual category from DB, or group by time of day
+                let category = activity.category || 'Diğer';
+                
+                // If category is in English (Sports, Kids Club, etc.), map to time-based category
+                // Otherwise use as-is
+                if (!['Sabah', 'Öğle', 'Akşam'].includes(category)) {
+                    // Try to infer category from start_time if available
+                    if (activity.start_time) {
+                        const hour = parseInt(activity.start_time.split(':')[0]);
+                        if (hour >= 6 && hour < 12) {
+                            category = 'Sabah';
+                        } else if (hour >= 12 && hour < 18) {
+                            category = 'Öğle';
+                        } else if (hour >= 18 && hour < 24) {
+                            category = 'Akşam';
+                        } else {
+                            category = 'Diğer';
+                        }
+                    } else {
+                        category = 'Diğer';
+                    }
+                }
+                
                 if (!grouped[category]) {
                     grouped[category] = [];
                 }
                 grouped[category].push(activity);
             });
+            
+            console.log('📊 Grouped activities:', Object.keys(grouped).map(k => `${k}: ${grouped[k].length}`).join(', '));
             
             let html = '';
             const categoryMap = {
