@@ -2839,7 +2839,7 @@ app.get('/api/activities', async (req, res) => {
         }
         
         // Check recurring pattern
-        if (activity.rrule && activity.activity_date) {
+        if (activity.rrule && activity.activity_date && RRule) {
           try {
             const rrule = RRule.fromString(activity.rrule);
             const startDate = new Date(activity.activity_date + 'T00:00:00');
