@@ -2768,38 +2768,123 @@ async function requireAssistant(req, res, next) {
 app.get('/api/activities', async (req, res) => {
   try {
     const { date, type, category, year } = req.query;
-    let query = `
-      SELECT * FROM activities 
-      WHERE is_active = true
-    `;
-    const params = [];
-    let paramCount = 1;
     
+    // If date is specified, we need to check both exact matches and recurring patterns
     if (date) {
-      query += ` AND activity_date = $${paramCount++}`;
-      params.push(date);
+      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+      console.log(`📅 Filtering activities by date: ${dateStr}`);
+      
+      // Import RRule dynamically
+      const { RRule } = await import('rrule');
+      const selectedDate = new Date(dateStr + 'T00:00:00');
+      
+      // Get all activities (including recurring ones)
+      let query = `
+        SELECT * FROM activities 
+        WHERE is_active = true
+      `;
+      const params = [];
+      let paramCount = 1;
+      
+      // Filter by year (skip if all=true)
+      if (req.query.all !== 'true' && year) {
+        query += ` AND (activity_date IS NULL OR EXTRACT(YEAR FROM activity_date) = $${paramCount++})`;
+        params.push(parseInt(year));
+      }
+      
+      if (type && type !== 'Tümü') {
+        query += ` AND type = $${paramCount++}`;
+        params.push(type);
+      }
+      
+      if (category) {
+        query += ` AND category = $${paramCount++}`;
+        params.push(category);
+      }
+      
+      query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
+      
+      const result = await pool.query(query, params);
+      
+      // Filter results: include activities that match the date either:
+      // 1. Exact date match (activity_date = selected date)
+      // 2. Recurring pattern match (rrule includes selected date)
+      const filteredActivities = result.rows.filter(activity => {
+        // Exact date match
+        if (activity.activity_date === dateStr) {
+          return true;
+        }
+        
+        // Check recurring pattern
+        if (activity.rrule && activity.activity_date) {
+          try {
+            const rrule = RRule.fromString(activity.rrule);
+            const startDate = new Date(activity.activity_date + 'T00:00:00');
+            
+            // Check if selected date is in the recurring pattern
+            // and is between start date and recurring_until (if exists)
+            if (selectedDate >= startDate) {
+              if (activity.recurring_until) {
+                const untilDate = new Date(activity.recurring_until + 'T23:59:59');
+                if (selectedDate > untilDate) {
+                  return false;
+                }
+              }
+              
+              // Check if the date matches the pattern
+              const occurrences = rrule.between(startDate, new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000), true);
+              return occurrences.some(occ => {
+                const occDate = occ.toISOString().split('T')[0];
+                return occDate === dateStr;
+              });
+            }
+          } catch (e) {
+            console.warn('Error parsing RRule for activity', activity.id, ':', e.message);
+            return false;
+          }
+        }
+        
+        return false;
+      });
+      
+      // Update activity_date for recurring activities to show the selected date
+      const activitiesWithDate = filteredActivities.map(activity => ({
+        ...activity,
+        activity_date: activity.activity_date === dateStr ? activity.activity_date : dateStr
+      }));
+      
+      console.log(`✅ Found ${activitiesWithDate.length} activities for ${dateStr}`);
+      res.json(activitiesWithDate);
+    } else {
+      // No date filter - return all activities
+      let query = `
+        SELECT * FROM activities 
+        WHERE is_active = true
+      `;
+      const params = [];
+      let paramCount = 1;
+      
+      // Filter by year (skip if all=true)
+      if (req.query.all !== 'true' && year) {
+        query += ` AND EXTRACT(YEAR FROM activity_date) = $${paramCount++}`;
+        params.push(parseInt(year));
+      }
+      
+      if (type && type !== 'Tümü') {
+        query += ` AND type = $${paramCount++}`;
+        params.push(type);
+      }
+      
+      if (category) {
+        query += ` AND category = $${paramCount++}`;
+        params.push(category);
+      }
+      
+      query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
+      
+      const result = await pool.query(query, params);
+      res.json(result.rows);
     }
-    
-    // Filter by year (skip if all=true)
-    if (req.query.all !== 'true' && year) {
-      query += ` AND EXTRACT(YEAR FROM activity_date) = $${paramCount++}`;
-      params.push(parseInt(year));
-    }
-    
-    if (type && type !== 'Tümü') {
-      query += ` AND type = $${paramCount++}`;
-      params.push(type);
-    }
-    
-    if (category) {
-      query += ` AND category = $${paramCount++}`;
-      params.push(category);
-    }
-    
-    query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
-    
-    const result = await pool.query(query, params);
-    res.json(result.rows);
   } catch (error) {
     console.error('Error fetching activities:', error);
     res.status(500).json({ error: 'Database error' });

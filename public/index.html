@@ -7879,16 +7879,19 @@
         async function loadActivitiesTimeline() {
             try {
                 const dateStr = getActivityDateString();
+                console.log('📅 Loading activities for date:', dateStr);
                 let url = `/api/activities?date=${dateStr}`;
                 
                 if (currentActivityCategory !== 'Tümü') {
                     url += `&type=${encodeURIComponent(currentActivityCategory)}`;
                 }
                 
+                console.log('🔗 Fetching URL:', url);
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Failed to load activities');
                 
                 activitiesData = await response.json();
+                console.log('✅ Loaded activities:', activitiesData.length, 'items');
                 renderActivitiesTimeline();
                 updateNowPlayingBanner();
                 // Apply translations after loading
