@@ -5277,7 +5277,7 @@
         // Load activity story videos
         async function loadActivityStories() {
             try {
-                const response = await fetch('/api/activities?is_story=true');
+                const response = await fetch('/api/story-tray-items');
                 if (!response.ok) {
                     console.warn('Failed to load activity stories');
                     return;
