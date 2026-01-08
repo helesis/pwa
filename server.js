@@ -133,8 +133,7 @@ async function initializeDatabase() {
     const tablesExist = checkResult.rows[0].exists;
     
     if (tablesExist) {
-      console.log('ℹ️ Database tables already exist, checking for new tables...');
-      // Check if new tables exist, if not add them
+      // Check if new tables exist, if not add them (silently, only log if changes made)
       await addNewTablesIfNeeded();
       return;
     }
@@ -361,7 +360,7 @@ async function initializeDatabase() {
 // Add new tables if they don't exist (for existing databases)
 async function addNewTablesIfNeeded() {
   try {
-    // Check and add activities table
+    // Check and add activities table - optimized single query
     const activitiesCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -369,31 +368,6 @@ async function addNewTablesIfNeeded() {
         AND table_name = 'activities'
       );
     `);
-    
-    // Add recurring columns to activities table if they don't exist
-    if (activitiesCheck.rows[0].exists) {
-      const recurringColumnsToAdd = [
-        { name: 'recurring_rule', type: 'VARCHAR(50)' },
-        { name: 'recurring_until', type: 'DATE' },
-        { name: 'end_date', type: 'DATE' },
-        { name: 'is_story', type: 'BOOLEAN DEFAULT false' },
-        { name: 'rrule', type: 'TEXT' }
-      ];
-      for (const col of recurringColumnsToAdd) {
-        const columnCheck = await pool.query(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            AND table_name = 'activities' 
-            AND column_name = $1
-          );
-        `, [col.name]);
-        if (!columnCheck.rows[0].exists) {
-          await pool.query(`ALTER TABLE activities ADD COLUMN ${col.name} ${col.type};`);
-          console.log(`✅ Added column ${col.name} to activities table`);
-        }
-      }
-    }
     
     if (!activitiesCheck.rows[0].exists) {
       await pool.query(`
@@ -418,48 +392,68 @@ async function addNewTablesIfNeeded() {
           featured BOOLEAN DEFAULT false,
           map_latitude DECIMAL(10, 8),
           map_longitude DECIMAL(11, 8),
+          recurring_rule VARCHAR(50),
+          recurring_until DATE,
+          end_date DATE,
+          is_story BOOLEAN DEFAULT false,
+          rrule TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
       console.log('✅ Created activities table');
-    } else {
-      // Add new columns if they don't exist (migration)
-      const columnsToAdd = [
-        { name: 'activity_date', type: 'DATE' },
-        { name: 'start_time', type: 'TIME' },
-        { name: 'end_time', type: 'TIME' },
-        { name: 'end_date', type: 'DATE' },
-        { name: 'description', type: 'TEXT' },
-        { name: 'category', type: 'VARCHAR(50)' },
-        { name: 'type', type: 'VARCHAR(50)' },
-        { name: 'location', type: 'VARCHAR(200)' },
-        { name: 'instructor_name', type: 'VARCHAR(100)' },
-        { name: 'age_group', type: 'VARCHAR(50)' },
-        { name: 'capacity', type: 'INTEGER' },
-        { name: 'featured', type: 'BOOLEAN DEFAULT false' },
-        { name: 'map_latitude', type: 'DECIMAL(10, 8)' },
-        { name: 'map_longitude', type: 'DECIMAL(11, 8)' },
-        { name: 'recurring_rule', type: 'VARCHAR(50)' },
-        { name: 'recurring_until', type: 'DATE' },
-        { name: 'is_story', type: 'BOOLEAN DEFAULT false' },
-        { name: 'rrule', type: 'TEXT' }
-      ];
-      
-      for (const col of columnsToAdd) {
-        const columnCheck = await pool.query(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-            AND table_name = 'activities' 
-            AND column_name = $1
-          );
-        `, [col.name]);
-        
-        if (!columnCheck.rows[0].exists) {
-          await pool.query(`ALTER TABLE activities ADD COLUMN ${col.name} ${col.type};`);
+      return; // Table created, no need to check columns
+    }
+    
+    // Check all missing columns in a single query (much faster)
+    const existingColumns = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'activities'
+    `);
+    
+    const existingColumnNames = new Set(existingColumns.rows.map(r => r.column_name));
+    
+    // Add missing columns in batch
+    const columnsToAdd = [
+      { name: 'activity_date', type: 'DATE' },
+      { name: 'start_time', type: 'TIME' },
+      { name: 'end_time', type: 'TIME' },
+      { name: 'end_date', type: 'DATE' },
+      { name: 'description', type: 'TEXT' },
+      { name: 'category', type: 'VARCHAR(50)' },
+      { name: 'type', type: 'VARCHAR(50)' },
+      { name: 'location', type: 'VARCHAR(200)' },
+      { name: 'instructor_name', type: 'VARCHAR(100)' },
+      { name: 'age_group', type: 'VARCHAR(50)' },
+      { name: 'capacity', type: 'INTEGER' },
+      { name: 'featured', type: 'BOOLEAN DEFAULT false' },
+      { name: 'map_latitude', type: 'DECIMAL(10, 8)' },
+      { name: 'map_longitude', type: 'DECIMAL(11, 8)' },
+      { name: 'recurring_rule', type: 'VARCHAR(50)' },
+      { name: 'recurring_until', type: 'DATE' },
+      { name: 'is_story', type: 'BOOLEAN DEFAULT false' },
+      { name: 'rrule', type: 'TEXT' }
+    ];
+    
+    const missingColumns = columnsToAdd.filter(col => !existingColumnNames.has(col.name));
+    
+    if (missingColumns.length > 0) {
+      // Add all missing columns in a single transaction
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const col of missingColumns) {
+          await client.query(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS ${col.name} ${col.type};`);
           console.log(`✅ Added column ${col.name} to activities table`);
         }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
       }
     }
 
@@ -4148,23 +4142,44 @@ app.post('/api/migrate/update-guest-unique-ids', async (req, res) => {
   }
 });
 
+// Cache health check result for 5 seconds to avoid excessive DB queries
+let healthCheckCache = { status: 'ok', timestamp: Date.now() };
+const HEALTH_CHECK_CACHE_TTL = 5000; // 5 seconds
+
 app.get('/health', async (req, res) => {
   try {
-    // Test database connection
-    await pool.query('SELECT 1');
-    res.json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
+    // Return cached result if recent
+    const now = Date.now();
+    if (healthCheckCache.timestamp && (now - healthCheckCache.timestamp) < HEALTH_CHECK_CACHE_TTL) {
+      return res.json(healthCheckCache);
+    }
+    
+    // Quick database connection test with timeout
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database check timeout')), 2000)
+    );
+    
+    await Promise.race([
+      pool.query('SELECT 1'),
+      timeoutPromise
+    ]);
+    
+    healthCheckCache = {
+      status: 'ok',
+      timestamp: now,
       database: 'connected',
       websocket: 'active'
-    });
+    };
+    
+    res.json(healthCheckCache);
   } catch (error) {
-    res.status(503).json({ 
-      status: 'error', 
-      timestamp: new Date().toISOString(),
+    healthCheckCache = {
+      status: 'error',
+      timestamp: Date.now(),
       database: 'disconnected',
       error: error.message
-    });
+    };
+    res.status(503).json(healthCheckCache);
   }
 });
 
