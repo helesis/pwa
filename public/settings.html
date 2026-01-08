@@ -3419,6 +3419,18 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Check if required libraries are loaded
+            if (typeof FullCalendar === 'undefined') {
+                console.error('❌ FullCalendar library not loaded');
+            } else {
+                console.log('✅ FullCalendar library loaded');
+            }
+            if (typeof RRule === 'undefined') {
+                console.warn('⚠️ RRule library not loaded (optional)');
+            } else {
+                console.log('✅ RRule library loaded');
+            }
+            
             loadAssistants();
             
             // Ensure form submit handlers are attached
