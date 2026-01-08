@@ -376,7 +376,8 @@ async function addNewTablesIfNeeded() {
         { name: 'recurring_rule', type: 'VARCHAR(50)' },
         { name: 'recurring_until', type: 'DATE' },
         { name: 'end_date', type: 'DATE' },
-        { name: 'is_story', type: 'BOOLEAN DEFAULT false' }
+        { name: 'is_story', type: 'BOOLEAN DEFAULT false' },
+        { name: 'rrule', type: 'TEXT' }
       ];
       for (const col of recurringColumnsToAdd) {
         const columnCheck = await pool.query(`
@@ -441,7 +442,8 @@ async function addNewTablesIfNeeded() {
         { name: 'map_longitude', type: 'DECIMAL(11, 8)' },
         { name: 'recurring_rule', type: 'VARCHAR(50)' },
         { name: 'recurring_until', type: 'DATE' },
-        { name: 'is_story', type: 'BOOLEAN DEFAULT false' }
+        { name: 'is_story', type: 'BOOLEAN DEFAULT false' },
+        { name: 'rrule', type: 'TEXT' }
       ];
       
       for (const col of columnsToAdd) {
@@ -2685,8 +2687,8 @@ app.get('/api/activities', async (req, res) => {
       params.push(date);
     }
     
-    // Filter by year
-    if (year) {
+    // Filter by year (skip if all=true)
+    if (req.query.all !== 'true' && year) {
       query += ` AND EXTRACT(YEAR FROM activity_date) = $${paramCount++}`;
       params.push(parseInt(year));
     }
@@ -2762,7 +2764,7 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
       featured, map_latitude, map_longitude, video_url, image_url,
-      recurring_rule, recurring_until, is_story
+      recurring_rule, recurring_until, is_story, rrule
     } = req.body;
     
     if (!title) {
@@ -2774,9 +2776,9 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
         title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
         description, category, type, location, instructor_name, age_group, capacity,
         featured, map_latitude, map_longitude, video_url, image_url,
-        recurring_rule, recurring_until, is_story
+        recurring_rule, recurring_until, is_story, rrule
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       RETURNING *
     `, [
       title.trim(),
@@ -2801,7 +2803,8 @@ app.post('/api/admin/activities', requireAssistant, async (req, res) => {
       image_url || null,
       recurring_rule || null,
       recurring_until || null,
-      is_story !== undefined ? is_story : false
+      is_story !== undefined ? is_story : false,
+      rrule || null
     ]);
     
     res.json(result.rows[0]);
@@ -2819,7 +2822,7 @@ app.put('/api/admin/activities/:id', requireAssistant, async (req, res) => {
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
       featured, map_latitude, map_longitude, video_url, image_url,
-      recurring_rule, recurring_until, is_story
+      recurring_rule, recurring_until, is_story, rrule
     } = req.body;
     
     const result = await pool.query(`
@@ -2848,14 +2851,15 @@ app.put('/api/admin/activities/:id', requireAssistant, async (req, res) => {
         recurring_rule = COALESCE($21, recurring_rule),
         recurring_until = COALESCE($22, recurring_until),
         is_story = COALESCE($23, is_story),
+        rrule = COALESCE($24, rrule),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $24
+      WHERE id = $25
       RETURNING *
     `, [
       title, icon, display_order, is_active, activity_date, start_time, end_time, end_date,
       description, category, type, location, instructor_name, age_group, capacity,
       featured, map_latitude, map_longitude, video_url, image_url,
-      recurring_rule, recurring_until, is_story, id
+      recurring_rule, recurring_until, is_story, rrule, id
     ]);
     
     if (result.rows.length === 0) {
@@ -2887,8 +2891,40 @@ app.delete('/api/admin/activities/:id', requireAssistant, async (req, res) => {
   }
 });
 
+// Update activity date/time (for drag and drop)
+app.patch('/api/admin/activities/:id/move', requireAssistant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { activity_date, start_time, end_time } = req.body;
+    
+    if (!activity_date) {
+      return res.status(400).json({ error: 'activity_date is required' });
+    }
+    
+    const result = await pool.query(`
+      UPDATE activities 
+      SET 
+        activity_date = $1,
+        start_time = COALESCE($2, start_time),
+        end_time = COALESCE($3, end_time),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+      RETURNING *
+    `, [activity_date, start_time || null, end_time || null, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error moving activity:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Upload photo/video for activity (supports both file upload and URL)
-app.post('/api/admin/activities/:id/upload', upload.single('file'), async (req, res) => {
+app.post('/api/admin/activities/:id/upload', requireAssistant, upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
     let image_url = req.body.image_url;

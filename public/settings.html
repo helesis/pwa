@@ -8,7 +8,16 @@
     
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- FullCalendar JS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.js"></script>
+    <!-- FullCalendar Turkish Locale -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/tr.js"></script>
+    <!-- RRule Library -->
+    <script src="https://cdn.jsdelivr.net/npm/rrule@2.8.1/dist/es5/rrule.min.js"></script>
     
     <style>
         * {
@@ -528,6 +537,67 @@
             margin-bottom: 0;
             flex: 1;
         }
+
+        /* FullCalendar Custom Styling */
+        #activities-fullcalendar {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .fc {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .fc-header-toolbar {
+            margin-bottom: 20px;
+        }
+
+        .fc-button {
+            background: var(--voyage-blue) !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 6px !important;
+            font-weight: 500 !important;
+            text-transform: none !important;
+        }
+
+        .fc-button:hover {
+            background: var(--voyage-navy) !important;
+        }
+
+        .fc-button-active {
+            background: var(--voyage-navy) !important;
+        }
+
+        .fc-today-button {
+            background: var(--voyage-gold) !important;
+        }
+
+        .fc-today-button:hover {
+            background: #b89a4f !important;
+        }
+
+        .fc-daygrid-event {
+            border-radius: 4px !important;
+            padding: 2px 4px !important;
+            font-size: 12px !important;
+        }
+
+        .fc-event-title {
+            font-weight: 500 !important;
+        }
+
+        .fc-day-today {
+            background: var(--voyage-light-blue) !important;
+        }
+
+        .fc-col-header-cell {
+            background: var(--voyage-light-blue);
+            padding: 10px 0;
+            font-weight: 600;
+            color: var(--voyage-navy);
+        }
     </style>
 </head>
 <body>
@@ -631,26 +701,11 @@
         <div id="activities-calendar-tab" class="tab-content">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Aktiviteler Takvimi (Yıllık Görünüm)</h2>
+                    <h2 class="card-title">Aktiviteler Takvimi</h2>
                     <button class="btn btn-primary" onclick="openActivityCalendarModal()">+ Yeni Aktivite</button>
                 </div>
-                <div style="margin-bottom: 20px;">
-                    <div class="form-group" style="max-width: 300px;">
-                        <label class="form-label">Yıl Seç</label>
-                        <select id="calendar-year-select" class="form-select" onchange="loadActivitiesCalendar()">
-                            ${(() => {
-                                const currentYear = new Date().getFullYear();
-                                let options = '';
-                                for (let year = currentYear - 1; year <= currentYear + 1; year++) {
-                                    options += `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`;
-                                }
-                                return options;
-                            })()}
-                        </select>
-                    </div>
-                </div>
-                <div id="activities-calendar-list">
-                    <div class="loading">Yükleniyor...</div>
+                <div id="activities-calendar-container" style="padding: 20px;">
+                    <div id="activities-fullcalendar"></div>
                 </div>
             </div>
         </div>
@@ -971,7 +1026,25 @@
                     <textarea id="calendar-activity-description" class="form-input" rows="3"></textarea>
                 </div>
                 
-                <!-- Tekrar Seçenekleri -->
+                <!-- Fotoğraf ve Video Yükleme -->
+                <div class="form-group" style="border-top: 2px solid var(--voyage-light-blue); padding-top: 16px; margin-top: 16px;">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 12px;">Fotoğraf veya Video</label>
+                    <div class="form-group">
+                        <label class="form-label">Dosya Yükle</label>
+                        <input type="file" id="calendar-activity-file" class="form-input" accept="image/*,video/*" onchange="handleActivityFileChange(event)">
+                        <div id="calendar-activity-file-preview" style="margin-top: 10px;"></div>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label class="form-label">veya URL ile ekle</label>
+                        <input type="text" id="calendar-activity-image-url" class="form-input" placeholder="Fotoğraf URL (opsiyonel)">
+                        <input type="text" id="calendar-activity-video-url" class="form-input" style="margin-top: 8px;" placeholder="Video URL (opsiyonel)">
+                        <div style="font-size: 12px; color: #667781; margin-top: 6px;">
+                            Not: Video URL girerseniz fotoğraf alanı otomatik boşaltılır (ve tersi).
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tekrar Seçenekleri (RRule) -->
                 <div class="form-group" style="border-top: 2px solid var(--voyage-light-blue); padding-top: 16px; margin-top: 16px;">
                     <label class="form-label" style="font-weight: 600; margin-bottom: 12px;">Tekrar Seçenekleri</label>
                     <div class="form-group">
@@ -1003,6 +1076,19 @@
                             <input type="radio" name="recurring-type" id="recurring-monthly" value="monthly" onchange="toggleRecurringOptions()">
                             Her ay (aynı gün)
                         </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="radio" name="recurring-type" id="recurring-custom" value="custom" onchange="toggleRecurringOptions()">
+                            Özel RRule (Gelişmiş)
+                        </label>
+                    </div>
+                    <div class="form-group" id="recurring-custom-group" style="display: none;">
+                        <label class="form-label">RRule String</label>
+                        <input type="text" id="recurring-rrule-string" class="form-input" placeholder="Örn: FREQ=WEEKLY;BYDAY=MO,WE,FR">
+                        <div style="font-size: 12px; color: #667781; margin-top: 4px;">
+                            RRule formatı: FREQ=DAILY|WEEKLY|MONTHLY|YEARLY;INTERVAL=2;BYDAY=MO,WE,FR;UNTIL=20241231T000000Z
+                        </div>
                     </div>
                     <div class="form-group" id="recurring-until-group" style="display: none;">
                         <label class="form-label">Tekrar Son Tarihi (Opsiyonel)</label>
@@ -1094,7 +1180,13 @@
             if (tabName === 'assignments') loadAssignments();
             if (tabName === 'unassigned') loadUnassignedRooms();
             if (tabName === 'activities') loadActivities();
-            if (tabName === 'activities-calendar') loadActivitiesCalendar();
+            if (tabName === 'activities-calendar') {
+                if (!calendar) {
+                    initFullCalendar();
+                } else {
+                    loadActivitiesCalendar();
+                }
+            }
             if (tabName === 'posts') loadPosts();
         }
 
@@ -3368,16 +3460,130 @@
         });
 
         // ============================================
-        // Activities Calendar Management
+        // Activities Calendar Management (FullCalendar)
         // ============================================
 
         let currentCalendarActivityId = null;
+        let calendar = null;
+        let activityFileToUpload = null;
 
-        // Load activities calendar for selected year
+        // Initialize FullCalendar
+        function initFullCalendar() {
+            const calendarEl = document.getElementById('activities-fullcalendar');
+            if (!calendarEl) return;
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'tr',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                },
+                editable: true,
+                droppable: false,
+                selectable: true,
+                dayMaxEvents: true,
+                select: function(info) {
+                    // Open modal when date is clicked
+                    const dateStr = info.startStr.split('T')[0];
+                    openActivityCalendarModal(dateStr);
+                },
+                eventClick: function(info) {
+                    // Edit activity when clicked
+                    const activityId = info.event.id;
+                    editCalendarActivity(activityId);
+                },
+                eventDrop: async function(info) {
+                    // Handle drag and drop
+                    const activityId = info.event.id;
+                    const newDate = info.event.start;
+                    const newTime = info.event.startStr.includes('T') 
+                        ? info.event.startStr.split('T')[1].substring(0, 5)
+                        : null;
+                    
+                    try {
+                        const response = await fetch(`/api/admin/activities/${activityId}/move`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                activity_date: newDate.toISOString().split('T')[0],
+                                start_time: newTime
+                            })
+                        });
+                        
+                if (!response.ok) {
+                            throw new Error('Failed to move activity');
+                        }
+                        
+                        showAlert('Aktivite başarıyla taşındı', 'success');
+                    } catch (error) {
+                        console.error('Error moving activity:', error);
+                        info.revert();
+                        showAlert('Aktivite taşınırken hata oluştu', 'error');
+                    }
+                },
+                eventResize: async function(info) {
+                    // Handle event resize (duration change)
+                    const activityId = info.event.id;
+                    const newEnd = info.event.end || info.event.start;
+                    const endTime = info.event.endStr && info.event.endStr.includes('T')
+                        ? info.event.endStr.split('T')[1].substring(0, 5)
+                        : null;
+                    
+                    try {
+                        const response = await fetch(`/api/admin/activities/${activityId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                end_time: endTime
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to update activity');
+                        }
+                        
+                        showAlert('Aktivite başarıyla güncellendi', 'success');
+                    } catch (error) {
+                        console.error('Error updating activity:', error);
+                        info.revert();
+                        showAlert('Aktivite güncellenirken hata oluştu', 'error');
+                    }
+                },
+                eventContent: function(info) {
+                    // Custom event rendering
+                    const activity = info.event.extendedProps;
+                    const hasMedia = activity.image_url || activity.video_url;
+                    const isRecurring = activity.rrule || activity.recurring_rule;
+                    
+                    return {
+                        html: `
+                            <div style="padding: 2px 4px; font-size: 12px;">
+                                ${isRecurring ? '🔄 ' : ''}${hasMedia ? '📷 ' : ''}
+                                ${info.event.title}
+                                ${info.event.extendedProps.start_time ? '<br><small>' + info.event.extendedProps.start_time + '</small>' : ''}
+                            </div>
+                        `
+                    };
+                }
+            });
+
+            calendar.render();
+            loadActivitiesCalendar();
+        }
+
+        // Load activities calendar
         async function loadActivitiesCalendar() {
+            if (!calendar) {
+                initFullCalendar();
+                return;
+            }
+
             try {
-                const year = parseInt(document.getElementById('calendar-year-select').value) || new Date().getFullYear();
-                const response = await fetch(`/api/activities?year=${year}`, {
+                const response = await fetch('/api/activities?all=true', {
                     credentials: 'include'
                 });
                 if (!response.ok) {
@@ -3385,84 +3591,82 @@
                 }
                 const activities = await response.json();
                 
-                // Group activities by month
-                const activitiesByMonth = {};
-                activities.forEach(activity => {
-                    if (activity.activity_date) {
-                        const date = new Date(activity.activity_date);
-                        const month = date.getMonth();
-                        if (!activitiesByMonth[month]) {
-                            activitiesByMonth[month] = [];
-                        }
-                        activitiesByMonth[month].push(activity);
-                    }
-                });
+                // Convert activities to FullCalendar events
+                const events = [];
                 
-                // Generate calendar for each month
-                const calendarList = document.getElementById('activities-calendar-list');
-                const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                                   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-                const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-                
-                let html = '';
-                for (let month = 0; month < 12; month++) {
-                    const firstDay = new Date(year, month, 1);
-                    const lastDay = new Date(year, month + 1, 0);
-                    const daysInMonth = lastDay.getDate();
-                    const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Monday = 0
+                for (const activity of activities) {
+                    if (!activity.activity_date || activity.is_story) continue;
                     
-                    html += `
-                        <div class="calendar-month">
-                            <div class="calendar-month-header">${monthNames[month]} ${year}</div>
-                            <div class="calendar-grid">
-                                ${dayNames.map(day => `<div class="calendar-day-header">${day}</div>`).join('')}
-                                ${Array(startingDayOfWeek).fill(null).map(() => '<div class="calendar-day empty"></div>').join('')}
-                                ${Array.from({length: daysInMonth}, (_, i) => {
-                                    const day = i + 1;
-                                    const date = new Date(year, month, day);
-                                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                    const dayActivities = (activitiesByMonth[month] || []).filter(a => {
-                                        const activityDate = new Date(a.activity_date);
-                                        return activityDate.getDate() === day;
-                                    });
-                                    
-                                    const today = new Date();
-                                    const isToday = date.getDate() === today.getDate() && 
-                                                   date.getMonth() === today.getMonth() && 
-                                                   date.getFullYear() === today.getFullYear();
-                                    
-                                    return `
-                                        <div class="calendar-day ${isToday ? 'today' : ''}" onclick="openActivityCalendarModal('${dateStr}')">
-                                            <div class="calendar-day-number">${day}</div>
-                                            ${dayActivities.map(activity => `
-                                                <div class="calendar-activity" onclick="event.stopPropagation(); editCalendarActivity(${activity.id})" title="${activity.title} - ${activity.start_time || ''}">
-                                                    ${activity.recurring_rule ? '<span class="recurring-indicator"></span>' : ''}
-                                                    ${activity.title}
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    `;
+                    const startDate = new Date(activity.activity_date);
+                    if (activity.start_time) {
+                        const [hours, minutes] = activity.start_time.split(':');
+                        startDate.setHours(parseInt(hours), parseInt(minutes));
+                    }
+                    
+                    let endDate = null;
+                    if (activity.end_date) {
+                        endDate = new Date(activity.end_date);
+                        if (activity.end_time) {
+                            const [hours, minutes] = activity.end_time.split(':');
+                            endDate.setHours(parseInt(hours), parseInt(minutes));
+                        }
+                    } else if (activity.end_time) {
+                        endDate = new Date(startDate);
+                        const [hours, minutes] = activity.end_time.split(':');
+                        endDate.setHours(parseInt(hours), parseInt(minutes));
+                    }
+                    
+                    const event = {
+                        id: activity.id.toString(),
+                        title: activity.title,
+                        start: startDate.toISOString(),
+                        end: endDate ? endDate.toISOString() : null,
+                        allDay: !activity.start_time,
+                        extendedProps: {
+                            description: activity.description,
+                            category: activity.category,
+                            type: activity.type,
+                            location: activity.location,
+                            image_url: activity.image_url,
+                            video_url: activity.video_url,
+                            start_time: activity.start_time,
+                            end_time: activity.end_time,
+                            rrule: activity.rrule,
+                            recurring_rule: activity.recurring_rule,
+                            recurring_until: activity.recurring_until
+                        },
+                        backgroundColor: activity.category === 'Sabah' ? '#FFD700' : 
+                                       activity.category === 'Öğle' ? '#FF6347' : 
+                                       activity.category === 'Akşam' ? '#4B0082' : '#2C6E8F',
+                        borderColor: activity.category === 'Sabah' ? '#FFA500' : 
+                                   activity.category === 'Öğle' ? '#FF4500' : 
+                                   activity.category === 'Akşam' ? '#6A0DAD' : '#1A4D6D'
+                    };
+                    
+                    // Add RRule if exists (FullCalendar RRule plugin expects string)
+                    if (activity.rrule) {
+                        event.rrule = activity.rrule;
+                    }
+                    
+                    events.push(event);
                 }
                 
-                calendarList.innerHTML = html;
+                calendar.removeAllEvents();
+                calendar.addEventSource(events);
             } catch (error) {
                 console.error('Error loading activities calendar:', error);
-                document.getElementById('activities-calendar-list').innerHTML = `
-                    <div class="alert alert-error">Aktiviteler takvimi yüklenirken hata oluştu: ${error.message}</div>
-                `;
+                showAlert('Aktiviteler yüklenirken hata oluştu: ' + error.message, 'error');
             }
         }
 
         // Open activity calendar modal
         function openActivityCalendarModal(dateStr = null) {
             currentCalendarActivityId = null;
+            activityFileToUpload = null;
             document.getElementById('activity-calendar-modal-title').textContent = 'Yeni Aktivite';
             document.getElementById('activity-calendar-modal').classList.add('active');
             document.getElementById('activity-calendar-form').reset();
+            document.getElementById('calendar-activity-file-preview').innerHTML = '';
             
             if (dateStr) {
                 document.getElementById('calendar-activity-start-date').value = dateStr;
@@ -3487,10 +3691,44 @@
         function toggleRecurringOptions() {
             const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
             const untilGroup = document.getElementById('recurring-until-group');
+            const customGroup = document.getElementById('recurring-custom-group');
+            
             if (recurringType === 'none') {
                 untilGroup.style.display = 'none';
+                customGroup.style.display = 'none';
+            } else if (recurringType === 'custom') {
+                untilGroup.style.display = 'block';
+                customGroup.style.display = 'block';
             } else {
                 untilGroup.style.display = 'block';
+                customGroup.style.display = 'none';
+            }
+        }
+
+        // Handle activity file change
+        function handleActivityFileChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            activityFileToUpload = file;
+            const preview = document.getElementById('calendar-activity-file-preview');
+            
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                        <div style="margin-top: 8px; font-size: 12px; color: #667781;">${file.name}</div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type.startsWith('video/')) {
+                preview.innerHTML = `
+                    <video controls style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                        <source src="${URL.createObjectURL(file)}" type="${file.type}">
+                    </video>
+                    <div style="margin-top: 8px; font-size: 12px; color: #667781;">${file.name}</div>
+                `;
             }
         }
 
@@ -3518,11 +3756,20 @@
                 document.getElementById('calendar-activity-location').value = activity.location || '';
                 document.getElementById('calendar-activity-description').value = activity.description || '';
                 
+                // Set media URLs
+                document.getElementById('calendar-activity-image-url').value = activity.image_url || '';
+                document.getElementById('calendar-activity-video-url').value = activity.video_url || '';
+                
                 // Set recurring type
+                if (activity.rrule) {
+                    document.getElementById('recurring-custom').checked = true;
+                    document.getElementById('recurring-rrule-string').value = activity.rrule;
+                } else {
                 const recurringType = activity.recurring_rule || 'none';
                 const recurringRadio = document.getElementById(`recurring-${recurringType}`);
                 if (recurringRadio) {
                     recurringRadio.checked = true;
+                    }
                 }
                 if (activity.recurring_until) {
                     document.getElementById('recurring-until-date').value = activity.recurring_until;
@@ -3534,7 +3781,7 @@
             }
         }
 
-        // Save activity calendar (with recurring support)
+        // Save activity calendar (with recurring support and file upload)
         async function saveActivityCalendar(event) {
             event.preventDefault();
             
@@ -3547,8 +3794,11 @@
             const type = document.getElementById('calendar-activity-type').value.trim() || null;
             const location = document.getElementById('calendar-activity-location').value.trim() || null;
             const description = document.getElementById('calendar-activity-description').value.trim() || null;
+            const imageUrl = document.getElementById('calendar-activity-image-url').value.trim() || null;
+            const videoUrl = document.getElementById('calendar-activity-video-url').value.trim() || null;
             const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
             const recurringUntil = document.getElementById('recurring-until-date').value || null;
+            const customRrule = document.getElementById('recurring-rrule-string').value.trim() || null;
             
             if (!title || !startDate) {
                 showAlert('Başlık ve başlangıç tarihi gereklidir', 'error');
@@ -3556,18 +3806,107 @@
             }
             
             try {
-                const year = parseInt(document.getElementById('calendar-year-select').value) || new Date().getFullYear();
+                let rruleString = null;
+                if (recurringType === 'custom' && customRrule) {
+                    rruleString = customRrule;
+                } else if (recurringType !== 'none') {
+                    // Generate RRule string from simple recurring type
+                    const untilDate = recurringUntil || new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0];
+                    rruleString = generateRRuleString(recurringType, startDate, untilDate);
+                }
+                
+                // If editing single activity, update it directly
+                if (currentCalendarActivityId) {
+                    // Update activity
+                    let response = await fetch(`/api/admin/activities/${currentCalendarActivityId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            title,
+                            activity_date: startDate,
+                            end_date: endDate,
+                            start_time: startTime,
+                            end_time: endTime,
+                            category,
+                            type,
+                            location,
+                            description,
+                            image_url: imageUrl,
+                            video_url: videoUrl,
+                            recurring_rule: recurringType !== 'none' ? recurringType : null,
+                            recurring_until: recurringType !== 'none' ? (recurringUntil || new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]) : null,
+                            rrule: rruleString,
+                            is_story: false,
+                            is_active: true
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to update activity');
+                    }
+                    
+                    const updatedActivity = await response.json();
+                    
+                    // Upload file if exists
+                    if (activityFileToUpload) {
+                        const formData = new FormData();
+                        formData.append('file', activityFileToUpload);
+                        if (updatedActivity.image_url) {
+                            formData.append('image_url', updatedActivity.image_url);
+                        }
+                        if (updatedActivity.video_url) {
+                            formData.append('video_url', updatedActivity.video_url);
+                        }
+                        
+                        await fetch(`/api/admin/activities/${currentCalendarActivityId}/upload`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData
+                        });
+                    }
+                    
+                    closeActivityCalendarModal();
+                    loadActivitiesCalendar();
+                    showAlert('Aktivite başarıyla güncellendi', 'success');
+                    return;
+                }
+                
+                // Create new activity/activities
+                const year = new Date().getFullYear();
                 const recurringUntilDate = recurringUntil ? recurringUntil : `${year}-12-31`;
                 
-                // Generate all dates based on recurring rule
-                const dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
+                // Generate dates if recurring
+                let dates = [startDate];
+                if (recurringType !== 'none' && !rruleString) {
+                    dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
+                } else if (rruleString) {
+                    // Parse RRule and generate dates
+                    try {
+                        const rruleObj = RRule.fromString(rruleString);
+                        const startDateTime = new Date(startDate);
+                        if (startTime) {
+                            const [hours, minutes] = startTime.split(':');
+                            startDateTime.setHours(parseInt(hours), parseInt(minutes));
+                        }
+                        rruleObj.options.dtstart = startDateTime;
+                        if (recurringUntilDate) {
+                            rruleObj.options.until = new Date(recurringUntilDate + 'T23:59:59');
+                        }
+                        const allDates = rruleObj.all();
+                        dates = allDates.map(d => d.toISOString().split('T')[0]);
+                    } catch (e) {
+                        console.warn('Error parsing RRule, using simple generation:', e);
+                        dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
+                    }
+                }
                 
                 // Save each date as a separate activity
+                const savedActivities = [];
                 for (const date of dates) {
-                    const response = await fetch(currentCalendarActivityId && dates.length === 1 
-                        ? `/api/admin/activities/${currentCalendarActivityId}`
-                        : '/api/admin/activities', {
-                        method: currentCalendarActivityId && dates.length === 1 ? 'PUT' : 'POST',
+                    const response = await fetch('/api/admin/activities', {
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({
@@ -3580,9 +3919,12 @@
                             type,
                             location,
                             description,
+                            image_url: imageUrl,
+                            video_url: videoUrl,
                             recurring_rule: recurringType !== 'none' ? recurringType : null,
                             recurring_until: recurringType !== 'none' ? recurringUntilDate : null,
-                            is_story: false, // Timeline activities, not story tray
+                            rrule: rruleString,
+                            is_story: false,
                             is_active: true
                         })
                     });
@@ -3591,6 +3933,21 @@
                         const error = await response.json();
                         throw new Error(error.error || 'Failed to save activity');
                     }
+                    
+                    const savedActivity = await response.json();
+                    savedActivities.push(savedActivity);
+                }
+                
+                // Upload file to first activity if exists
+                if (activityFileToUpload && savedActivities.length > 0) {
+                    const formData = new FormData();
+                    formData.append('file', activityFileToUpload);
+                    
+                    await fetch(`/api/admin/activities/${savedActivities[0].id}/upload`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
                 }
                 
                 closeActivityCalendarModal();
@@ -3599,6 +3956,25 @@
             } catch (error) {
                 console.error('Error saving activity:', error);
                 showAlert('Aktivite kaydedilirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        // Generate RRule string from simple recurring type
+        function generateRRuleString(recurringType, startDate, untilDate) {
+            const start = new Date(startDate);
+            const dayOfWeek = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][start.getDay()];
+            
+            switch (recurringType) {
+                case 'daily':
+                    return `FREQ=DAILY;UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                case 'weekly':
+                    return `FREQ=WEEKLY;BYDAY=${dayOfWeek};UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                case 'biweekly':
+                    return `FREQ=WEEKLY;INTERVAL=2;BYDAY=${dayOfWeek};UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                case 'monthly':
+                    return `FREQ=MONTHLY;BYMONTHDAY=${start.getDate()};UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                default:
+                    return null;
             }
         }
 
