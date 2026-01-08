@@ -2776,7 +2776,7 @@ app.get('/api/activities', async (req, res) => {
       
       // Import RRule dynamically (ES module)
       const rruleModule = await import('rrule');
-      const { RRule } = rruleModule;
+      const { RRule } = rruleModule.default || rruleModule;
       const selectedDate = new Date(dateStr + 'T00:00:00');
       
       // Get all activities (including recurring ones)
