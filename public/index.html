@@ -2321,6 +2321,212 @@
             cursor: not-allowed;
         }
 
+        /* SPA Booking Wizard Styles */
+        .spa-booking-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .spa-booking-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+
+        .spa-booking-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding: 0 20px;
+        }
+
+        .spa-booking-progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e4e6e9;
+            transition: background 0.3s;
+        }
+
+        .spa-booking-progress-dot.active {
+            background: #1A4D6D;
+        }
+
+        .spa-booking-step {
+            min-height: 200px;
+        }
+
+        .spa-service-item,
+        .spa-time-slot,
+        .spa-therapist-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .spa-service-item:hover,
+        .spa-time-slot:hover,
+        .spa-therapist-item:hover {
+            background: #f8f9fa;
+            border-color: #1A4D6D;
+        }
+
+        .spa-time-slot.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f8f9fa;
+        }
+
+        .spa-time-slot.disabled:hover {
+            background: #f8f9fa;
+            border-color: #e4e6e9;
+        }
+
+        .spa-calendar-day {
+            position: relative;
+            width: 70px;
+            height: 80px;
+            padding: 12px 8px;
+            background: white;
+            border: 2px solid #e4e6e9;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .spa-calendar-day:hover {
+            border-color: #1A4D6D;
+            background: #f8f9fa;
+        }
+
+        .spa-calendar-day.selected {
+            border-color: #1A4D6D;
+            background: #E8F1F5;
+        }
+
+        .spa-calendar-day.heat-green {
+            border-left: 4px solid #28a745;
+        }
+
+        .spa-calendar-day.heat-yellow {
+            border-left: 4px solid #ffc107;
+        }
+
+        .spa-calendar-day.heat-red {
+            border-left: 4px solid #dc3545;
+        }
+
+        .spa-earliest-btn {
+            width: 100%;
+            padding: 12px;
+            background: #1A4D6D;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .spa-earliest-btn:hover {
+            background: #2C6E8F;
+        }
+
+        .spa-therapist-tag {
+            display: inline-block;
+            background: #E8F1F5;
+            color: #1A4D6D;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .spa-new-request-btn {
+            width: 100%;
+            padding: 12px;
+            background: #1A4D6D;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .spa-new-request-btn:hover {
+            background: #2C6E8F;
+        }
+
+        .spa-request-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .spa-request-item:hover {
+            background: #f8f9fa;
+            border-color: #1A4D6D;
+        }
+
+        .spa-status-badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .spa-request-details-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
     </style>
 </head>
 <body>
@@ -2456,6 +2662,14 @@
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
                             Henüz spa rezervasyonunuz bulunmamaktadır.
                         </div>
+                    </div>
+                </div>
+                
+                <!-- SPA Requests in My Reservations -->
+                <div class="info-card" id="spaRequestsInMyReservations" style="display: none;">
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaRequests">SPA Taleplerim</span></div>
+                    <div class="info-card-content" id="spaRequestsList">
+                        <!-- Will be populated by loadSpaReservationsForMyReservations -->
                     </div>
                 </div>
             </div>
@@ -5141,6 +5355,7 @@
             // Update reservations info when switching to reservations section
             if (section === 'reservations') {
                 updateReservationsInfo();
+                loadSpaReservationsForMyReservations();
             }
             
             // Load activity stories when switching to info section
@@ -7930,6 +8145,794 @@
             if (reservationChildCountEl) {
                 reservationChildCountEl.textContent = '0'; // Default, will be updated from backend
             }
+
+            // Load SPA reservations
+            loadSpaReservations();
+        }
+
+        // ============================================
+        // SPA Booking API Client
+        // ============================================
+        const spaApi = {
+            baseUrl: SERVER_URL || window.location.origin,
+
+            async getServices() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/spa/services`, {
+                        credentials: 'include'
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch services');
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error fetching SPA services:', error);
+                    throw error;
+                }
+            },
+
+            async getAvailability(serviceId, from, to) {
+                try {
+                    const params = new URLSearchParams({ serviceId, from, to });
+                    const response = await fetch(`${this.baseUrl}/api/spa/availability?${params}`, {
+                        credentials: 'include'
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch availability');
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error fetching SPA availability:', error);
+                    throw error;
+                }
+            },
+
+            async createRequest(payload) {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/spa/requests`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to create request');
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error creating SPA request:', error);
+                    throw error;
+                }
+            },
+
+            async listMyRequests() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/spa/requests?mine=true`, {
+                        credentials: 'include'
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch requests');
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error fetching SPA requests:', error);
+                    throw error;
+                }
+            },
+
+            async cancelRequest(requestId) {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/spa/requests/${requestId}/cancel`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to cancel request');
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error canceling SPA request:', error);
+                    throw error;
+                }
+            }
+        };
+
+        // ============================================
+        // SPA Booking Wizard State
+        // ============================================
+        let spaBookingState = {
+            selectedService: null,
+            selectedDate: null,
+            selectedSlot: null,
+            selectedTherapist: null,
+            note: ''
+        };
+
+        // ============================================
+        // SPA Booking Wizard Functions
+        // ============================================
+        async function openSpaBookingWizard() {
+            // Reset state
+            spaBookingState = {
+                selectedService: null,
+                selectedDate: null,
+                selectedSlot: null,
+                selectedTherapist: null,
+                note: ''
+            };
+            
+            // Show modal and start with service selection
+            document.getElementById('spaBookingModal').style.display = 'flex';
+            showSpaBookingStep('service');
+            await loadSpaServices();
+        }
+
+        function closeSpaBookingWizard() {
+            document.getElementById('spaBookingModal').style.display = 'none';
+            spaBookingState = {
+                selectedService: null,
+                selectedDate: null,
+                selectedSlot: null,
+                selectedTherapist: null,
+                note: ''
+            };
+        }
+
+        function showSpaBookingStep(step) {
+            // Hide all steps
+            document.querySelectorAll('.spa-booking-step').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Show selected step
+            const stepEl = document.getElementById(`spa-booking-step-${step}`);
+            if (stepEl) {
+                stepEl.style.display = 'block';
+            }
+            
+            // Update progress indicator
+            const steps = ['service', 'date', 'time', 'therapist', 'confirm'];
+            const currentIndex = steps.indexOf(step);
+            document.querySelectorAll('.spa-booking-progress-dot').forEach((dot, idx) => {
+                if (idx <= currentIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+
+        async function loadSpaServices() {
+            const container = document.getElementById('spa-services-list');
+            if (!container) return;
+            
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
+            
+            try {
+                const services = await spaApi.getServices();
+                if (!services || services.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Henüz hizmet bulunmamaktadır.</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                services.forEach(service => {
+                    const item = document.createElement('div');
+                    item.className = 'spa-service-item';
+                    item.onclick = () => selectSpaService(service);
+                    item.innerHTML = `
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${service.name}</div>
+                            <div style="font-size: 13px; color: #667781; margin-bottom: 4px;">${service.shortDescription || service.category || ''}</div>
+                            <div style="font-size: 12px; color: #667781;">${service.durationMin} dk • ${service.price} ${service.currency}</div>
+                        </div>
+                        <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                    `;
+                    container.appendChild(item);
+                });
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch (error) {
+                container.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
+            }
+        }
+
+        function selectSpaService(service) {
+            spaBookingState.selectedService = service;
+            showSpaBookingStep('date');
+            loadSpaAvailability();
+        }
+
+        async function loadSpaAvailability() {
+            if (!spaBookingState.selectedService) return;
+            
+            // Calculate stay range
+            if (!CHECKIN_DATE || !CHECKOUT_DATE) {
+                alert('Giriş ve çıkış tarihleri bulunamadı. Lütfen profil bilgilerinizi kontrol edin.');
+                return;
+            }
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const checkin = new Date(CHECKIN_DATE);
+            checkin.setHours(0, 0, 0, 0);
+            const checkout = new Date(CHECKOUT_DATE);
+            checkout.setHours(0, 0, 0, 0);
+            
+            const from = checkin > today ? checkin : today;
+            const to = new Date(checkout);
+            to.setDate(to.getDate() - 1); // departure-1
+            
+            const fromStr = from.toISOString().split('T')[0];
+            const toStr = to.toISOString().split('T')[0];
+            
+            const container = document.getElementById('spa-availability-calendar');
+            if (!container) return;
+            
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
+            
+            try {
+                const availability = await spaApi.getAvailability(
+                    spaBookingState.selectedService.id,
+                    fromStr,
+                    toStr
+                );
+                
+                renderSpaCalendar(availability);
+                
+                // Show last updated warning if older than 10 minutes
+                if (availability.lastUpdatedAt) {
+                    const lastUpdated = new Date(availability.lastUpdatedAt);
+                    const now = new Date();
+                    const minutesAgo = Math.floor((now - lastUpdated) / 60000);
+                    
+                    const warningEl = document.getElementById('spa-availability-warning');
+                    if (warningEl) {
+                        if (minutesAgo > 10) {
+                            warningEl.style.display = 'block';
+                            warningEl.textContent = `⚠️ Müsaitlik verisi güncel olmayabilir. (Son güncelleme: ${minutesAgo} dakika önce)`;
+                        } else {
+                            warningEl.style.display = 'none';
+                        }
+                    }
+                    
+                    const lastUpdateEl = document.getElementById('spa-availability-last-update');
+                    if (lastUpdateEl) {
+                        lastUpdateEl.textContent = `Son güncelleme: ${minutesAgo === 0 ? 'Az önce' : `${minutesAgo} dakika önce`}`;
+                    }
+                }
+            } catch (error) {
+                container.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
+            }
+        }
+
+        function renderSpaCalendar(availability) {
+            const container = document.getElementById('spa-availability-calendar');
+            if (!container) return;
+            
+            if (!availability.days || availability.days.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarih aralığında müsaitlik bulunmamaktadır.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            // Add "En erken uygun" button
+            const earliestBtn = document.createElement('button');
+            earliestBtn.className = 'spa-earliest-btn';
+            earliestBtn.onclick = () => selectEarliestAvailableSlot(availability);
+            earliestBtn.innerHTML = '<i data-lucide="clock" class="icon icon-sm"></i> En erken uygun';
+            container.appendChild(earliestBtn);
+            
+            // Render calendar days
+            availability.days.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'spa-calendar-day';
+                
+                const date = new Date(day.date);
+                const isToday = date.toDateString() === new Date().toDateString();
+                const isSelected = spaBookingState.selectedDate === day.date;
+                
+                let heatClass = '';
+                if (day.heat === 'GREEN') heatClass = 'heat-green';
+                else if (day.heat === 'YELLOW') heatClass = 'heat-yellow';
+                else if (day.heat === 'RED') heatClass = 'heat-red';
+                
+                dayEl.className = `spa-calendar-day ${heatClass} ${isSelected ? 'selected' : ''}`;
+                dayEl.onclick = () => selectSpaDate(day.date, availability);
+                
+                const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+                const dayNumber = date.getDate();
+                const month = date.toLocaleDateString('tr-TR', { month: 'short' });
+                
+                dayEl.innerHTML = `
+                    <div style="font-size: 11px; color: #667781; margin-bottom: 4px;">${dayName}</div>
+                    <div style="font-size: 18px; font-weight: 600; color: #111b21;">${dayNumber}</div>
+                    <div style="font-size: 10px; color: #667781;">${month}</div>
+                    ${isToday ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #008069; border-radius: 50%;"></div>' : ''}
+                `;
+                
+                container.appendChild(dayEl);
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function selectEarliestAvailableSlot(availability) {
+            for (const day of availability.days) {
+                for (const slot of day.slots || []) {
+                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                        spaBookingState.selectedDate = day.date;
+                        spaBookingState.selectedSlot = slot;
+                        spaBookingState.selectedTherapist = slot.therapists[0];
+                        showSpaBookingStep('confirm');
+                        renderSpaConfirmStep();
+                        return;
+                    }
+                }
+            }
+            alert('Uygun slot bulunamadı.');
+        }
+
+        function selectSpaDate(date, availability) {
+            spaBookingState.selectedDate = date;
+            const selectedDay = availability.days.find(d => d.date === date);
+            if (!selectedDay) return;
+            
+            // Render time slots for selected day
+            const container = document.getElementById('spa-time-slots-list');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (!selectedDay.slots || selectedDay.slots.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarihte müsaitlik bulunmamaktadır.</div>';
+                return;
+            }
+            
+            selectedDay.slots.forEach(slot => {
+                const slotEl = document.createElement('div');
+                const isAvailable = slot.availability === 'AVAILABLE';
+                const isLimited = slot.availability === 'LIMITED';
+                const isFull = slot.availability === 'FULL';
+                
+                slotEl.className = `spa-time-slot ${isFull ? 'disabled' : ''}`;
+                if (!isFull) {
+                    slotEl.onclick = () => selectSpaTimeSlot(slot);
+                }
+                
+                const start = new Date(slot.start);
+                const end = new Date(slot.end);
+                const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                let availabilityBadge = '';
+                if (isLimited) {
+                    availabilityBadge = '<span style="font-size: 10px; background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Sınırlı</span>';
+                } else if (isFull) {
+                    availabilityBadge = '<span style="font-size: 10px; background: #dc3545; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Dolu</span>';
+                }
+                
+                slotEl.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: ${isFull ? '#999' : '#111b21'};">
+                            ${timeStr}
+                            ${availabilityBadge}
+                        </div>
+                        <div style="font-size: 12px; color: #667781; margin-top: 4px;">
+                            ${slot.therapists ? slot.therapists.length + ' terapist' : 'Terapist yok'}
+                        </div>
+                    </div>
+                    ${!isFull ? '<i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>' : ''}
+                `;
+                
+                container.appendChild(slotEl);
+            });
+            
+            showSpaBookingStep('time');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function selectSpaTimeSlot(slot) {
+            spaBookingState.selectedSlot = slot;
+            showSpaBookingStep('therapist');
+            renderSpaTherapists();
+        }
+
+        function renderSpaTherapists() {
+            const container = document.getElementById('spa-therapists-list');
+            if (!container) return;
+            
+            if (!spaBookingState.selectedSlot || !spaBookingState.selectedSlot.therapists) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Terapist bulunamadı.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            spaBookingState.selectedSlot.therapists.forEach(therapist => {
+                const item = document.createElement('div');
+                item.className = 'spa-therapist-item';
+                item.onclick = () => selectSpaTherapist(therapist);
+                
+                const tags = therapist.tags && therapist.tags.length > 0 
+                    ? therapist.tags.map(t => `<span class="spa-therapist-tag">${t}</span>`).join('')
+                    : '';
+                
+                item.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${therapist.displayName}</div>
+                        <div style="font-size: 13px; color: #667781; margin-bottom: 4px;">${therapist.level || ''}</div>
+                        ${tags ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px;">${tags}</div>` : ''}
+                    </div>
+                    <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                `;
+                
+                container.appendChild(item);
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function selectSpaTherapist(therapist) {
+            spaBookingState.selectedTherapist = therapist;
+            showSpaBookingStep('confirm');
+            renderSpaConfirmStep();
+        }
+
+        function renderSpaConfirmStep() {
+            const serviceEl = document.getElementById('spa-confirm-service');
+            const dateEl = document.getElementById('spa-confirm-date');
+            const timeEl = document.getElementById('spa-confirm-time');
+            const therapistEl = document.getElementById('spa-confirm-therapist');
+            const noteInput = document.getElementById('spa-confirm-note');
+            
+            if (serviceEl && spaBookingState.selectedService) {
+                serviceEl.textContent = spaBookingState.selectedService.name;
+            }
+            
+            if (dateEl && spaBookingState.selectedDate) {
+                const date = new Date(spaBookingState.selectedDate);
+                dateEl.textContent = date.toLocaleDateString('tr-TR', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric',
+                    weekday: 'long'
+                });
+            }
+            
+            if (timeEl && spaBookingState.selectedSlot) {
+                const start = new Date(spaBookingState.selectedSlot.start);
+                const end = new Date(spaBookingState.selectedSlot.end);
+                timeEl.textContent = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+            
+            if (therapistEl && spaBookingState.selectedTherapist) {
+                therapistEl.textContent = spaBookingState.selectedTherapist.displayName;
+            }
+            
+            if (noteInput) {
+                noteInput.value = spaBookingState.note;
+            }
+        }
+
+        async function submitSpaRequest() {
+            if (!spaBookingState.selectedService || !spaBookingState.selectedSlot || !spaBookingState.selectedTherapist) {
+                alert('Lütfen tüm seçimleri yapın.');
+                return;
+            }
+            
+            const noteInput = document.getElementById('spa-confirm-note');
+            if (noteInput) {
+                spaBookingState.note = noteInput.value.trim();
+            }
+            
+            const submitBtn = document.getElementById('spa-submit-request-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Gönderiliyor...';
+            }
+            
+            try {
+                const payload = {
+                    serviceId: spaBookingState.selectedService.id,
+                    start: spaBookingState.selectedSlot.start,
+                    end: spaBookingState.selectedSlot.end,
+                    therapistId: spaBookingState.selectedTherapist.id,
+                    note: spaBookingState.note || null
+                };
+                
+                const result = await spaApi.createRequest(payload);
+                
+                alert('SPA talebiniz başarıyla oluşturuldu! SPA ekibi onayladıktan sonra kesinleşecektir.');
+                closeSpaBookingWizard();
+                loadSpaReservations();
+            } catch (error) {
+                alert(`Hata: ${error.message}`);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Talebi Gönder';
+                }
+            }
+        }
+
+        // ============================================
+        // SPA Reservations Management
+        // ============================================
+        async function loadSpaReservations() {
+            const container = document.getElementById('spaReservations');
+            if (!container) return;
+            
+            try {
+                const requests = await spaApi.listMyRequests();
+                
+                if (!requests || requests.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
+                            Henüz spa rezervasyonunuz bulunmamaktadır.
+                        </div>
+                        <button onclick="openSpaBookingWizard()" style="width: 100%; margin-top: 16px; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                            <i data-lucide="plus" class="icon icon-sm"></i> Yeni SPA Talebi Oluştur
+                        </button>
+                    `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                // Add "New Request" button at top
+                const newRequestBtn = document.createElement('button');
+                newRequestBtn.className = 'spa-new-request-btn';
+                newRequestBtn.onclick = openSpaBookingWizard;
+                newRequestBtn.innerHTML = '<i data-lucide="plus" class="icon icon-sm"></i> Yeni SPA Talebi Oluştur';
+                container.appendChild(newRequestBtn);
+                
+                // Render requests
+                requests.forEach(request => {
+                    const item = document.createElement('div');
+                    item.className = 'spa-request-item';
+                    item.onclick = () => showSpaRequestDetails(request);
+                    
+                    const status = request.status || 'PENDING';
+                    let statusClass = 'status-pending';
+                    let statusText = 'Beklemede';
+                    let statusColor = '#ffc107';
+                    
+                    if (status === 'CONFIRMED') {
+                        statusClass = 'status-confirmed';
+                        statusText = 'Onaylandı';
+                        statusColor = '#28a745';
+                    } else if (status === 'REJECTED') {
+                        statusClass = 'status-rejected';
+                        statusText = 'Reddedildi';
+                        statusColor = '#dc3545';
+                    } else if (status === 'CANCELLED') {
+                        statusClass = 'status-cancelled';
+                        statusText = 'İptal Edildi';
+                        statusColor = '#6c757d';
+                    } else if (status === 'EXPIRED') {
+                        statusClass = 'status-expired';
+                        statusText = 'Süresi Doldu';
+                        statusColor = '#6c757d';
+                    }
+                    
+                    const start = new Date(request.start);
+                    const end = new Date(request.end);
+                    const dateStr = start.toLocaleDateString('tr-TR', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric'
+                    });
+                    const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                    
+                    item.innerHTML = `
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <div style="font-weight: 600; color: #111b21;">${request.serviceName || 'SPA Hizmeti'}</div>
+                                <span class="spa-status-badge ${statusClass}" style="background: ${statusColor}; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 500;">${statusText}</span>
+                            </div>
+                            <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${dateStr}</div>
+                            <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${timeStr}</div>
+                            ${request.therapistDisplayName ? `<div style="font-size: 12px; color: #667781;">Terapist: ${request.therapistDisplayName}</div>` : ''}
+                        </div>
+                        <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch (error) {
+                container.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function loadSpaReservationsForMyReservations() {
+            const container = document.getElementById('spaRequestsList');
+            const section = document.getElementById('spaRequestsInMyReservations');
+            if (!container || !section) return;
+            
+            try {
+                const requests = await spaApi.listMyRequests();
+                
+                if (!requests || requests.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+                
+                section.style.display = 'block';
+                container.innerHTML = '';
+                
+                requests.forEach(request => {
+                    const item = document.createElement('div');
+                    item.className = 'spa-request-item';
+                    item.onclick = () => showSpaRequestDetails(request);
+                    
+                    const status = request.status || 'PENDING';
+                    let statusClass = 'status-pending';
+                    let statusText = 'Beklemede';
+                    let statusColor = '#ffc107';
+                    
+                    if (status === 'CONFIRMED') {
+                        statusClass = 'status-confirmed';
+                        statusText = 'Onaylandı';
+                        statusColor = '#28a745';
+                    } else if (status === 'REJECTED') {
+                        statusClass = 'status-rejected';
+                        statusText = 'Reddedildi';
+                        statusColor = '#dc3545';
+                    } else if (status === 'CANCELLED') {
+                        statusClass = 'status-cancelled';
+                        statusText = 'İptal Edildi';
+                        statusColor = '#6c757d';
+                    } else if (status === 'EXPIRED') {
+                        statusClass = 'status-expired';
+                        statusText = 'Süresi Doldu';
+                        statusColor = '#6c757d';
+                    }
+                    
+                    const start = new Date(request.start);
+                    const end = new Date(request.end);
+                    const dateStr = start.toLocaleDateString('tr-TR', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric'
+                    });
+                    const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                    
+                    item.innerHTML = `
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <div style="font-weight: 600; color: #111b21;">${request.serviceName || 'SPA Hizmeti'}</div>
+                                <span class="spa-status-badge ${statusClass}" style="background: ${statusColor}; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 500;">${statusText}</span>
+                            </div>
+                            <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${dateStr}</div>
+                            <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${timeStr}</div>
+                            ${request.therapistDisplayName ? `<div style="font-size: 12px; color: #667781;">Terapist: ${request.therapistDisplayName}</div>` : ''}
+                        </div>
+                        <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading SPA requests:', error);
+                section.style.display = 'none';
+            }
+        }
+
+        function showSpaRequestDetails(request) {
+            const modal = document.createElement('div');
+            modal.className = 'spa-request-details-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            `;
+            
+            const status = request.status || 'PENDING';
+            let statusText = 'Beklemede';
+            let statusColor = '#ffc107';
+            
+            if (status === 'CONFIRMED') {
+                statusText = 'Onaylandı';
+                statusColor = '#28a745';
+            } else if (status === 'REJECTED') {
+                statusText = 'Reddedildi';
+                statusColor = '#dc3545';
+            } else if (status === 'CANCELLED') {
+                statusText = 'İptal Edildi';
+                statusColor = '#6c757d';
+            } else if (status === 'EXPIRED') {
+                statusText = 'Süresi Doldu';
+                statusColor = '#6c757d';
+            }
+            
+            const start = new Date(request.start);
+            const end = new Date(request.end);
+            const dateStr = start.toLocaleDateString('tr-TR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                weekday: 'long'
+            });
+            const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+            
+            const canCancel = status === 'PENDING' || (status === 'CONFIRMED');
+            
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="font-size: 20px; font-weight: 600; color: #111b21; margin: 0;">SPA Talebi Detayları</h3>
+                        <button onclick="this.closest('.spa-request-details-modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6C757D; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Hizmet</div>
+                        <div style="font-weight: 600; color: #111b21;">${request.serviceName || '-'}</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Tarih</div>
+                        <div style="font-weight: 600; color: #111b21;">${dateStr}</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Saat</div>
+                        <div style="font-weight: 600; color: #111b21;">${timeStr}</div>
+                    </div>
+                    
+                    ${request.therapistDisplayName ? `
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Terapist</div>
+                        <div style="font-weight: 600; color: #111b21;">${request.therapistDisplayName}</div>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Durum</div>
+                        <div>
+                            <span style="background: ${statusColor}; color: white; font-size: 12px; padding: 4px 12px; border-radius: 12px; font-weight: 500;">${statusText}</span>
+                        </div>
+                    </div>
+                    
+                    ${canCancel ? `
+                    <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e4e6e9;">
+                        <button onclick="cancelSpaRequest('${request.requestId}')" style="width: 100%; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                            Talebi İptal Et
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
+            
+            document.body.appendChild(modal);
+        }
+
+        async function cancelSpaRequest(requestId) {
+            if (!confirm('Bu talebi iptal etmek istediğinize emin misiniz?')) {
+                return;
+            }
+            
+            try {
+                await spaApi.cancelRequest(requestId);
+                alert('Talebiniz iptal edildi.');
+                document.querySelectorAll('.spa-request-details-modal').forEach(m => m.remove());
+                loadSpaReservations();
+            } catch (error) {
+                alert(`Hata: ${error.message}`);
+            }
         }
 
         // Update profile information
@@ -8335,6 +9338,34 @@
                 'spaReservations': 'Spa Rezervasyonları',
                 'noRestaurantReservations': 'Henüz restoran rezervasyonunuz bulunmamaktadır.',
                 'noSpaReservations': 'Henüz spa rezervasyonunuz bulunmamaktadır.',
+                'spaRequests': 'SPA Taleplerim',
+                'newSpaRequest': 'Yeni SPA Talebi Oluştur',
+                'spaBookingTitle': 'SPA Rezervasyon Talebi',
+                'selectService': 'Hizmet Seçin',
+                'selectDate': 'Tarih Seçin',
+                'selectTime': 'Saat Seçin',
+                'selectTherapist': 'Terapist Seçin',
+                'confirmRequest': 'Talebi Onaylayın',
+                'requestNote': 'Bu bir taleptir. SPA ekibi onayladıktan sonra kesinleşir.',
+                'submitRequest': 'Talebi Gönder',
+                'earliestAvailable': 'En erken uygun',
+                'lastUpdate': 'Son güncelleme',
+                'availabilityWarning': 'Müsaitlik verisi güncel olmayabilir.',
+                'requestPending': 'Beklemede',
+                'requestConfirmed': 'Onaylandı',
+                'requestRejected': 'Reddedildi',
+                'requestCancelled': 'İptal Edildi',
+                'requestExpired': 'Süresi Doldu',
+                'cancelRequest': 'Talebi İptal Et',
+                'requestDetails': 'SPA Talebi Detayları',
+                'service': 'Hizmet',
+                'date': 'Tarih',
+                'time': 'Saat',
+                'therapist': 'Terapist',
+                'status': 'Durum',
+                'note': 'Not',
+                'optional': 'Opsiyonel',
+                'back': 'Geri',
                 
                 // Chat
                 'typeMessage': 'Mesajınızı yazın...',
@@ -8439,6 +9470,34 @@
                 'spaReservations': 'Spa Reservations',
                 'noRestaurantReservations': 'You do not have any restaurant reservations yet.',
                 'noSpaReservations': 'You do not have any spa reservations yet.',
+                'spaRequests': 'My SPA Requests',
+                'newSpaRequest': 'Create New SPA Request',
+                'spaBookingTitle': 'SPA Reservation Request',
+                'selectService': 'Select Service',
+                'selectDate': 'Select Date',
+                'selectTime': 'Select Time',
+                'selectTherapist': 'Select Therapist',
+                'confirmRequest': 'Confirm Request',
+                'requestNote': 'This is a request. It will be confirmed after SPA team approval.',
+                'submitRequest': 'Submit Request',
+                'earliestAvailable': 'Earliest Available',
+                'lastUpdate': 'Last update',
+                'availabilityWarning': 'Availability data may not be up to date.',
+                'requestPending': 'Pending',
+                'requestConfirmed': 'Confirmed',
+                'requestRejected': 'Rejected',
+                'requestCancelled': 'Cancelled',
+                'requestExpired': 'Expired',
+                'cancelRequest': 'Cancel Request',
+                'requestDetails': 'SPA Request Details',
+                'service': 'Service',
+                'date': 'Date',
+                'time': 'Time',
+                'therapist': 'Therapist',
+                'status': 'Status',
+                'note': 'Note',
+                'optional': 'Optional',
+                'back': 'Back',
                 
                 // Chat
                 'typeMessage': 'Type your message...',
@@ -8538,6 +9597,34 @@
                 'spaReservations': 'Spa Reservierungen',
                 'noRestaurantReservations': 'Sie haben noch keine Restaurantreservierungen.',
                 'noSpaReservations': 'Sie haben noch keine Spa-Reservierungen.',
+                'spaRequests': 'Meine SPA-Anfragen',
+                'newSpaRequest': 'Neue SPA-Anfrage erstellen',
+                'spaBookingTitle': 'SPA-Reservierungsanfrage',
+                'selectService': 'Service auswählen',
+                'selectDate': 'Datum auswählen',
+                'selectTime': 'Uhrzeit auswählen',
+                'selectTherapist': 'Therapeut auswählen',
+                'confirmRequest': 'Anfrage bestätigen',
+                'requestNote': 'Dies ist eine Anfrage. Sie wird nach Genehmigung durch das SPA-Team bestätigt.',
+                'submitRequest': 'Anfrage senden',
+                'earliestAvailable': 'Frühestes verfügbares',
+                'lastUpdate': 'Letzte Aktualisierung',
+                'availabilityWarning': 'Verfügbarkeitsdaten sind möglicherweise nicht aktuell.',
+                'requestPending': 'Ausstehend',
+                'requestConfirmed': 'Bestätigt',
+                'requestRejected': 'Abgelehnt',
+                'requestCancelled': 'Storniert',
+                'requestExpired': 'Abgelaufen',
+                'cancelRequest': 'Anfrage stornieren',
+                'requestDetails': 'SPA-Anfragedetails',
+                'service': 'Service',
+                'date': 'Datum',
+                'time': 'Uhrzeit',
+                'therapist': 'Therapeut',
+                'status': 'Status',
+                'note': 'Notiz',
+                'optional': 'Optional',
+                'back': 'Zurück',
                 
                 // Chat
                 'typeMessage': 'Geben Sie Ihre Nachricht ein...',
@@ -8643,6 +9730,34 @@
                 'spaReservations': 'Бронирования SPA',
                 'noRestaurantReservations': 'У вас пока нет бронирований ресторана.',
                 'noSpaReservations': 'У вас пока нет бронирований SPA.',
+                'spaRequests': 'Мои запросы SPA',
+                'newSpaRequest': 'Создать новый запрос SPA',
+                'spaBookingTitle': 'Запрос на бронирование SPA',
+                'selectService': 'Выберите услугу',
+                'selectDate': 'Выберите дату',
+                'selectTime': 'Выберите время',
+                'selectTherapist': 'Выберите терапевта',
+                'confirmRequest': 'Подтвердить запрос',
+                'requestNote': 'Это запрос. Он будет подтвержден после одобрения командой SPA.',
+                'submitRequest': 'Отправить запрос',
+                'earliestAvailable': 'Самое раннее доступное',
+                'lastUpdate': 'Последнее обновление',
+                'availabilityWarning': 'Данные о доступности могут быть неактуальными.',
+                'requestPending': 'В ожидании',
+                'requestConfirmed': 'Подтверждено',
+                'requestRejected': 'Отклонено',
+                'requestCancelled': 'Отменено',
+                'requestExpired': 'Истекло',
+                'cancelRequest': 'Отменить запрос',
+                'requestDetails': 'Детали запроса SPA',
+                'service': 'Услуга',
+                'date': 'Дата',
+                'time': 'Время',
+                'therapist': 'Терапевт',
+                'status': 'Статус',
+                'note': 'Примечание',
+                'optional': 'Необязательно',
+                'back': 'Назад',
                 
                 // Chat
                 'typeMessage': 'Введите ваше сообщение...',
@@ -9543,6 +10658,99 @@
         </div>
         <div id="storyViewerIndicators" class="story-viewer-indicators"></div>
         <div id="storyViewerContent" class="story-viewer-content"></div>
+    </div>
+
+    <!-- SPA Booking Wizard Modal -->
+    <div id="spaBookingModal" class="spa-booking-modal" onclick="if(event.target === this) closeSpaBookingWizard()" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div class="spa-booking-modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #E8F1F5;">
+                <h3 style="font-size: 20px; font-weight: 600; color: #1A4D6D; margin: 0;">SPA Rezervasyon Talebi</h3>
+                <button onclick="closeSpaBookingWizard()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6C757D; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            
+            <!-- Progress Indicator -->
+            <div class="spa-booking-progress" style="display: flex; justify-content: space-between; margin-bottom: 24px; padding: 0 20px;">
+                <div class="spa-booking-progress-dot active"></div>
+                <div class="spa-booking-progress-dot"></div>
+                <div class="spa-booking-progress-dot"></div>
+                <div class="spa-booking-progress-dot"></div>
+                <div class="spa-booking-progress-dot"></div>
+            </div>
+            
+            <!-- Step 1: Service Selection -->
+            <div id="spa-booking-step-service" class="spa-booking-step" style="display: block;">
+                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Hizmet Seçin</h4>
+                <div id="spa-services-list" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Services will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Step 2: Date Selection -->
+            <div id="spa-booking-step-date" class="spa-booking-step" style="display: none;">
+                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Tarih Seçin</h4>
+                <div id="spa-availability-last-update" style="font-size: 12px; color: #667781; margin-bottom: 8px; text-align: center;"></div>
+                <div id="spa-availability-warning" style="display: none; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 16px; text-align: center;"></div>
+                <div id="spa-availability-calendar" style="display: flex; gap: 8px; flex-wrap: wrap; max-height: 400px; overflow-y: auto; justify-content: center;">
+                    <!-- Calendar will be rendered here -->
+                </div>
+                <button onclick="showSpaBookingStep('service')" style="margin-top: 16px; padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; cursor: pointer;">Geri</button>
+            </div>
+            
+            <!-- Step 3: Time Slot Selection -->
+            <div id="spa-booking-step-time" class="spa-booking-step" style="display: none;">
+                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Saat Seçin</h4>
+                <div id="spa-time-slots-list" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Time slots will be rendered here -->
+                </div>
+                <button onclick="showSpaBookingStep('date')" style="margin-top: 16px; padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; cursor: pointer;">Geri</button>
+            </div>
+            
+            <!-- Step 4: Therapist Selection -->
+            <div id="spa-booking-step-therapist" class="spa-booking-step" style="display: none;">
+                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Terapist Seçin</h4>
+                <div id="spa-therapists-list" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Therapists will be rendered here -->
+                </div>
+                <button onclick="showSpaBookingStep('time')" style="margin-top: 16px; padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; cursor: pointer;">Geri</button>
+            </div>
+            
+            <!-- Step 5: Confirmation -->
+            <div id="spa-booking-step-confirm" class="spa-booking-step" style="display: none;">
+                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Talebi Onaylayın</h4>
+                <div style="background: #E8F1F5; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Hizmet</div>
+                        <div style="font-weight: 600; color: #111b21;" id="spa-confirm-service">-</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Tarih</div>
+                        <div style="font-weight: 600; color: #111b21;" id="spa-confirm-date">-</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Saat</div>
+                        <div style="font-weight: 600; color: #111b21;" id="spa-confirm-time">-</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Terapist</div>
+                        <div style="font-weight: 600; color: #111b21;" id="spa-confirm-therapist">-</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Not (Opsiyonel)</label>
+                    <textarea id="spa-confirm-note" rows="3" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;"></textarea>
+                </div>
+                
+                <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 12px; color: #856404; line-height: 1.5;">
+                    ⚠️ Bu bir taleptir. SPA ekibi onayladıktan sonra kesinleşir.
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="showSpaBookingStep('therapist')" style="flex: 1; padding: 12px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Geri</button>
+                    <button id="spa-submit-request-btn" onclick="submitSpaRequest()" style="flex: 1; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Talebi Gönder</button>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
