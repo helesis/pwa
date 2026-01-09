@@ -90,13 +90,7 @@ app.use('/uploads', (req, res, next) => {
     const filePath = join(uploadsDir, filename);
     if (!fs.existsSync(filePath)) {
       // File not found - log warning
-      console.warn(`⚠️ Uploaded file not found: ${filename}`);
-      console.warn(`   Looking in: ${uploadsDir}`);
-      console.warn(`   Uploads directory exists: ${fs.existsSync(uploadsDir)}`);
-      if (fs.existsSync(uploadsDir)) {
-        const files = fs.readdirSync(uploadsDir);
-        console.warn(`   Available files (${files.length}):`, files.slice(0, 10).join(', '));
-      }
+      console.warn(`Uploaded file not found: ${filename}`);
       // Return 404 with proper error message
       // Note: Render.com uses ephemeral storage, files are lost on server restart
       return res.status(404).json({ 
@@ -144,10 +138,9 @@ const pool = new Pool({
 let isFirstConnection = true;
 pool.on('connect', () => {
   if (isFirstConnection) {
-    console.log('📊 [STEP 0/3] PostgreSQL connection pool initialized');
+    logDebug('PostgreSQL connection pool initialized');
     isFirstConnection = false;
   }
-  // Production'da her connection log'unu kaldır
 });
 
 pool.on('error', (err) => {
@@ -167,7 +160,7 @@ async function retryQuery(queryFn, maxRetries = 3, delay = 1000) {
       
       if (isTimeoutError && attempt < maxRetries) {
         const waitTime = delay * attempt;
-        console.warn(`⚠️ Database query timeout (attempt ${attempt}/${maxRetries}), retrying in ${waitTime}ms...`);
+        logDebug(`Database query timeout (attempt ${attempt}/${maxRetries}), retrying...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
@@ -181,12 +174,10 @@ async function retryQuery(queryFn, maxRetries = 3, delay = 1000) {
 // Initialize database tables
 async function initializeDatabase() {
   const initStartTime = Date.now();
-  console.log('📊 [STEP 1/3] Starting database initialization...');
+  logDebug('Initializing database...');
   
   try {
-    console.log('   🔍 [1.1] Checking if tables exist...');
     // Check if tables already exist
-    const checkStartTime = Date.now();
     const checkResult = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -194,23 +185,15 @@ async function initializeDatabase() {
         AND table_name = 'rooms'
       );
     `);
-    const checkTime = ((Date.now() - checkStartTime) / 1000).toFixed(3);
     
     const tablesExist = checkResult.rows[0].exists;
-    console.log(`   ${tablesExist ? '✅' : '🔄'} [1.2] Tables exist: ${tablesExist} (${checkTime}s)`);
     
     if (tablesExist) {
-      console.log('   🔄 [1.3] Checking for new tables and columns...');
-      const migrationStartTime = Date.now();
       await addNewTablesIfNeeded();
-      const migrationTime = ((Date.now() - migrationStartTime) / 1000).toFixed(3);
-      console.log(`   ✅ [1.4] Migration check completed (${migrationTime}s)`);
-      const totalTime = ((Date.now() - initStartTime) / 1000).toFixed(3);
-      console.log(`📊 [STEP 1/3] Database initialization completed in ${totalTime}s`);
+      logDebug(`Database initialized (${((Date.now() - initStartTime) / 1000).toFixed(2)}s)`);
       return;
     }
     
-    console.log('   🔄 [1.3] Creating database tables...');
     const createStartTime = Date.now();
     
     // Create tables with new structure
@@ -439,26 +422,17 @@ async function initializeDatabase() {
       CREATE INDEX idx_user_locations_guest ON user_locations(guest_unique_id);
       CREATE INDEX idx_user_locations_timestamp ON user_locations(timestamp DESC);
     `);
-    const createTime = ((Date.now() - createStartTime) / 1000).toFixed(3);
-    console.log(`   ✅ [1.4] All tables and indexes created (${createTime}s)`);
-    
-    const totalTime = ((Date.now() - initStartTime) / 1000).toFixed(3);
-    console.log(`📊 [STEP 1/3] Database initialization completed in ${totalTime}s`);
+    logDebug(`Database tables created (${((Date.now() - createStartTime) / 1000).toFixed(2)}s)`);
   } catch (error) {
-    const totalTime = ((Date.now() - initStartTime) / 1000).toFixed(3);
-    console.error(`❌ [STEP 1/3] Database initialization FAILED after ${totalTime}s`);
-    console.error(`   Error: ${error.message}`);
-    console.error(`   Stack: ${error.stack}`);
+    console.error(`Database initialization failed: ${error.message}`);
     throw error;
   }
 }
 
 // Add new tables if they don't exist (for existing databases)
 async function addNewTablesIfNeeded() {
-  const migrationStartTime = Date.now();
   try {
-    // Check and add activities table - optimized single query
-    console.log('      🔍 Checking activities table...');
+    // Check and add activities table
     const activitiesCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -468,7 +442,6 @@ async function addNewTablesIfNeeded() {
     `);
     
     if (!activitiesCheck.rows[0].exists) {
-      console.log('      ➕ Creating activities table...');
       await pool.query(`
         CREATE TABLE activities (
           id SERIAL PRIMARY KEY,
@@ -500,12 +473,11 @@ async function addNewTablesIfNeeded() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('      ✅ Created activities table');
-      return; // Table created, no need to check columns
+      logDebug('Created activities table');
+      return;
     }
     
-    // Check all missing columns in a single query (much faster)
-    console.log('      🔍 Checking activities table columns...');
+    // Check all missing columns in a single query
     const existingColumns = await pool.query(`
       SELECT column_name 
       FROM information_schema.columns 
@@ -514,7 +486,6 @@ async function addNewTablesIfNeeded() {
     `);
     
     const existingColumnNames = new Set(existingColumns.rows.map(r => r.column_name));
-    console.log(`      📋 Found ${existingColumnNames.size} existing columns`);
     
     // Add missing columns in batch
     const columnsToAdd = [
@@ -541,26 +512,21 @@ async function addNewTablesIfNeeded() {
     const missingColumns = columnsToAdd.filter(col => !existingColumnNames.has(col.name));
     
     if (missingColumns.length > 0) {
-      console.log(`      ➕ Adding ${missingColumns.length} missing columns...`);
-      // Add all missing columns in a single transaction
+      logDebug(`Adding ${missingColumns.length} missing columns to activities table`);
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
         for (const col of missingColumns) {
           await client.query(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS ${col.name} ${col.type};`);
-          console.log(`      ✅ Added column: ${col.name}`);
         }
         await client.query('COMMIT');
-        console.log(`      ✅ All ${missingColumns.length} columns added successfully`);
       } catch (error) {
         await client.query('ROLLBACK');
-        console.error(`      ❌ Failed to add columns: ${error.message}`);
+        console.error(`Failed to add columns: ${error.message}`);
         throw error;
       } finally {
         client.release();
       }
-    } else {
-      console.log('      ✅ All columns are up to date');
     }
 
     // Check and create story_tray_items table if it doesn't exist
@@ -573,7 +539,6 @@ async function addNewTablesIfNeeded() {
     `);
     
     if (!storyTrayCheck.rows[0].exists) {
-      console.log('      ➕ Creating story_tray_items table...');
       await pool.query(`
         CREATE TABLE story_tray_items (
           id SERIAL PRIMARY KEY,
@@ -587,10 +552,9 @@ async function addNewTablesIfNeeded() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('      ✅ Created story_tray_items table');
+      logDebug('Created story_tray_items table');
       
       // Migrate existing is_story=true items to story_tray_items
-      console.log('      🔄 Migrating existing story tray items...');
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
@@ -604,20 +568,15 @@ async function addNewTablesIfNeeded() {
         const migratedCount = migrationResult.rowCount;
         
         if (migratedCount > 0) {
-          console.log(`      ✅ Migrated ${migratedCount} story tray items`);
-          // Optionally delete migrated items from activities table
-          // await client.query('DELETE FROM activities WHERE is_story = true');
+          logDebug(`Migrated ${migratedCount} story tray items`);
         }
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK');
-        console.error(`      ❌ Failed to migrate story tray items: ${error.message}`);
-        // Don't throw - allow table creation even if migration fails
+        console.error(`Failed to migrate story tray items: ${error.message}`);
       } finally {
         client.release();
       }
-    } else {
-      console.log('      ✅ story_tray_items table already exists');
     }
 
     // Add avatar and ghost_mode columns to rooms table if they don't exist
@@ -637,7 +596,7 @@ async function addNewTablesIfNeeded() {
         ADD COLUMN avatar_style VARCHAR(50) DEFAULT 'avataaars',
         ADD COLUMN ghost_mode BOOLEAN DEFAULT false;
       `);
-      console.log('✅ Added avatar_seed, avatar_style, and ghost_mode columns to rooms table');
+      logDebug('Added avatar columns to rooms table');
     }
 
     // Check and add user_locations table
@@ -663,7 +622,7 @@ async function addNewTablesIfNeeded() {
         CREATE INDEX idx_user_locations_guest ON user_locations(guest_unique_id);
         CREATE INDEX idx_user_locations_timestamp ON user_locations(timestamp DESC);
       `);
-      console.log('✅ Created user_locations table');
+      logDebug('Created user_locations table');
     }
 
     // Check and add info_posts table
@@ -693,7 +652,7 @@ async function addNewTablesIfNeeded() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('✅ Created info_posts table');
+      logDebug('Created info_posts table');
     } else {
       // Add new columns if they don't exist (migration)
       const postColumnsToAdd = [
@@ -711,7 +670,6 @@ async function addNewTablesIfNeeded() {
         `, [col.name]);
         if (!columnCheck.rows[0].exists) {
           await pool.query(`ALTER TABLE info_posts ADD COLUMN ${col.name} ${col.type};`);
-          console.log(`✅ Added column ${col.name} to info_posts table`);
         }
       }
     }
@@ -737,7 +695,7 @@ async function addNewTablesIfNeeded() {
         CREATE INDEX idx_post_likes_post ON post_likes(post_id);
         CREATE INDEX idx_post_likes_guest ON post_likes(guest_unique_id);
       `);
-      console.log('✅ Created post_likes table');
+      logDebug('Created post_likes table');
     }
 
     // Check and add post_comments table
@@ -762,7 +720,7 @@ async function addNewTablesIfNeeded() {
         CREATE INDEX idx_post_comments_post ON post_comments(post_id);
         CREATE INDEX idx_post_comments_guest ON post_comments(guest_unique_id);
       `);
-      console.log('✅ Created post_comments table');
+      logDebug('Created post_comments table');
     }
 
     // Check and add post_bookmarks table
@@ -786,7 +744,7 @@ async function addNewTablesIfNeeded() {
         CREATE INDEX idx_post_bookmarks_post ON post_bookmarks(post_id);
         CREATE INDEX idx_post_bookmarks_guest ON post_bookmarks(guest_unique_id);
       `);
-      console.log('✅ Created post_bookmarks table');
+      logDebug('Created post_bookmarks table');
     }
 
     // Check and add direct_messages table
@@ -813,13 +771,13 @@ async function addNewTablesIfNeeded() {
         CREATE INDEX idx_dm_to ON direct_messages(to_guest_unique_id);
         CREATE INDEX idx_dm_post ON direct_messages(post_id);
       `);
-      console.log('✅ Created direct_messages table');
+      logDebug('Created direct_messages table');
     }
 
     // Seed initial data if tables are empty
     await seedInitialData();
   } catch (error) {
-    console.error('❌ Error adding new tables:', error);
+    console.error('Error adding new tables:', error);
     // Don't throw, just log - existing tables might have foreign key constraints
   }
 }
@@ -872,7 +830,7 @@ async function seedInitialData() {
           VALUES ($1, $2, $3, $4)
         `, [activity.title, activity.icon, activity.display_order, activity.is_active]);
       }
-      console.log('✅ Seeded initial story tray items');
+      logDebug('Seeded initial story tray items');
     }
 
     // Check if info_posts table exists and has data
@@ -954,10 +912,10 @@ async function seedInitialData() {
           ON CONFLICT (post_id) DO NOTHING
         `, [post.post_id, post.title, post.icon, post.caption, post.location, post.display_order, post.is_active]);
       }
-      console.log('✅ Seeded initial info posts');
+      logDebug('Seeded initial info posts');
     }
   } catch (error) {
-    console.error('❌ Error seeding initial data:', error);
+    console.error('Error seeding initial data:', error);
     // Don't throw, just log - this is optional initialization
   }
 }
@@ -1251,21 +1209,10 @@ io.on('connection', (socket) => {
       
       const messageId = result.rows[0].id;
       const timestamp = result.rows[0].timestamp;
-      console.log('✅ Message saved to database:', { messageId, timestamp });
+      logDebug('Message saved to database:', { messageId, timestamp });
       
       // Use guest_unique_id for room ID
       const roomId = `guest_${guestUniqueId}`;
-      
-      console.log('📡 ========== BROADCASTING MESSAGE ==========');
-      console.log('📡 Room ID:', roomId);
-      
-      // Check how many clients are in this room
-      const room = io.sockets.adapter.rooms.get(roomId);
-      const roomSize = room ? room.size : 0;
-      console.log('📡 Clients in room:', roomSize);
-      if (room) {
-        console.log('📡 Socket IDs in room:', Array.from(room));
-      }
       
       // Broadcast message with status
       const messageData = {
@@ -1276,30 +1223,19 @@ io.on('connection', (socket) => {
         assistantId: actualAssistantId,
         message,
         timestamp: timestamp.toISOString(),
-        status: 'sent', // Initial status: sent
+        status: 'sent',
         deliveredAt: null,
         readAt: null
       };
       
-      console.log('📡 Message data to broadcast:', {
-        id: messageData.id,
-        guestUniqueId: messageData.guestUniqueId,
-        senderType: messageData.senderType,
-        senderName: messageData.senderName,
-        assistantId: messageData.assistantId,
-        messageLength: messageData.message?.length
-      });
-      
       // Send confirmation to sender first
       socket.emit('message_sent', { messageId, status: 'sent' });
-      console.log('✅ message_sent confirmation sent to sender');
       
-      // Broadcast to room (other users will mark as delivered when received)
+      // Broadcast to room
       io.to(roomId).emit('new_message', messageData);
-      console.log('✅ new_message broadcasted to room:', roomId);
-      console.log('📡 ========== BROADCAST COMPLETE ==========');
+      logDebug('Message broadcasted to room:', roomId);
     } catch (error) {
-      console.error('❌ Error saving message:', error);
+      console.error('Error saving message:', error);
       socket.emit('error', { message: 'Mesaj kaydedilemedi' });
     }
   });
@@ -1475,11 +1411,11 @@ app.get('/api/rooms', async (req, res) => {
     if (start_date && end_date) {
       query += ' AND checkin_date >= $1 AND checkin_date <= $2 ORDER BY checkin_date ASC, room_number ASC';
       params.push(start_date, end_date);
-      console.log('🔍 Filtering rooms by date range:', start_date, 'to', end_date);
+      logDebug('Filtering rooms by date range:', start_date, 'to', end_date);
     } else if (start_date) {
       query += ' AND checkin_date >= $1 ORDER BY checkin_date ASC, room_number ASC';
       params.push(start_date);
-      console.log('🔍 Filtering rooms from date:', start_date);
+      logDebug('Filtering rooms from date:', start_date);
     } else {
       query += ' ORDER BY checkin_date DESC, room_number ASC';
       logDebug('🔍 No date filter, returning all active rooms');
@@ -1721,7 +1657,7 @@ app.post('/api/rooms/:roomNumber/profile-photo', async (req, res) => {
       `, [profilePhoto, roomNumber]);
     }
     
-    console.log('✅ Profile photo saved successfully');
+    logDebug('Profile photo saved successfully');
     res.json({ success: true });
   } catch (error) {
     console.error('❌ Error saving profile photo:', error);
@@ -2202,7 +2138,7 @@ app.post('/api/guest/login', async (req, res) => {
           [guest_unique_id, guest.id]
         );
         
-        console.log(`✅ Generated and saved guest_unique_id for guest: ${guest_unique_id}`);
+        logDebug(`Generated guest_unique_id: ${guest_unique_id}`);
       } else {
         console.error('❌ generateGuestUniqueId returned null for:', { guestName, guestSurname, checkin_date: guest.checkin_date });
       }
@@ -2526,7 +2462,7 @@ app.delete('/api/teams/:id', async (req, res) => {
 app.get('/api/team-assignments', async (req, res) => {
   try {
     const { checkin_date } = req.query;
-    console.log('📋 GET /api/team-assignments - checkin_date:', checkin_date);
+    logDebug('GET /api/team-assignments - checkin_date:', checkin_date);
     
     let query = `
       SELECT 
@@ -2546,7 +2482,7 @@ app.get('/api/team-assignments', async (req, res) => {
     const params = [];
     
     if (checkin_date) {
-      console.log('🔍 Filtering by checkin_date:', checkin_date);
+      logDebug('Filtering by checkin_date:', checkin_date);
       query += ' AND r.checkin_date = $1';
       params.push(checkin_date);
     }
@@ -2647,7 +2583,7 @@ app.post('/api/team-assignments', async (req, res) => {
              WHERE guest_unique_id = $1 OR (room_number = $2 AND checkin_date = $3 AND (guest_unique_id IS NULL OR guest_unique_id = ''))`,
             [guest_unique_id, room_number || null, checkin_date || null]
           );
-          console.log('✅ Updated room table with guest_unique_id:', guest_unique_id);
+          logDebug('Updated room with guest_unique_id:', guest_unique_id);
         } catch (error) {
           console.error('Error updating room table with guest_unique_id:', error);
           // Don't fail the assignment if room update fails
@@ -2879,7 +2815,7 @@ app.get('/api/activities', async (req, res) => {
       if (!RRule) {
         console.warn('⚠️ RRule not available, skipping recurring pattern checks');
       } else {
-        console.log('✅ RRule imported successfully');
+        logDebug('RRule imported successfully');
       }
       
       const selectedDate = new Date(dateStr + 'T00:00:00');
@@ -2912,20 +2848,7 @@ app.get('/api/activities', async (req, res) => {
       query += ` ORDER BY activity_date ASC, start_time ASC, display_order ASC`;
       
       const result = await retryQuery(() => pool.query(query, params));
-      console.log(`📊 Query: ${query}`);
-      console.log(`📊 Params:`, params);
-      console.log(`📊 Total activities from DB: ${result.rows.length}`);
-      
-      if (result.rows.length > 0) {
-        console.log(`🔍 Sample activity:`, {
-          id: result.rows[0].id,
-          title: result.rows[0].title,
-          activity_date: result.rows[0].activity_date,
-          activity_date_type: typeof result.rows[0].activity_date,
-          rrule: result.rows[0].rrule,
-          recurring_until: result.rows[0].recurring_until
-        });
-      }
+      logDebug(`Activities query returned ${result.rows.length} results`);
       
       // Filter results: include activities that match the date either:
       // 1. Exact date match (activity_date = selected date)
@@ -2943,14 +2866,8 @@ app.get('/api/activities', async (req, res) => {
           }
         }
         
-        // Debug log for first few activities
-        if (activity.id <= 3) {
-          console.log(`🔍 Activity ${activity.id} (${activity.title}): activity_date="${activityDateStr}", searching for="${dateStr}", rrule="${activity.rrule}"`);
-        }
-        
         // Exact date match
         if (activityDateStr === dateStr) {
-          console.log(`✅ Exact match: ${activity.id} - ${activity.title}`);
           return true;
         }
         
@@ -2970,9 +2887,7 @@ app.get('/api/activities', async (req, res) => {
               }
               
               // For DAILY frequency, simple range check is sufficient
-              // Since it repeats every day, any date >= start_date and <= recurring_until should match
               if (activity.rrule.includes('FREQ=DAILY')) {
-                console.log(`✅ Recurring DAILY match: ${activity.id} - ${activity.title} (start: ${activityDateStr}, until: ${activity.recurring_until})`);
                 return true;
               }
               
@@ -2982,19 +2897,13 @@ app.get('/api/activities', async (req, res) => {
               endCheckDate.setHours(23, 59, 59, 999);
               const occurrences = rrule.between(startDate, endCheckDate, true);
               
-              const matches = occurrences.some(occ => {
+              return occurrences.some(occ => {
                 const occDate = occ.toISOString().split('T')[0];
                 return occDate === dateStr;
               });
-              
-              if (matches) {
-                console.log(`✅ Recurring match: ${activity.id} - ${activity.title} (rrule: ${activity.rrule})`);
-              }
-              
-              return matches;
             }
           } catch (e) {
-            console.warn(`⚠️ Error parsing RRule for activity ${activity.id} (${activity.title}):`, e.message);
+            logDebug(`Error parsing RRule for activity ${activity.id}:`, e.message);
             return false;
           }
         }
@@ -3008,7 +2917,7 @@ app.get('/api/activities', async (req, res) => {
         activity_date: activity.activity_date === dateStr ? activity.activity_date : dateStr
       }));
       
-      console.log(`✅ Found ${activitiesWithDate.length} activities for ${dateStr}`);
+      logDebug(`Found ${activitiesWithDate.length} activities for ${dateStr}`);
       res.json(activitiesWithDate);
     } else {
       // No date filter - return all activities
@@ -4920,29 +4829,9 @@ const PORT = process.env.PORT || 3000;
 const serverStartTime = Date.now(); // Track server startup time
 
 httpServer.listen(PORT, () => {
-  const totalStartupTime = ((Date.now() - serverStartTime) / 1000).toFixed(3);
-  console.log('');
-  console.log('🏨 ════════════════════════════════════════════');
-  console.log('   Voyage Sorgun Chat Server');
-  console.log('   ════════════════════════════════════════════');
-  console.log('');
-  console.log(`   🌐 Server: http://localhost:${PORT}`);
-  console.log(`   🔌 WebSocket: ws://localhost:${PORT}`);
-  console.log(`   📊 API: http://localhost:${PORT}/api`);
-  console.log(`   ❤️  Health: http://localhost:${PORT}/health`);
-  console.log('');
-  console.log(`   ✅ Database: PostgreSQL`);
-  console.log('   ✅ Real-time: Socket.IO');
-  console.log('   ✅ PWA: Enabled');
-  console.log(`   ✅ Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('');
-  console.log(`   ⏱️  Total startup time: ${totalStartupTime}s`);
-  console.log('');
-  console.log('🏨 ════════════════════════════════════════════');
-  console.log('');
-  console.log('✅ [STARTUP] Server is ready and listening!');
-  console.log('ℹ️  Test verisi oluşturmak için: /test-data.html sayfasını ziyaret edin');
-  console.log('');
+  const totalStartupTime = ((Date.now() - serverStartTime) / 1000).toFixed(2);
+  console.log(`\n✅ Server running on port ${PORT} (${totalStartupTime}s)`);
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}\n`);
 });
 
 // Graceful shutdown
