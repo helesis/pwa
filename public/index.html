@@ -1991,6 +1991,59 @@
             z-index: 1;
         }
 
+        .post-media-carousel {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .post-media-carousel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .post-media-item {
+            min-width: 100%;
+            height: 100%;
+            scroll-snap-align: start;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .post-media-item img,
+        .post-media-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .post-media-indicators {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .post-media-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            transition: background 0.3s;
+        }
+
+        .post-media-indicator.active {
+            background: rgba(255,255,255,0.9);
+        }
+
         .post-image-placeholder {
             font-size: 48px;
             color: #dbdbdb;
@@ -5698,18 +5751,52 @@
                             <div class="post-more">⋯</div>
                         </div>
                         <div class="post-image">
-                            ${post.video_url ? 
-                                `<video src="${post.video_url}" style="width: 100%; height: 100%; object-fit: cover;" controls playsinline></video>` :
-                                (post.image_url ? 
-                                    `<img src="${post.image_url}" alt="${post.title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block';">
-                                    <div class="post-image-placeholder" style="display: none;">
+                            ${(() => {
+                                // Handle arrays for image_url and video_url
+                                const imageUrls = Array.isArray(post.image_url) ? post.image_url : (post.image_url ? [post.image_url] : []);
+                                const videoUrls = Array.isArray(post.video_url) ? post.video_url : (post.video_url ? [post.video_url] : []);
+                                const allMedia = [
+                                    ...imageUrls.map(url => ({ type: 'image', url })),
+                                    ...videoUrls.map(url => ({ type: 'video', url }))
+                                ];
+                                
+                                if (allMedia.length === 0) {
+                                    return `<div class="post-image-placeholder">
                                         <i data-lucide="${post.icon || 'circle'}" class="icon icon-xl"></i>
-                                    </div>` :
-                                    `<div class="post-image-placeholder">
-                                        <i data-lucide="${post.icon || 'circle'}" class="icon icon-xl"></i>
-                                    </div>`
-                                )
-                            }
+                                    </div>`;
+                                }
+                                
+                                if (allMedia.length === 1) {
+                                    const media = allMedia[0];
+                                    if (media.type === 'video') {
+                                        return `<video src="${media.url}" style="width: 100%; height: 100%; object-fit: cover;" controls playsinline></video>`;
+                                    } else {
+                                        return `<img src="${media.url}" alt="${post.title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block';">
+                                        <div class="post-image-placeholder" style="display: none;">
+                                            <i data-lucide="${post.icon || 'circle'}" class="icon icon-xl"></i>
+                                        </div>`;
+                                    }
+                                }
+                                
+                                // Multiple media - create scrollable carousel
+                                return `
+                                    <div class="post-media-carousel" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none;">
+                                        ${allMedia.map((media, idx) => `
+                                            <div class="post-media-item" style="min-width: 100%; scroll-snap-align: start; position: relative;">
+                                                ${media.type === 'video' ? 
+                                                    `<video src="${media.url}" style="width: 100%; height: 100%; object-fit: cover;" controls playsinline></video>` :
+                                                    `<img src="${media.url}" alt="${post.title} ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none';" onload="this.style.display='block';">`
+                                                }
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    <div class="post-media-indicators" style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 10;">
+                                        ${allMedia.map((_, idx) => `
+                                            <div class="post-media-indicator ${idx === 0 ? 'active' : ''}" style="width: 6px; height: 6px; border-radius: 50%; background: ${idx === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)'}; transition: background 0.3s;"></div>
+                                        `).join('')}
+                                    </div>
+                                `;
+                            })()}
                         </div>
                         <div class="post-actions">
                             <div class="post-action like-btn ${userLikesMap[post.post_id] ? 'liked' : ''}">
@@ -5730,6 +5817,24 @@
                         <div class="post-time" data-i18n="now">Şimdi</div>
                     `;
                     container.appendChild(postEl);
+                    
+                    // Setup carousel scroll listeners for indicators
+                    const carousel = postEl.querySelector('.post-media-carousel');
+                    if (carousel) {
+                        const indicators = postEl.querySelectorAll('.post-media-indicator');
+                        if (indicators.length > 1) {
+                            let currentIndex = 0;
+                            carousel.addEventListener('scroll', () => {
+                                const newIndex = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+                                if (newIndex !== currentIndex && newIndex >= 0 && newIndex < indicators.length) {
+                                    currentIndex = newIndex;
+                                    indicators.forEach((ind, idx) => {
+                                        ind.classList.toggle('active', idx === currentIndex);
+                                    });
+                                }
+                            });
+                        }
+                    }
                 });
                 
                 if (typeof lucide !== 'undefined') {
