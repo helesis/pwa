@@ -1404,6 +1404,61 @@
                             </label>
                             <small style="color: var(--text-light); display: block; margin-top: 5px;">Rezervasyon yaparken misafirlere sigara/sigarasız alan tercihi sorulsun</small>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Çalışma Günleri</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="1" checked> Pazartesi
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="2" checked> Salı
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="3" checked> Çarşamba
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="4" checked> Perşembe
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="5" checked> Cuma
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="6" checked> Cumartesi
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" class="restaurant-weekday" value="7" checked> Pazar
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="restaurant-allow-multiple-rooms"> Başka Odaları Dahil Etmeye İzin Ver
+                            </label>
+                            <small style="color: var(--text-light); display: block; margin-top: 5px;">Misafirler rezervasyon yaparken başka odaları da dahil edebilir</small>
+                        </div>
+                        <div class="form-group" id="restaurant-max-total-pax-group" style="display: none;">
+                            <label class="form-label">Maksimum Toplam Kişi Sayısı</label>
+                            <input type="number" id="restaurant-max-total-pax" class="form-input" min="1" placeholder="Sınırsız için boş bırakın">
+                            <small style="color: var(--text-light);">Tüm odalar dahil edildiğinde toplam kişi sayısı limiti</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table Setup Section -->
+                <div class="form-group" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="toggleRestaurantTableSetup()" style="width: 100%; margin-bottom: 10px;">
+                        <i data-lucide="table" class="icon icon-md"></i> Masa Kurulumu
+                    </button>
+                    <div id="restaurant-table-setup-section" style="display: none; padding: 15px; background: var(--voyage-light-blue); border-radius: 8px;">
+                        <div id="restaurant-tables-list">
+                            <!-- Dynamic table rows will be added here -->
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="addRestaurantTableRow()" style="margin-top: 10px;">
+                            + Masa Ekle
+                        </button>
+                        <div id="restaurant-total-capacity" style="margin-top: 15px; padding: 10px; background: white; border-radius: 8px; font-weight: 600; color: var(--voyage-navy);">
+                            Toplam Kapasite: <span id="restaurant-capacity-total">0</span> kişi
+                        </div>
                     </div>
                 </div>
 
@@ -4998,6 +5053,27 @@
             document.getElementById('restaurant-allow-mix-table').checked = false;
             document.getElementById('restaurant-deposit-required').checked = false;
             document.getElementById('restaurant-ask-table-preference').checked = false;
+            document.getElementById('restaurant-allow-multiple-rooms').checked = false;
+            document.getElementById('restaurant-max-total-pax').value = '';
+            document.getElementById('restaurant-max-total-pax-group').style.display = 'none';
+            
+            // Reset weekdays (all checked by default)
+            document.querySelectorAll('.restaurant-weekday').forEach(cb => cb.checked = true);
+            
+            // Toggle max total pax visibility based on allow multiple rooms
+            const allowMultipleRoomsCheckbox = document.getElementById('restaurant-allow-multiple-rooms');
+            // Remove existing listeners by cloning
+            const newCheckbox = allowMultipleRoomsCheckbox.cloneNode(true);
+            allowMultipleRoomsCheckbox.parentNode.replaceChild(newCheckbox, allowMultipleRoomsCheckbox);
+            // Add new listener
+            newCheckbox.addEventListener('change', function() {
+                document.getElementById('restaurant-max-total-pax-group').style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Reset table setup
+            document.getElementById('restaurant-tables-list').innerHTML = '';
+            document.getElementById('restaurant-table-setup-section').style.display = 'none';
+            document.getElementById('restaurant-capacity-total').textContent = '0';
             
             if (restaurantId) {
                 title.textContent = 'Restoran Düzenle';
@@ -5050,6 +5126,24 @@
                             document.getElementById('restaurant-allow-mix-table').checked = rules.allow_mix_table || false;
                             document.getElementById('restaurant-deposit-required').checked = rules.deposit_required || false;
                             document.getElementById('restaurant-ask-table-preference').checked = rules.ask_table_preference || false;
+                            document.getElementById('restaurant-allow-multiple-rooms').checked = rules.allow_multiple_rooms || false;
+                            document.getElementById('restaurant-max-total-pax').value = rules.max_total_pax || '';
+                            document.getElementById('restaurant-max-total-pax-group').style.display = rules.allow_multiple_rooms ? 'block' : 'none';
+                            
+                            // Load weekdays
+                            if (rules.working_weekdays && Array.isArray(rules.working_weekdays)) {
+                                document.querySelectorAll('.restaurant-weekday').forEach(cb => {
+                                    cb.checked = rules.working_weekdays.includes(parseInt(cb.value));
+                                });
+                            }
+                            
+                            // Load table setup
+                            if (rules.table_setup && Array.isArray(rules.table_setup)) {
+                                document.getElementById('restaurant-tables-list').innerHTML = '';
+                                rules.table_setup.forEach(table => {
+                                    addRestaurantTableRow(table.capacity || 2, table.count || 0);
+                                });
+                            }
                         }
                     }
                 } catch (error) {
@@ -5087,15 +5181,48 @@
             }
             
             // Get photos (stored as JSON array in hidden input)
+            // Limit photo size to prevent 413 errors - only keep URLs, not base64
             const photosData = document.getElementById('restaurant-photos-data').value;
             let photos = [];
             if (photosData) {
                 try {
-                    photos = JSON.parse(photosData);
+                    const parsedPhotos = JSON.parse(photosData);
+                    // Filter out base64 images that are too large (keep only URLs)
+                    photos = parsedPhotos.filter(photo => {
+                        // If it's a base64 data URL and too large, skip it
+                        if (photo.startsWith('data:image/')) {
+                            // Base64 images can be very large, limit to 500KB
+                            const base64Length = photo.length;
+                            const sizeInKB = (base64Length * 3) / 4 / 1024;
+                            if (sizeInKB > 500) {
+                                showAlert('Bazı fotoğraflar çok büyük ve atlandı. Lütfen daha küçük fotoğraflar kullanın.', 'warning');
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
                 } catch (e) {
                     console.error('Error parsing photos:', e);
                 }
             }
+            
+            // Get working weekdays
+            const workingWeekdays = [];
+            document.querySelectorAll('.restaurant-weekday:checked').forEach(cb => {
+                workingWeekdays.push(parseInt(cb.value));
+            });
+            
+            // Get table setup
+            const tableSetup = [];
+            const capacityInputs = document.querySelectorAll('.table-capacity-input');
+            const countInputs = document.querySelectorAll('.table-count-input');
+            capacityInputs.forEach((capInput, index) => {
+                const capacity = parseInt(capInput.value) || 0;
+                const count = parseInt(countInputs[index].value) || 0;
+                if (capacity > 0 && count > 0) {
+                    tableSetup.push({ capacity, count });
+                }
+            });
             
             // Build rules JSON
             const rules = {
@@ -5106,7 +5233,11 @@
                 child_pricing_policy: document.getElementById('restaurant-child-pricing-policy').value || 'free_under_12',
                 allow_mix_table: document.getElementById('restaurant-allow-mix-table').checked || false,
                 deposit_required: document.getElementById('restaurant-deposit-required').checked || false,
-                ask_table_preference: document.getElementById('restaurant-ask-table-preference').checked || false
+                ask_table_preference: document.getElementById('restaurant-ask-table-preference').checked || false,
+                allow_multiple_rooms: document.getElementById('restaurant-allow-multiple-rooms').checked || false,
+                max_total_pax: document.getElementById('restaurant-max-total-pax').value ? parseInt(document.getElementById('restaurant-max-total-pax').value) : null,
+                working_weekdays: workingWeekdays.length > 0 ? workingWeekdays : [1, 2, 3, 4, 5, 6, 7], // Default: all days
+                table_setup: tableSetup
             };
             
             const restaurantData = {
@@ -5136,6 +5267,10 @@
                 if (!response.ok) {
                     if (response.status === 404) {
                         showAlert('API endpoint henüz implement edilmedi. Backend\'de ' + endpoint + ' endpoint\'i eklenmeli.', 'warning');
+                        return;
+                    }
+                    if (response.status === 413) {
+                        showAlert('Gönderilen veri çok büyük. Lütfen fotoğrafları küçültün veya daha az fotoğraf ekleyin.', 'error');
                         return;
                     }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -5175,12 +5310,29 @@
             
             const photos = [];
             const previewEl = document.getElementById('restaurant-photos-preview');
+            const maxSizeKB = 500; // Max 500KB per photo
             
             Array.from(files).forEach((file, index) => {
                 if (file.type.startsWith('image/')) {
+                    // Check file size before reading
+                    const fileSizeKB = file.size / 1024;
+                    if (fileSizeKB > maxSizeKB) {
+                        showAlert(`Fotoğraf "${file.name}" çok büyük (${Math.round(fileSizeKB)}KB). Maksimum ${maxSizeKB}KB olmalı.`, 'warning');
+                        return;
+                    }
+                    
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const photoData = e.target.result;
+                        
+                        // Double check base64 size
+                        const base64Length = photoData.length;
+                        const sizeInKB = (base64Length * 3) / 4 / 1024;
+                        if (sizeInKB > maxSizeKB) {
+                            showAlert(`Fotoğraf "${file.name}" işlendikten sonra çok büyük oldu. Lütfen daha küçük bir fotoğraf seçin.`, 'warning');
+                            return;
+                        }
+                        
                         photos.push(photoData);
                         
                         // Display preview
@@ -5287,6 +5439,73 @@
         function toggleRestaurantRules() {
             const section = document.getElementById('restaurant-rules-section');
             section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Toggle restaurant table setup section
+        function toggleRestaurantTableSetup() {
+            const section = document.getElementById('restaurant-table-setup-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            if (section.style.display === 'block') {
+                // Initialize with at least one row if empty
+                const tablesList = document.getElementById('restaurant-tables-list');
+                if (tablesList.children.length === 0) {
+                    addRestaurantTableRow();
+                }
+            }
+        }
+
+        // Add restaurant table row
+        function addRestaurantTableRow(capacity = 2, count = 0) {
+            const tablesList = document.getElementById('restaurant-tables-list');
+            const rowId = 'table-row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            const row = document.createElement('div');
+            row.id = rowId;
+            row.style.display = 'flex';
+            row.style.gap = '10px';
+            row.style.marginBottom = '10px';
+            row.style.alignItems = 'center';
+            
+            row.innerHTML = `
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 4px;">Kapasite (Kişi)</label>
+                    <input type="number" class="table-capacity-input" min="1" value="${capacity}" onchange="calculateTotalCapacity()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 4px;">Masa Sayısı</label>
+                    <input type="number" class="table-count-input" min="0" value="${count}" onchange="calculateTotalCapacity()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                </div>
+                <div style="flex: 0 0 auto; padding-top: 20px;">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeRestaurantTableRow('${rowId}')" style="padding: 8px 12px;">Sil</button>
+                </div>
+            `;
+            
+            tablesList.appendChild(row);
+            calculateTotalCapacity();
+        }
+
+        // Remove restaurant table row
+        function removeRestaurantTableRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+                calculateTotalCapacity();
+            }
+        }
+
+        // Calculate total capacity
+        function calculateTotalCapacity() {
+            const capacityInputs = document.querySelectorAll('.table-capacity-input');
+            const countInputs = document.querySelectorAll('.table-count-input');
+            let total = 0;
+            
+            capacityInputs.forEach((capInput, index) => {
+                const capacity = parseInt(capInput.value) || 0;
+                const count = parseInt(countInputs[index].value) || 0;
+                total += capacity * count;
+            });
+            
+            document.getElementById('restaurant-capacity-total').textContent = total;
         }
 
         // Edit restaurant

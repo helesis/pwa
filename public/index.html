@@ -9220,6 +9220,11 @@
             document.getElementById('reservation-pax-adult').value = 1;
             document.getElementById('reservation-pax-child').value = 0;
             document.getElementById('reservation-special-requests').value = '';
+            document.getElementById('reservation-additional-rooms-list').innerHTML = '';
+            
+            // Add event listeners for pax calculation
+            document.getElementById('reservation-pax-adult').addEventListener('input', calculateTotalPax);
+            document.getElementById('reservation-pax-child').addEventListener('input', calculateTotalPax);
             
             // Load restaurant data if not provided
             let restaurant = restaurantData;
@@ -9233,6 +9238,16 @@
                 } catch (error) {
                     console.error('Error loading restaurant:', error);
                 }
+            }
+            
+            // Check if restaurant allows multiple rooms
+            const additionalRoomsSection = document.getElementById('reservation-additional-rooms-section');
+            if (restaurant && restaurant.rules_json && restaurant.rules_json.allow_multiple_rooms) {
+                additionalRoomsSection.style.display = 'block';
+                document.getElementById('reservation-additional-rooms-list').innerHTML = '';
+                calculateTotalPax();
+            } else {
+                additionalRoomsSection.style.display = 'none';
             }
             
             // Check if restaurant asks for table preference
@@ -9253,6 +9268,9 @@
                 tablePreferenceSection.style.display = 'none';
             }
             
+            // Store restaurant data for validation
+            window.currentRestaurantData = restaurant;
+            
             // Set modal title
             const titleEl = document.getElementById('restaurantReservationModalTitle');
             if (restaurant) {
@@ -9261,6 +9279,80 @@
             
             // Show modal
             modal.style.display = 'flex';
+        }
+
+        // Add additional room
+        function addAdditionalRoom() {
+            const roomsList = document.getElementById('reservation-additional-rooms-list');
+            const roomId = 'room-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            const roomDiv = document.createElement('div');
+            roomDiv.id = roomId;
+            roomDiv.style.display = 'flex';
+            roomDiv.style.gap = '10px';
+            roomDiv.style.marginBottom = '10px';
+            roomDiv.style.alignItems = 'center';
+            
+            roomDiv.innerHTML = `
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 12px; color: #6C757D; margin-bottom: 4px;">Oda Numarası</label>
+                    <input type="text" class="additional-room-number" placeholder="Örn: 102" onchange="calculateTotalPax()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 12px; color: #6C757D; margin-bottom: 4px;">Yetişkin</label>
+                    <input type="number" class="additional-room-adult" min="0" value="0" onchange="calculateTotalPax()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 12px; color: #6C757D; margin-bottom: 4px;">Çocuk</label>
+                    <input type="number" class="additional-room-child" min="0" value="0" onchange="calculateTotalPax()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                </div>
+                <div style="flex: 0 0 auto; padding-top: 20px;">
+                    <button type="button" onclick="removeAdditionalRoom('${roomId}')" style="padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Sil</button>
+                </div>
+            `;
+            
+            roomsList.appendChild(roomDiv);
+            calculateTotalPax();
+        }
+
+        // Remove additional room
+        function removeAdditionalRoom(roomId) {
+            const roomDiv = document.getElementById(roomId);
+            if (roomDiv) {
+                roomDiv.remove();
+                calculateTotalPax();
+            }
+        }
+
+        // Calculate total pax
+        function calculateTotalPax() {
+            const mainAdult = parseInt(document.getElementById('reservation-pax-adult').value) || 0;
+            const mainChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
+            
+            let additionalPax = 0;
+            document.querySelectorAll('.additional-room-adult').forEach(input => {
+                additionalPax += parseInt(input.value) || 0;
+            });
+            document.querySelectorAll('.additional-room-child').forEach(input => {
+                additionalPax += parseInt(input.value) || 0;
+            });
+            
+            const totalPax = mainAdult + mainChild + additionalPax;
+            document.getElementById('reservation-total-pax-count').textContent = totalPax;
+            
+            // Check max total pax limit
+            const warningEl = document.getElementById('reservation-max-pax-warning');
+            if (window.currentRestaurantData && window.currentRestaurantData.rules_json && window.currentRestaurantData.rules_json.max_total_pax) {
+                const maxPax = window.currentRestaurantData.rules_json.max_total_pax;
+                if (totalPax > maxPax) {
+                    warningEl.style.display = 'inline';
+                    warningEl.textContent = `⚠️ Maksimum ${maxPax} kişi limiti aşıldı!`;
+                } else {
+                    warningEl.style.display = 'none';
+                }
+            } else {
+                warningEl.style.display = 'none';
+            }
         }
 
         // Select table preference (visual feedback)
@@ -9308,6 +9400,39 @@
             const tablePreference = document.querySelector('input[name="table-preference"]:checked');
             const tablePreferenceValue = tablePreference ? tablePreference.value : null;
             
+            // Get additional rooms if allowed
+            const additionalRooms = [];
+            document.querySelectorAll('.additional-room-number').forEach((roomInput, index) => {
+                const roomNumber = roomInput.value.trim();
+                const adultInputs = document.querySelectorAll('.additional-room-adult');
+                const childInputs = document.querySelectorAll('.additional-room-child');
+                const adult = parseInt(adultInputs[index].value) || 0;
+                const child = parseInt(childInputs[index].value) || 0;
+                
+                if (roomNumber && (adult > 0 || child > 0)) {
+                    additionalRooms.push({
+                        room_no: roomNumber,
+                        pax_adult: adult,
+                        pax_child: child
+                    });
+                }
+            });
+            
+            // Calculate total pax
+            let totalPax = paxAdult + paxChild;
+            additionalRooms.forEach(room => {
+                totalPax += room.pax_adult + room.pax_child;
+            });
+            
+            // Check max total pax limit
+            if (window.currentRestaurantData && window.currentRestaurantData.rules_json && window.currentRestaurantData.rules_json.max_total_pax) {
+                const maxPax = window.currentRestaurantData.rules_json.max_total_pax;
+                if (totalPax > maxPax) {
+                    alert(`Toplam kişi sayısı (${totalPax}) maksimum limiti (${maxPax}) aşıyor. Lütfen kişi sayısını azaltın.`);
+                    return;
+                }
+            }
+            
             if (!restaurantId || !sessionInstanceId || !paxAdult || paxAdult < 1) {
                 alert('Lütfen tüm gerekli alanları doldurun');
                 return;
@@ -9319,7 +9444,8 @@
                 pax_adult: paxAdult,
                 pax_child: paxChild,
                 special_requests: specialRequests || null,
-                table_preference: tablePreferenceValue // Add table preference to reservation data
+                table_preference: tablePreferenceValue,
+                additional_rooms: additionalRooms.length > 0 ? additionalRooms : null // Add additional rooms to reservation data
             };
             
             try {
@@ -9366,6 +9492,19 @@
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Çocuk Sayısı</label>
                     <input type="number" id="reservation-pax-child" class="form-input" min="0" value="0" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 16px;">
+                </div>
+                
+                <!-- Additional Rooms Section (Conditional) -->
+                <div id="reservation-additional-rooms-section" style="margin-bottom: 15px; display: none;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Başka Odaları Dahil Et <span style="color: #6C757D; font-weight: 400;">(Opsiyonel)</span></label>
+                    <div id="reservation-additional-rooms-list" style="margin-bottom: 10px;">
+                        <!-- Dynamic room inputs will be added here -->
+                    </div>
+                    <button type="button" onclick="addAdditionalRoom()" style="padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">+ Oda Ekle</button>
+                    <div id="reservation-total-pax-summary" style="margin-top: 10px; padding: 10px; background: #E8F1F5; border-radius: 8px; font-size: 14px; color: #1A4D6D;">
+                        <strong>Toplam Kişi Sayısı: <span id="reservation-total-pax-count">1</span></strong>
+                        <span id="reservation-max-pax-warning" style="color: #dc3545; display: none; margin-left: 10px;">⚠️ Maksimum limit aşıldı!</span>
+                    </div>
                 </div>
                 
                 <!-- Masa/Alan Tercihi (Conditional) -->
