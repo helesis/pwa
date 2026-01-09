@@ -421,6 +421,32 @@ async function initializeDatabase() {
       -- Indexes for user_locations
       CREATE INDEX idx_user_locations_guest ON user_locations(guest_unique_id);
       CREATE INDEX idx_user_locations_timestamp ON user_locations(timestamp DESC);
+
+      -- Restaurants table (for A'la Carte reservations)
+      CREATE TABLE restaurants (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        photos JSONB DEFAULT '[]'::jsonb,
+        active BOOLEAN DEFAULT true,
+        price_per_person DECIMAL(10, 2) NOT NULL,
+        currency VARCHAR(3) DEFAULT 'TRY',
+        rules_json JSONB DEFAULT '{
+          "max_reservation_per_room_per_day": 1,
+          "max_reservation_per_stay": null,
+          "cutoff_minutes": 120,
+          "cancellation_deadline_minutes": 240,
+          "child_pricing_policy": "free_under_12",
+          "allow_mix_table": false,
+          "deposit_required": false
+        }'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP WITH TIME ZONE NULL
+      );
+
+      CREATE INDEX idx_restaurants_active ON restaurants(active) WHERE deleted_at IS NULL;
+      CREATE INDEX idx_restaurants_deleted ON restaurants(deleted_at) WHERE deleted_at IS NOT NULL;
     `);
     logDebug(`Database tables created (${((Date.now() - createStartTime) / 1000).toFixed(2)}s)`);
   } catch (error) {
@@ -1085,6 +1111,44 @@ async function addNewTablesIfNeeded() {
         CREATE INDEX idx_dm_post ON direct_messages(post_id);
       `);
       logDebug('Created direct_messages table');
+    }
+
+    // Check and add restaurants table
+    const restaurantsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'restaurants'
+      );
+    `);
+    
+    if (!restaurantsCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE restaurants (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          photos JSONB DEFAULT '[]'::jsonb,
+          active BOOLEAN DEFAULT true,
+          price_per_person DECIMAL(10, 2) NOT NULL,
+          currency VARCHAR(3) DEFAULT 'TRY',
+          rules_json JSONB DEFAULT '{
+            "max_reservation_per_room_per_day": 1,
+            "max_reservation_per_stay": null,
+            "cutoff_minutes": 120,
+            "cancellation_deadline_minutes": 240,
+            "child_pricing_policy": "free_under_12",
+            "allow_mix_table": false,
+            "deposit_required": false
+          }'::jsonb,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          deleted_at TIMESTAMP WITH TIME ZONE NULL
+        );
+        CREATE INDEX idx_restaurants_active ON restaurants(active) WHERE deleted_at IS NULL;
+        CREATE INDEX idx_restaurants_deleted ON restaurants(deleted_at) WHERE deleted_at IS NOT NULL;
+      `);
+      logDebug('Created restaurants table');
     }
 
     // Seed initial data if tables are empty
@@ -5447,6 +5511,246 @@ app.get('/join-team', (req, res) => {
     </body>
     </html>
   `);
+});
+
+// ============================================================================
+// RESTAURANT RESERVATIONS API ENDPOINTS
+// ============================================================================
+
+// Get all restaurants (admin)
+app.get('/admin/restaurants', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, name, description, photos, active, 
+        price_per_person, currency, rules_json,
+        created_at, updated_at
+      FROM restaurants
+      WHERE deleted_at IS NULL
+      ORDER BY created_at DESC
+    `);
+    
+    const restaurants = result.rows.map(row => ({
+      ...row,
+      photos: Array.isArray(row.photos) ? row.photos : (row.photos ? JSON.parse(row.photos) : []),
+      rules_json: typeof row.rules_json === 'object' ? row.rules_json : (row.rules_json ? JSON.parse(row.rules_json) : {})
+    }));
+    
+    res.json({ success: true, data: restaurants });
+  } catch (error) {
+    console.error('Error fetching restaurants:', error);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// Get single restaurant (admin)
+app.get('/admin/restaurants/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`
+      SELECT 
+        id, name, description, photos, active, 
+        price_per_person, currency, rules_json,
+        created_at, updated_at
+      FROM restaurants
+      WHERE id = $1 AND deleted_at IS NULL
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Restaurant not found' });
+    }
+    
+    const restaurant = result.rows[0];
+    restaurant.photos = Array.isArray(restaurant.photos) ? restaurant.photos : (restaurant.photos ? JSON.parse(restaurant.photos) : []);
+    restaurant.rules_json = typeof restaurant.rules_json === 'object' ? restaurant.rules_json : (restaurant.rules_json ? JSON.parse(restaurant.rules_json) : {});
+    
+    res.json({ success: true, data: restaurant });
+  } catch (error) {
+    console.error('Error fetching restaurant:', error);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// Create restaurant (admin)
+app.post('/admin/restaurants', async (req, res) => {
+  try {
+    const { name, description, photos, active, price_per_person, currency, rules_json } = req.body;
+    
+    if (!name || !price_per_person) {
+      return res.status(400).json({ success: false, error: 'Name and price_per_person are required' });
+    }
+    
+    // Prepare photos (ensure it's JSONB compatible)
+    let photosJson = '[]';
+    if (photos) {
+      if (Array.isArray(photos)) {
+        photosJson = JSON.stringify(photos);
+      } else if (typeof photos === 'string') {
+        try {
+          // Try to parse if it's a JSON string
+          JSON.parse(photos);
+          photosJson = photos;
+        } catch (e) {
+          // If not JSON, treat as single URL
+          photosJson = JSON.stringify([photos]);
+        }
+      }
+    }
+    
+    // Prepare rules_json (ensure it's JSONB compatible)
+    let rulesJson = '{}';
+    if (rules_json) {
+      if (typeof rules_json === 'object') {
+        rulesJson = JSON.stringify(rules_json);
+      } else if (typeof rules_json === 'string') {
+        rulesJson = rules_json;
+      }
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO restaurants (name, description, photos, active, price_per_person, currency, rules_json)
+      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7::jsonb)
+      RETURNING 
+        id, name, description, photos, active, 
+        price_per_person, currency, rules_json,
+        created_at, updated_at
+    `, [
+      name.trim(),
+      description || null,
+      photosJson,
+      active !== undefined ? active : true,
+      parseFloat(price_per_person),
+      currency || 'TRY',
+      rulesJson
+    ]);
+    
+    const restaurant = result.rows[0];
+    restaurant.photos = Array.isArray(restaurant.photos) ? restaurant.photos : (restaurant.photos ? JSON.parse(restaurant.photos) : []);
+    restaurant.rules_json = typeof restaurant.rules_json === 'object' ? restaurant.rules_json : (restaurant.rules_json ? JSON.parse(restaurant.rules_json) : {});
+    
+    res.status(201).json({ success: true, data: restaurant });
+  } catch (error) {
+    console.error('Error creating restaurant:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+// Update restaurant (admin)
+app.put('/admin/restaurants/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, photos, active, price_per_person, currency, rules_json } = req.body;
+    
+    // Check if restaurant exists
+    const checkResult = await pool.query(`
+      SELECT id FROM restaurants WHERE id = $1 AND deleted_at IS NULL
+    `, [id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Restaurant not found' });
+    }
+    
+    // Build update query dynamically
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (name !== undefined) {
+      updates.push(`name = $${paramCount++}`);
+      values.push(name.trim());
+    }
+    if (description !== undefined) {
+      updates.push(`description = $${paramCount++}`);
+      values.push(description || null);
+    }
+    if (photos !== undefined) {
+      let photosJson = '[]';
+      if (Array.isArray(photos)) {
+        photosJson = JSON.stringify(photos);
+      } else if (typeof photos === 'string') {
+        try {
+          JSON.parse(photos);
+          photosJson = photos;
+        } catch (e) {
+          photosJson = JSON.stringify([photos]);
+        }
+      }
+      updates.push(`photos = $${paramCount++}::jsonb`);
+      values.push(photosJson);
+    }
+    if (active !== undefined) {
+      updates.push(`active = $${paramCount++}`);
+      values.push(active);
+    }
+    if (price_per_person !== undefined) {
+      updates.push(`price_per_person = $${paramCount++}`);
+      values.push(parseFloat(price_per_person));
+    }
+    if (currency !== undefined) {
+      updates.push(`currency = $${paramCount++}`);
+      values.push(currency);
+    }
+    if (rules_json !== undefined) {
+      let rulesJson = '{}';
+      if (typeof rules_json === 'object') {
+        rulesJson = JSON.stringify(rules_json);
+      } else if (typeof rules_json === 'string') {
+        rulesJson = rules_json;
+      }
+      updates.push(`rules_json = $${paramCount++}::jsonb`);
+      values.push(rulesJson);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+    
+    // Add updated_at
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const result = await pool.query(`
+      UPDATE restaurants
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING 
+        id, name, description, photos, active, 
+        price_per_person, currency, rules_json,
+        created_at, updated_at
+    `, values);
+    
+    const restaurant = result.rows[0];
+    restaurant.photos = Array.isArray(restaurant.photos) ? restaurant.photos : (restaurant.photos ? JSON.parse(restaurant.photos) : []);
+    restaurant.rules_json = typeof restaurant.rules_json === 'object' ? restaurant.rules_json : (restaurant.rules_json ? JSON.parse(restaurant.rules_json) : {});
+    
+    res.json({ success: true, data: restaurant });
+  } catch (error) {
+    console.error('Error updating restaurant:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+// Delete restaurant (admin) - Soft delete
+app.delete('/admin/restaurants/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      UPDATE restaurants
+      SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND deleted_at IS NULL
+      RETURNING id
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Restaurant not found' });
+    }
+    
+    res.json({ success: true, message: 'Restaurant deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting restaurant:', error);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
