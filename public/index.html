@@ -793,7 +793,7 @@
             border-top: 1px solid rgba(0, 0, 0, 0.08);
             display: flex;
             gap: 8px;
-            align-items: flex-end;
+            align-items: flex-start; /* Yukarıdan hizalama için */
             position: fixed;
             bottom: 0;
             left: 0;
@@ -821,6 +821,7 @@
             padding: 9px 16px;
             transition: all 0.2s ease;
             min-height: 42px;
+            max-width: calc(100% - 50px); /* Button için yer bırak (42px button + 8px gap) */
         }
 
         .input-wrapper:focus-within {
@@ -849,8 +850,8 @@
         .action-buttons {
             display: flex;
             gap: 8px;
-            align-items: center;
-            margin-bottom: 36px;
+            align-items: flex-start; /* Button'u yukarıdan hizala */
+            flex-shrink: 0; /* Button genişliğini sabit tut */
         }
 
 
@@ -2462,7 +2463,7 @@
 
         <div class="content-section active" id="infoSection">
             <div class="section-header">
-                <h1 class="section-header-title" data-i18n="info">Info</h1>
+                <h1 class="section-header-title" data-i18n="info">Hotel Info</h1>
             </div>
             <div class="info-section">
                 <!-- Instagram Story Tray Style Activity Notifications -->
@@ -8039,7 +8040,7 @@
         const translations = {
             tr: {
                 // Navigation
-                'info': 'Info',
+                'info': 'Hotel Info',
                 'reservations': 'Rezervasyonlar',
                 'chat': 'Sohbetler',
                 'map': 'Harita',
@@ -8129,7 +8130,7 @@
             },
             en: {
                 // Navigation
-                'info': 'Info',
+                'info': 'Hotel Info',
                 'reservations': 'Reservations',
                 'chat': 'Chats',
                 'map': 'Map',
@@ -8214,7 +8215,7 @@
             },
             de: {
                 // Navigation
-                'info': 'Info',
+                'info': 'Hotel Info',
                 'reservations': 'Reservierungen',
                 'chat': 'Chats',
                 'map': 'Karte',
@@ -8305,7 +8306,7 @@
             },
             ru: {
                 // Navigation
-                'info': 'Инфо',
+                'info': 'Информация об отеле',
                 'reservations': 'Бронирования',
                 'chat': 'Чаты',
                 'map': 'Карта',
