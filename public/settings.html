@@ -4674,7 +4674,37 @@
         async function loadRestaurants() {
             try {
                 const response = await fetch('/admin/restaurants');
-                const result = await response.json();
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // API endpoint not implemented yet
+                        document.getElementById('restaurants-list').innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🍽️</div>
+                                <p>API endpoint henüz implement edilmedi</p>
+                                <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">
+                                    Backend'de /admin/restaurants endpoint'i eklenmeli
+                                </p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // Try to parse JSON
+                let result;
+                try {
+                    const text = await response.text();
+                    if (!text) {
+                        throw new Error('Empty response');
+                    }
+                    result = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    throw new Error('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.');
+                }
                 
                 // Handle both {success: true, data: [...]} and direct array responses
                 let restaurants = [];
@@ -4732,7 +4762,11 @@
                 console.error('Error loading restaurants:', error);
                 document.getElementById('restaurants-list').innerHTML = `
                     <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
                         <p style="color: var(--danger);">Hata: ${error.message}</p>
+                        <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">
+                            API endpoint kontrol edilmeli: /admin/restaurants
+                        </p>
                     </div>
                 `;
             }
@@ -4742,7 +4776,34 @@
         async function loadRestaurantsForSelect(selectId) {
             try {
                 const response = await fetch('/admin/restaurants');
-                const result = await response.json();
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // API endpoint not implemented yet - silently fail for dropdowns
+                        const selectEl = document.getElementById(selectId);
+                        if (selectEl) {
+                            selectEl.innerHTML = '<option value="">-- API endpoint henüz implement edilmedi --</option>';
+                        }
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                let result;
+                try {
+                    const text = await response.text();
+                    if (!text) {
+                        throw new Error('Empty response');
+                    }
+                    result = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    const selectEl = document.getElementById(selectId);
+                    if (selectEl) {
+                        selectEl.innerHTML = '<option value="">-- API hatası --</option>';
+                    }
+                    return;
+                }
                 
                 // Handle both {success: true, data: [...]} and direct array responses
                 let restaurants = [];
@@ -4753,7 +4814,9 @@
                 } else if (!result.success) {
                     throw new Error(result.error || 'Restoranlar yüklenemedi');
                 }
+                
                 const selectEl = document.getElementById(selectId);
+                if (!selectEl) return;
                 
                 selectEl.innerHTML = '<option value="">-- Restoran Seçin --</option>';
                 restaurants.forEach(restaurant => {
@@ -4764,6 +4827,10 @@
                 });
             } catch (error) {
                 console.error('Error loading restaurants for select:', error);
+                const selectEl = document.getElementById(selectId);
+                if (selectEl) {
+                    selectEl.innerHTML = '<option value="">-- Hata: ' + error.message + ' --</option>';
+                }
             }
         }
 
@@ -4937,7 +5004,27 @@
                 // Load restaurant data
                 try {
                     const response = await fetch(`/admin/restaurants/${restaurantId}`);
-                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            showAlert('API endpoint henüz implement edilmedi. Backend\'de /admin/restaurants/:id endpoint\'i eklenmeli.', 'warning');
+                            return;
+                        }
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    let result;
+                    try {
+                        const text = await response.text();
+                        if (!text) {
+                            throw new Error('Empty response');
+                        }
+                        result = JSON.parse(text);
+                    } catch (parseError) {
+                        console.error('JSON parse error:', parseError);
+                        showAlert('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.', 'error');
+                        return;
+                    }
                     
                     if (result.success && result.data) {
                         const restaurant = result.data;
@@ -4967,7 +5054,7 @@
                     }
                 } catch (error) {
                     console.error('Error loading restaurant:', error);
-                    showAlert('Restoran yüklenirken hata oluştu', 'error');
+                    showAlert('Restoran yüklenirken hata oluştu: ' + error.message, 'error');
                 }
             } else {
                 title.textContent = 'Yeni Restoran';
@@ -5034,23 +5121,39 @@
             
             try {
                 let response;
-                if (currentRestaurantId) {
-                    // Update
-                    response = await fetch(`/admin/restaurants/${currentRestaurantId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(restaurantData)
-                    });
-                } else {
-                    // Create
-                    response = await fetch('/admin/restaurants', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(restaurantData)
-                    });
+                const endpoint = currentRestaurantId 
+                    ? `/admin/restaurants/${currentRestaurantId}`
+                    : '/admin/restaurants';
+                const method = currentRestaurantId ? 'PUT' : 'POST';
+                
+                response = await fetch(endpoint, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(restaurantData)
+                });
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showAlert('API endpoint henüz implement edilmedi. Backend\'de ' + endpoint + ' endpoint\'i eklenmeli.', 'warning');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const result = await response.json();
+                // Try to parse JSON
+                let result;
+                try {
+                    const text = await response.text();
+                    if (!text) {
+                        throw new Error('Empty response');
+                    }
+                    result = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    showAlert('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.', 'error');
+                    return;
+                }
                 
                 if (result.success) {
                     showAlert(currentRestaurantId ? 'Restoran güncellendi' : 'Restoran oluşturuldu', 'success');
@@ -5061,7 +5164,7 @@
                 }
             } catch (error) {
                 console.error('Error saving restaurant:', error);
-                showAlert('Restoran kaydedilirken hata oluştu', 'error');
+                showAlert('Restoran kaydedilirken hata oluştu: ' + error.message, 'error');
             }
         }
 
@@ -5201,7 +5304,30 @@
                 const response = await fetch(`/admin/restaurants/${restaurantId}`, { 
                     method: 'DELETE' 
                 });
-                const result = await response.json();
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showAlert('API endpoint henüz implement edilmedi. Backend\'de DELETE /admin/restaurants/:id endpoint\'i eklenmeli.', 'warning');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                let result;
+                try {
+                    const text = await response.text();
+                    if (!text) {
+                        // Empty response might be OK for DELETE
+                        showAlert('Restoran silindi', 'success');
+                        loadRestaurants();
+                        return;
+                    }
+                    result = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    showAlert('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.', 'error');
+                    return;
+                }
                 
                 if (result.success) {
                     showAlert('Restoran silindi', 'success');
@@ -5211,7 +5337,7 @@
                 }
             } catch (error) {
                 console.error('Error deleting restaurant:', error);
-                showAlert('Restoran silinirken hata oluştu', 'error');
+                showAlert('Restoran silinirken hata oluştu: ' + error.message, 'error');
             }
         }
 
