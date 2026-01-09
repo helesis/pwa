@@ -358,9 +358,9 @@
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 16px 8px;
-            padding-left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left)));
-            padding-right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right)));
+            padding: 16px 16px;
+            padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
+            padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
             padding-top: 16px;
             padding-bottom: calc(16px + 143px); /* Space for input container */
             background: white;
@@ -2763,18 +2763,18 @@
                 
                 <!-- Konum Durumu Kartı -->
                 <div class="info-card" style="margin-top: 16px;">
-                    <div class="info-card-title">Konum</div>
+                    <div class="info-card-title" data-i18n="location">Konum</div>
                     <div class="info-card-content">
                         <div style="display: flex; flex-direction: column; gap: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 14px; color: #667781;">Durum:</span>
+                                <span style="font-size: 14px; color: #667781;" data-i18n="status">Durum:</span>
                                 <span id="locationPermissionStatus" style="font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
                                     <i data-lucide="clock" class="icon icon-sm"></i>
-                                    <span>Kontrol ediliyor...</span>
+                                    <span data-i18n="checking">Kontrol ediliyor...</span>
                                 </span>
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 14px; color: #667781;">Son güncelleme:</span>
+                                <span style="font-size: 14px; color: #667781;" data-i18n="lastUpdate">Son güncelleme:</span>
                                 <span id="locationLastUpdate" style="font-size: 14px; color: #667781;">-</span>
                             </div>
                             <button id="locationSettingsBtn" onclick="openLocationSettingsGuide()" style="
@@ -2788,7 +2788,7 @@
                                 color: #008069;
                                 cursor: pointer;
                                 margin-top: 8px;
-                            ">
+                            " data-i18n="changeSettings">
                                 Ayarları Değiştir
                             </button>
                         </div>
@@ -5276,7 +5276,7 @@
             if (!statusEl) return;
 
             if (!navigator.geolocation) {
-                statusEl.innerHTML = '<i data-lucide="x-circle" class="icon icon-sm"></i><span>Desteklenmiyor</span>';
+                statusEl.innerHTML = `<i data-lucide="x-circle" class="icon icon-sm"></i><span>${t('notSupported')}</span>`;
                 statusEl.style.color = '#F44336';
                 if (lastUpdateEl) lastUpdateEl.textContent = '-';
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -5287,13 +5287,13 @@
             const state = await checkPermissionState();
 
             if (state === 'granted') {
-                statusEl.innerHTML = '<i data-lucide="check-circle" class="icon icon-sm"></i><span>✅ İzin Verildi</span>';
+                statusEl.innerHTML = `<i data-lucide="check-circle" class="icon icon-sm"></i><span>✅ ${t('permissionGranted')}</span>`;
                 statusEl.style.color = '#4CAF50';
             } else if (state === 'denied') {
-                statusEl.innerHTML = '<i data-lucide="x-circle" class="icon icon-sm"></i><span>❌ İzin Verilmedi</span>';
+                statusEl.innerHTML = `<i data-lucide="x-circle" class="icon icon-sm"></i><span>❌ ${t('permissionDenied')}</span>`;
                 statusEl.style.color = '#F44336';
             } else {
-                statusEl.innerHTML = '<i data-lucide="clock" class="icon icon-sm"></i><span>İzin Bekleniyor</span>';
+                statusEl.innerHTML = `<i data-lucide="clock" class="icon icon-sm"></i><span>${t('permissionPending')}</span>`;
                 statusEl.style.color = '#667781';
             }
 
@@ -5302,12 +5302,12 @@
                 if (lastLocationUpdateTime) {
                     const diff = Math.floor((Date.now() - lastLocationUpdateTime) / 1000 / 60); // minutes
                     if (diff < 1) {
-                        lastUpdateEl.textContent = 'Az önce';
+                        lastUpdateEl.textContent = t('justNow');
                     } else if (diff < 60) {
-                        lastUpdateEl.textContent = `${diff} dk önce`;
+                        lastUpdateEl.textContent = `${diff} ${t('minutesAgo')}`;
                     } else {
                         const hours = Math.floor(diff / 60);
-                        lastUpdateEl.textContent = `${hours} saat önce`;
+                        lastUpdateEl.textContent = `${hours} ${t('hoursAgo')}`;
                     }
                 } else {
                     lastUpdateEl.textContent = '-';
@@ -8303,6 +8303,18 @@
                 'notifications': 'Bildirimler',
                 'locationPermission': 'Konum İzni',
                 'locationPermissionStatus': 'İzin ver',
+                'location': 'Konum',
+                'status': 'Durum:',
+                'checking': 'Kontrol ediliyor...',
+                'lastUpdate': 'Son güncelleme:',
+                'changeSettings': 'Ayarları Değiştir',
+                'notSupported': 'Desteklenmiyor',
+                'permissionGranted': 'İzin Verildi',
+                'permissionDenied': 'İzin Verilmedi',
+                'permissionPending': 'İzin Bekleniyor',
+                'justNow': 'Az önce',
+                'minutesAgo': 'dk önce',
+                'hoursAgo': 'saat önce',
                 'updateApp': 'Uygulamayı Güncelle',
                 'language': 'Dil',
                 'selectLanguage': 'Dil Seçin',
@@ -8395,6 +8407,18 @@
                 'notifications': 'Notifications',
                 'locationPermission': 'Location Permission',
                 'locationPermissionStatus': 'Grant permission',
+                'location': 'Location',
+                'status': 'Status:',
+                'checking': 'Checking...',
+                'lastUpdate': 'Last update:',
+                'changeSettings': 'Change Settings',
+                'notSupported': 'Not Supported',
+                'permissionGranted': 'Permission Granted',
+                'permissionDenied': 'Permission Denied',
+                'permissionPending': 'Permission Pending',
+                'justNow': 'Just now',
+                'minutesAgo': 'min ago',
+                'hoursAgo': 'hours ago',
                 'updateApp': 'Update App',
                 'language': 'Language',
                 'selectLanguage': 'Select Language',
@@ -8482,6 +8506,18 @@
                 'notifications': 'Benachrichtigungen',
                 'locationPermission': 'Standortberechtigung',
                 'locationPermissionStatus': 'Berechtigung erteilen',
+                'location': 'Standort',
+                'status': 'Status:',
+                'checking': 'Wird geprüft...',
+                'lastUpdate': 'Letzte Aktualisierung:',
+                'changeSettings': 'Einstellungen ändern',
+                'notSupported': 'Nicht unterstützt',
+                'permissionGranted': 'Berechtigung erteilt',
+                'permissionDenied': 'Berechtigung verweigert',
+                'permissionPending': 'Berechtigung ausstehend',
+                'justNow': 'Gerade eben',
+                'minutesAgo': 'Min. zuvor',
+                'hoursAgo': 'Std. zuvor',
                 'updateApp': 'App aktualisieren',
                 'language': 'Sprache',
                 'selectLanguage': 'Sprache auswählen',
@@ -8575,6 +8611,18 @@
                 'notifications': 'Уведомления',
                 'locationPermission': 'Разрешение на местоположение',
                 'locationPermissionStatus': 'Предоставить разрешение',
+                'location': 'Местоположение',
+                'status': 'Статус:',
+                'checking': 'Проверка...',
+                'lastUpdate': 'Последнее обновление:',
+                'changeSettings': 'Изменить настройки',
+                'notSupported': 'Не поддерживается',
+                'permissionGranted': 'Разрешение предоставлено',
+                'permissionDenied': 'Разрешение отклонено',
+                'permissionPending': 'Ожидание разрешения',
+                'justNow': 'Только что',
+                'minutesAgo': 'мин. назад',
+                'hoursAgo': 'ч. назад',
                 'updateApp': 'Обновить приложение',
                 'language': 'Язык',
                 'selectLanguage': 'Выберите язык',
@@ -8709,6 +8757,10 @@
             currentLanguage = lang;
             localStorage.setItem('appLanguage', lang);
             applyTranslations();
+            // Update location permission status when language changes
+            if (typeof updateLocationPermissionStatus === 'function') {
+                updateLocationPermissionStatus();
+            }
             closeLanguageSelector();
         }
         
