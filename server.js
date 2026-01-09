@@ -3172,13 +3172,15 @@ app.post('/api/admin/story-tray-items/:id/upload', upload.single('file'), async 
     
     // If file was uploaded, use the file path
     if (req.file) {
-      const fileUrl = `/uploads/${req.file.filename}`;
+      // Use absolute URL for better compatibility across devices
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
       const filePath = join(uploadsDir, req.file.filename);
       
       // Verify file was actually saved
       if (fs.existsSync(filePath)) {
         console.log(`✅ File uploaded successfully: ${req.file.filename}`);
         console.log(`   Path: ${filePath}`);
+        console.log(`   URL: ${fileUrl}`);
         console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
       } else {
         console.error(`❌ File upload failed: ${req.file.filename} not found in ${uploadsDir}`);
@@ -3421,13 +3423,15 @@ app.post('/api/admin/activities/:id/upload', upload.single('file'), async (req, 
     
     // If file was uploaded, use the file path
     if (req.file) {
-      const fileUrl = `/uploads/${req.file.filename}`;
+      // Use absolute URL for better compatibility across devices
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
       const filePath = join(uploadsDir, req.file.filename);
       
       // Verify file was actually saved
       if (fs.existsSync(filePath)) {
         console.log(`✅ File uploaded successfully: ${req.file.filename}`);
         console.log(`   Path: ${filePath}`);
+        console.log(`   URL: ${fileUrl}`);
         console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
       } else {
         console.error(`❌ File upload failed: ${req.file.filename} not found in ${uploadsDir}`);
@@ -3746,11 +3750,12 @@ app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, 
     
     // If file was uploaded, use the file path
     if (req.file) {
-      const fileUrl = `/uploads/${req.file.filename}`;
+      // Use absolute URL for better compatibility across devices
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
       const filePath = join(uploadsDir, req.file.filename);
       
       if (fs.existsSync(filePath)) {
-        logDebug(`File uploaded successfully: ${req.file.filename}`);
+        logDebug(`File uploaded successfully: ${req.file.filename} -> ${fileUrl}`);
       } else {
         console.error(`File upload failed: ${req.file.filename} not found`);
       }
