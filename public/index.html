@@ -1791,6 +1791,119 @@
             white-space: nowrap;
         }
 
+        /* Story Viewer Modal */
+        .story-viewer-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 10000;
+            touch-action: pan-y;
+        }
+
+        .story-viewer-modal.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .story-viewer-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+        }
+
+        .story-viewer-close {
+            width: 32px;
+            height: 32px;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .story-viewer-title {
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .story-viewer-content {
+            flex: 1;
+            display: flex;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .story-viewer-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .story-viewer-item {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            scroll-snap-align: start;
+            position: relative;
+        }
+
+        .story-viewer-item img,
+        .story-viewer-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .story-viewer-item video {
+            background: #000;
+        }
+
+        .story-viewer-indicators {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            padding: 8px 16px;
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            z-index: 10001;
+        }
+
+        .story-indicator {
+            flex: 1;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 1px;
+            max-width: 40px;
+        }
+
+        .story-indicator.active {
+            background: rgba(255,255,255,0.9);
+        }
+
         /* Instagram Post Format */
         .info-posts-container {
             display: flex;
@@ -5305,18 +5418,138 @@
         }
 
         // Open activity story
-        function openActivityStory(activityId) {
-            // TODO: Implement story viewer modal
-            console.log('Opening activity story:', activityId);
-            // For now, just show an alert
-            const activityNames = {
-                1: 'Yüzme Havuzu',
-                2: 'Plaj',
-                3: 'Restoran',
-                4: 'Spa',
-                5: 'Aktiviteler'
+        function openActivityStory(activity) {
+            const modal = document.getElementById('storyViewerModal');
+            const content = document.getElementById('storyViewerContent');
+            const title = document.getElementById('storyViewerTitle');
+            const indicators = document.getElementById('storyViewerIndicators');
+            
+            if (!modal || !content) return;
+            
+            // Get all media items (images and videos combined)
+            const imageUrls = Array.isArray(activity.image_url) ? activity.image_url : (activity.image_url ? [activity.image_url] : []);
+            const videoUrls = Array.isArray(activity.video_url) ? activity.video_url : (activity.video_url ? [activity.video_url] : []);
+            const allMedia = [
+                ...imageUrls.map(url => ({ type: 'image', url })),
+                ...videoUrls.map(url => ({ type: 'video', url }))
+            ];
+            
+            if (allMedia.length === 0) {
+                alert('Bu story için medya bulunamadı');
+                return;
+            }
+            
+            // Set title
+            if (title) {
+                title.textContent = activity.title || 'Story';
+            }
+            
+            // Clear and populate content
+            content.innerHTML = '';
+            indicators.innerHTML = '';
+            
+            allMedia.forEach((media, index) => {
+                // Create media item
+                const item = document.createElement('div');
+                item.className = 'story-viewer-item';
+                
+                if (media.type === 'video') {
+                    item.innerHTML = `<video controls autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"><source src="${media.url}" type="video/mp4"></video>`;
+                } else {
+                    item.innerHTML = `<img src="${media.url}" alt="Story ${index + 1}" style="width: 100%; height: 100%; object-fit: contain;">`;
+                }
+                
+                content.appendChild(item);
+                
+                // Create indicator
+                const indicator = document.createElement('div');
+                indicator.className = 'story-indicator';
+                if (index === 0) indicator.classList.add('active');
+                indicators.appendChild(indicator);
+            });
+            
+            // Show modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Handle scroll to update indicators
+            let currentIndex = 0;
+            const updateIndicators = () => {
+                const newIndex = Math.round(content.scrollLeft / window.innerWidth);
+                if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allMedia.length) {
+                    currentIndex = newIndex;
+                    indicators.querySelectorAll('.story-indicator').forEach((ind, idx) => {
+                        ind.classList.toggle('active', idx === currentIndex);
+                    });
+                }
             };
-            alert(`${activityNames[activityId]} aktivitesi açılıyor...`);
+            content.addEventListener('scroll', updateIndicators);
+            
+            // Touch/swipe support
+            let touchStartX = 0;
+            let touchEndX = 0;
+            
+            content.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+            
+            content.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+            
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                const diff = touchStartX - touchEndX;
+                
+                if (Math.abs(diff) > swipeThreshold) {
+                    if (diff > 0 && currentIndex < allMedia.length - 1) {
+                        // Swipe left - next
+                        currentIndex++;
+                        content.scrollTo({
+                            left: currentIndex * window.innerWidth,
+                            behavior: 'smooth'
+                        });
+                    } else if (diff < 0 && currentIndex > 0) {
+                        // Swipe right - previous
+                        currentIndex--;
+                        content.scrollTo({
+                            left: currentIndex * window.innerWidth,
+                            behavior: 'smooth'
+                        });
+                    }
+                    updateIndicators();
+                }
+            }
+            
+            // Close on click outside or close button
+            const closeBtn = document.getElementById('storyViewerClose');
+            if (closeBtn) {
+                closeBtn.onclick = closeStoryViewer;
+            }
+            
+            // Close on escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    closeStoryViewer();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+        }
+        
+        function closeStoryViewer() {
+            const modal = document.getElementById('storyViewerModal');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+                
+                // Stop all videos
+                modal.querySelectorAll('video').forEach(video => {
+                    video.pause();
+                    video.currentTime = 0;
+                });
+            }
         }
 
         // Load activity story videos
@@ -5345,17 +5578,24 @@
                 activities.forEach((activity, index) => {
                     const storyEl = document.createElement('div');
                     storyEl.className = 'activity-story';
-                    storyEl.onclick = () => openActivityStory(activity.id);
-                    const hasVideo = !!activity.video_url;
-                    const hasImage = !!activity.image_url;
+                    storyEl.onclick = () => openActivityStory(activity);
+                    
+                    // Handle arrays for image_url and video_url
+                    const imageUrls = Array.isArray(activity.image_url) ? activity.image_url : (activity.image_url ? [activity.image_url] : []);
+                    const videoUrls = Array.isArray(activity.video_url) ? activity.video_url : (activity.video_url ? [activity.video_url] : []);
+                    const hasVideo = videoUrls.length > 0;
+                    const hasImage = imageUrls.length > 0;
+                    const firstImage = imageUrls[0];
+                    const firstVideo = videoUrls[0];
+                    
                     storyEl.innerHTML = `
                         <div class="story-avatar">
                             ${hasVideo ? 
-                                `<video class="story-video active" muted loop autoplay playsinline><source src="${activity.video_url}" type="video/mp4"></video>` : 
+                                `<video class="story-video active" muted loop autoplay playsinline><source src="${firstVideo}" type="video/mp4"></video>` : 
                                 ''
                             }
                             ${hasImage && !hasVideo ? 
-                                `<img src="${activity.image_url}" alt="${activity.title || ''}" onload="this.style.display='block'; this.parentElement.querySelector('.story-avatar-placeholder').style.display='none';" onerror="this.style.display='none';">` :
+                                `<img src="${firstImage}" alt="${activity.title || ''}" onload="this.style.display='block'; this.parentElement.querySelector('.story-avatar-placeholder').style.display='none';" onerror="this.style.display='none';">` :
                                 ''
                             }
                             <div class="story-avatar-placeholder" style="${hasVideo || hasImage ? 'display: none;' : ''}">
@@ -5367,7 +5607,7 @@
                     tray.appendChild(storyEl);
                     
                     // If video exists, ensure it plays
-                    if (activity.video_url) {
+                    if (hasVideo) {
                         const video = storyEl.querySelector('.story-video');
                         if (video) {
                             video.addEventListener('loadeddata', () => {
@@ -8356,6 +8596,16 @@
             }
         });
     </script>
+
+    <!-- Story Viewer Modal -->
+    <div id="storyViewerModal" class="story-viewer-modal">
+        <div class="story-viewer-header">
+            <button id="storyViewerClose" class="story-viewer-close">×</button>
+            <div id="storyViewerTitle" class="story-viewer-title"></div>
+        </div>
+        <div id="storyViewerIndicators" class="story-viewer-indicators"></div>
+        <div id="storyViewerContent" class="story-viewer-content"></div>
+    </div>
 </body>
 </html>
 

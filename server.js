@@ -3021,7 +3021,26 @@ app.get('/api/story-tray-items', async (req, res) => {
       `)
     );
     
-    res.json(result.rows);
+    // Parse JSON arrays for image_url and video_url
+    const items = result.rows.map(item => {
+      if (item.image_url) {
+        try {
+          item.image_url = JSON.parse(item.image_url);
+        } catch (e) {
+          // If not JSON, keep as is (single value)
+        }
+      }
+      if (item.video_url) {
+        try {
+          item.video_url = JSON.parse(item.video_url);
+        } catch (e) {
+          // If not JSON, keep as is (single value)
+        }
+      }
+      return item;
+    });
+    
+    res.json(items);
   } catch (error) {
     console.error('Error fetching story tray items:', error);
     res.status(500).json({ error: 'Failed to load story tray items' });
