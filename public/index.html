@@ -8660,88 +8660,400 @@
             if (!container) return;
             
             try {
-                const requests = await spaApi.listMyRequests();
-                
-                if (!requests || requests.length === 0) {
+                // Get services first
+                const services = await spaApi.getServices();
+                if (!services || services.length === 0) {
                     container.innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
-                            Henüz spa rezervasyonunuz bulunmamaktadır.
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Henüz SPA hizmeti bulunmamaktadır.
                         </div>
-                        <button onclick="openSpaBookingWizard()" style="width: 100%; margin-top: 16px; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                            <i data-lucide="plus" class="icon icon-sm"></i> Yeni SPA Talebi Oluştur
-                        </button>
                     `;
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
                     return;
                 }
                 
+                // Get existing requests
+                const requests = await spaApi.listMyRequests();
+                
                 container.innerHTML = '';
                 
-                // Add "New Request" button at top
-                const newRequestBtn = document.createElement('button');
-                newRequestBtn.className = 'spa-new-request-btn';
-                newRequestBtn.onclick = openSpaBookingWizard;
-                newRequestBtn.innerHTML = '<i data-lucide="plus" class="icon icon-sm"></i> Yeni SPA Talebi Oluştur';
-                container.appendChild(newRequestBtn);
+                // Service selection dropdown
+                const serviceSelect = document.createElement('div');
+                serviceSelect.style.cssText = 'margin-bottom: 16px;';
+                serviceSelect.innerHTML = `
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Hizmet Seçin</label>
+                    <select id="spa-service-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="loadSpaCalendar()">
+                        <option value="">Hizmet seçin...</option>
+                        ${services.map(s => `<option value="${s.id}">${s.name} (${s.durationMin} dk - ${s.price} ${s.currency})</option>`).join('')}
+                    </select>
+                `;
+                container.appendChild(serviceSelect);
                 
-                // Render requests
-                requests.forEach(request => {
-                    const item = document.createElement('div');
-                    item.className = 'spa-request-item';
-                    item.onclick = () => showSpaRequestDetails(request);
+                // Calendar container
+                const calendarContainer = document.createElement('div');
+                calendarContainer.id = 'spa-calendar-container';
+                calendarContainer.style.cssText = 'margin-bottom: 24px;';
+                container.appendChild(calendarContainer);
+                
+                // Last update info
+                const lastUpdateInfo = document.createElement('div');
+                lastUpdateInfo.id = 'spa-calendar-last-update';
+                lastUpdateInfo.style.cssText = 'font-size: 12px; color: #667781; text-align: center; margin-bottom: 8px;';
+                container.appendChild(lastUpdateInfo);
+                
+                // Warning banner
+                const warningBanner = document.createElement('div');
+                warningBanner.id = 'spa-calendar-warning';
+                warningBanner.style.cssText = 'display: none; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 16px; text-align: center;';
+                container.appendChild(warningBanner);
+                
+                // If there are existing requests, show them below calendar
+                if (requests && requests.length > 0) {
+                    const requestsSection = document.createElement('div');
+                    requestsSection.style.cssText = 'margin-top: 24px; padding-top: 24px; border-top: 1px solid #e4e6e9;';
                     
-                    const status = request.status || 'PENDING';
-                    let statusClass = 'status-pending';
-                    let statusText = 'Beklemede';
-                    let statusColor = '#ffc107';
+                    const requestsTitle = document.createElement('div');
+                    requestsTitle.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+                    requestsTitle.textContent = 'SPA Taleplerim';
+                    requestsSection.appendChild(requestsTitle);
                     
-                    if (status === 'CONFIRMED') {
-                        statusClass = 'status-confirmed';
-                        statusText = 'Onaylandı';
-                        statusColor = '#28a745';
-                    } else if (status === 'REJECTED') {
-                        statusClass = 'status-rejected';
-                        statusText = 'Reddedildi';
-                        statusColor = '#dc3545';
-                    } else if (status === 'CANCELLED') {
-                        statusClass = 'status-cancelled';
-                        statusText = 'İptal Edildi';
-                        statusColor = '#6c757d';
-                    } else if (status === 'EXPIRED') {
-                        statusClass = 'status-expired';
-                        statusText = 'Süresi Doldu';
-                        statusColor = '#6c757d';
-                    }
-                    
-                    const start = new Date(request.start);
-                    const end = new Date(request.end);
-                    const dateStr = start.toLocaleDateString('tr-TR', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric'
-                    });
-                    const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
-                    
-                    item.innerHTML = `
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                <div style="font-weight: 600; color: #111b21;">${request.serviceName || 'SPA Hizmeti'}</div>
-                                <span class="spa-status-badge ${statusClass}" style="background: ${statusColor}; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 500;">${statusText}</span>
+                    requests.forEach(request => {
+                        const item = document.createElement('div');
+                        item.className = 'spa-request-item';
+                        item.onclick = () => showSpaRequestDetails(request);
+                        
+                        const status = request.status || 'PENDING';
+                        let statusClass = 'status-pending';
+                        let statusText = 'Beklemede';
+                        let statusColor = '#ffc107';
+                        
+                        if (status === 'CONFIRMED') {
+                            statusClass = 'status-confirmed';
+                            statusText = 'Onaylandı';
+                            statusColor = '#28a745';
+                        } else if (status === 'REJECTED') {
+                            statusClass = 'status-rejected';
+                            statusText = 'Reddedildi';
+                            statusColor = '#dc3545';
+                        } else if (status === 'CANCELLED') {
+                            statusClass = 'status-cancelled';
+                            statusText = 'İptal Edildi';
+                            statusColor = '#6c757d';
+                        } else if (status === 'EXPIRED') {
+                            statusClass = 'status-expired';
+                            statusText = 'Süresi Doldu';
+                            statusColor = '#6c757d';
+                        }
+                        
+                        const start = new Date(request.start);
+                        const end = new Date(request.end);
+                        const dateStr = start.toLocaleDateString('tr-TR', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric'
+                        });
+                        const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                        
+                        item.innerHTML = `
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                    <div style="font-weight: 600; color: #111b21;">${request.serviceName || 'SPA Hizmeti'}</div>
+                                    <span class="spa-status-badge ${statusClass}" style="background: ${statusColor}; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 500;">${statusText}</span>
+                                </div>
+                                <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${dateStr}</div>
+                                <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${timeStr}</div>
+                                ${request.therapistDisplayName ? `<div style="font-size: 12px; color: #667781;">Terapist: ${request.therapistDisplayName}</div>` : ''}
                             </div>
-                            <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${dateStr}</div>
-                            <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${timeStr}</div>
-                            ${request.therapistDisplayName ? `<div style="font-size: 12px; color: #667781;">Terapist: ${request.therapistDisplayName}</div>` : ''}
-                        </div>
-                        <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
-                    `;
+                            <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                        `;
+                        
+                        requestsSection.appendChild(item);
+                    });
                     
-                    container.appendChild(item);
-                });
+                    container.appendChild(requestsSection);
+                }
+                
+                // Auto-select first service and load calendar
+                if (services.length > 0) {
+                    document.getElementById('spa-service-selector').value = services[0].id;
+                    await loadSpaCalendar();
+                }
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (error) {
                 container.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
             }
+        }
+        
+        // Load SPA calendar for selected service
+        async function loadSpaCalendar() {
+            const serviceSelector = document.getElementById('spa-service-selector');
+            const calendarContainer = document.getElementById('spa-calendar-container');
+            const lastUpdateInfo = document.getElementById('spa-calendar-last-update');
+            const warningBanner = document.getElementById('spa-calendar-warning');
+            
+            if (!serviceSelector || !calendarContainer) return;
+            
+            const serviceId = serviceSelector.value;
+            if (!serviceId) {
+                calendarContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Lütfen bir hizmet seçin.</div>';
+                return;
+            }
+            
+            // Calculate stay range
+            if (!CHECKIN_DATE || !CHECKOUT_DATE) {
+                calendarContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Giriş ve çıkış tarihleri bulunamadı.</div>';
+                return;
+            }
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const checkin = new Date(CHECKIN_DATE);
+            checkin.setHours(0, 0, 0, 0);
+            const checkout = new Date(CHECKOUT_DATE);
+            checkout.setHours(0, 0, 0, 0);
+            
+            const from = checkin > today ? checkin : today;
+            const to = new Date(checkout);
+            to.setDate(to.getDate() - 1); // departure-1
+            
+            const fromStr = from.toISOString().split('T')[0];
+            const toStr = to.toISOString().split('T')[0];
+            
+            calendarContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
+            
+            try {
+                const availability = await spaApi.getAvailability(serviceId, fromStr, toStr);
+                
+                // Show last updated info
+                if (availability.lastUpdatedAt && lastUpdateInfo) {
+                    const lastUpdated = new Date(availability.lastUpdatedAt);
+                    const now = new Date();
+                    const minutesAgo = Math.floor((now - lastUpdated) / 60000);
+                    
+                    lastUpdateInfo.textContent = `Son güncelleme: ${minutesAgo === 0 ? 'Az önce' : `${minutesAgo} dakika önce`}`;
+                    
+                    // Show warning if older than 10 minutes
+                    if (warningBanner) {
+                        if (minutesAgo > 10) {
+                            warningBanner.style.display = 'block';
+                            warningBanner.textContent = `⚠️ Müsaitlik verisi güncel olmayabilir. (Son güncelleme: ${minutesAgo} dakika önce)`;
+                        } else {
+                            warningBanner.style.display = 'none';
+                        }
+                    }
+                }
+                
+                // Render calendar
+                renderSpaCalendarInline(availability, calendarContainer);
+                
+            } catch (error) {
+                calendarContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
+            }
+        }
+        
+        // Render calendar inline (not in modal)
+        function renderSpaCalendarInline(availability, container) {
+            if (!availability.days || availability.days.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarih aralığında müsaitlik bulunmamaktadır.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            // Add "En erken uygun" button
+            const earliestBtn = document.createElement('button');
+            earliestBtn.className = 'spa-earliest-btn';
+            earliestBtn.onclick = () => selectEarliestAvailableSlotInline(availability);
+            earliestBtn.innerHTML = '<i data-lucide="clock" class="icon icon-sm"></i> En erken uygun';
+            container.appendChild(earliestBtn);
+            
+            // Render calendar days
+            const calendarGrid = document.createElement('div');
+            calendarGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px;';
+            
+            availability.days.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'spa-calendar-day';
+                
+                const date = new Date(day.date);
+                const isToday = date.toDateString() === new Date().toDateString();
+                
+                let heatClass = '';
+                if (day.heat === 'GREEN') heatClass = 'heat-green';
+                else if (day.heat === 'YELLOW') heatClass = 'heat-yellow';
+                else if (day.heat === 'RED') heatClass = 'heat-red';
+                
+                dayEl.className = `spa-calendar-day ${heatClass}`;
+                dayEl.onclick = () => showDaySlots(day.date, availability);
+                
+                const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+                const dayNumber = date.getDate();
+                const month = date.toLocaleDateString('tr-TR', { month: 'short' });
+                
+                dayEl.innerHTML = `
+                    <div style="font-size: 11px; color: #667781; margin-bottom: 4px;">${dayName}</div>
+                    <div style="font-size: 18px; font-weight: 600; color: #111b21;">${dayNumber}</div>
+                    <div style="font-size: 10px; color: #667781;">${month}</div>
+                    ${isToday ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #008069; border-radius: 50%;"></div>' : ''}
+                `;
+                
+                calendarGrid.appendChild(dayEl);
+            });
+            
+            container.appendChild(calendarGrid);
+            
+            // Time slots container (initially hidden)
+            const slotsContainer = document.createElement('div');
+            slotsContainer.id = 'spa-day-slots-container';
+            slotsContainer.style.cssText = 'display: none; margin-top: 16px;';
+            container.appendChild(slotsContainer);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Show time slots for selected day
+        function showDaySlots(date, availability) {
+            const slotsContainer = document.getElementById('spa-day-slots-container');
+            if (!slotsContainer) return;
+            
+            const selectedDay = availability.days.find(d => d.date === date);
+            if (!selectedDay || !selectedDay.slots || selectedDay.slots.length === 0) {
+                slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarihte müsaitlik bulunmamaktadır.</div>';
+                slotsContainer.style.display = 'block';
+                return;
+            }
+            
+            slotsContainer.innerHTML = '';
+            
+            const dateStr = new Date(date).toLocaleDateString('tr-TR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                weekday: 'long'
+            });
+            
+            const title = document.createElement('div');
+            title.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+            title.textContent = dateStr;
+            slotsContainer.appendChild(title);
+            
+            selectedDay.slots.forEach(slot => {
+                const slotEl = document.createElement('div');
+                const isAvailable = slot.availability === 'AVAILABLE';
+                const isLimited = slot.availability === 'LIMITED';
+                const isFull = slot.availability === 'FULL';
+                
+                slotEl.className = `spa-time-slot ${isFull ? 'disabled' : ''}`;
+                if (!isFull && slot.therapists && slot.therapists.length > 0) {
+                    slotEl.onclick = () => startBookingFromSlot(date, slot);
+                }
+                
+                const start = new Date(slot.start);
+                const end = new Date(slot.end);
+                const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                let availabilityBadge = '';
+                if (isLimited) {
+                    availabilityBadge = '<span style="font-size: 10px; background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Sınırlı</span>';
+                } else if (isFull) {
+                    availabilityBadge = '<span style="font-size: 10px; background: #dc3545; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Dolu</span>';
+                }
+                
+                slotEl.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: ${isFull ? '#999' : '#111b21'};">
+                            ${timeStr}
+                            ${availabilityBadge}
+                        </div>
+                        <div style="font-size: 12px; color: #667781; margin-top: 4px;">
+                            ${slot.therapists ? slot.therapists.length + ' terapist' : 'Terapist yok'}
+                        </div>
+                    </div>
+                    ${!isFull ? '<i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>' : ''}
+                `;
+                
+                slotsContainer.appendChild(slotEl);
+            });
+            
+            slotsContainer.style.display = 'block';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // Scroll to slots
+            slotsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // Start booking from selected slot
+        async function startBookingFromSlot(date, slot) {
+            const serviceSelector = document.getElementById('spa-service-selector');
+            if (!serviceSelector || !serviceSelector.value) {
+                alert('Lütfen bir hizmet seçin.');
+                return;
+            }
+            
+            try {
+                // Get service info
+                const serviceList = await spaApi.getServices();
+                const selectedService = serviceList.find(s => s.id === serviceSelector.value);
+                if (!selectedService) {
+                    alert('Hizmet bulunamadı.');
+                    return;
+                }
+                
+                // Set booking state
+                spaBookingState = {
+                    selectedService: selectedService,
+                    selectedDate: date,
+                    selectedSlot: slot,
+                    selectedTherapist: null,
+                    note: ''
+                };
+                
+                // If only one therapist, auto-select; otherwise go to therapist selection
+                if (slot.therapists && slot.therapists.length === 1) {
+                    spaBookingState.selectedTherapist = slot.therapists[0];
+                    showSpaBookingStep('confirm');
+                    renderSpaConfirmStep();
+                } else if (slot.therapists && slot.therapists.length > 1) {
+                    showSpaBookingStep('therapist');
+                    renderSpaTherapists();
+                } else {
+                    alert('Bu slot için terapist bulunamadı.');
+                    return;
+                }
+                
+                // Open booking wizard modal
+                document.getElementById('spaBookingModal').style.display = 'flex';
+            } catch (error) {
+                alert(`Hata: ${error.message}`);
+            }
+        }
+        
+        // Select earliest available slot (inline version)
+        async function selectEarliestAvailableSlotInline(availability) {
+            const serviceSelector = document.getElementById('spa-service-selector');
+            if (!serviceSelector || !serviceSelector.value) {
+                alert('Lütfen bir hizmet seçin.');
+                return;
+            }
+            
+            for (const day of availability.days) {
+                for (const slot of day.slots || []) {
+                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                        // Scroll to that day
+                        const dayEl = document.querySelector(`[onclick*="${day.date}"]`);
+                        if (dayEl) {
+                            dayEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            dayEl.click(); // Trigger click to show slots
+                            // Then select the slot
+                            setTimeout(() => {
+                                startBookingFromSlot(day.date, slot);
+                            }, 300);
+                        }
+                        return;
+                    }
+                }
+            }
+            alert('Uygun slot bulunamadı.');
         }
 
         async function loadSpaReservationsForMyReservations() {

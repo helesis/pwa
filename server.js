@@ -1295,6 +1295,9 @@ async function addNewTablesIfNeeded() {
 
     // Seed initial data if tables are empty
     await seedInitialData();
+    
+    // Seed SPA test data (one-time only)
+    await seedSpaTestData();
   } catch (error) {
     console.error('Error adding new tables:', error);
     // Don't throw, just log - existing tables might have foreign key constraints
@@ -1436,6 +1439,214 @@ async function seedInitialData() {
   } catch (error) {
     console.error('Error seeding initial data:', error);
     // Don't throw, just log - this is optional initialization
+  }
+}
+
+// Seed SPA test data (services, therapists, availability)
+async function seedSpaTestData() {
+  try {
+    // Check if spa_services table has data
+    const servicesCheck = await pool.query('SELECT COUNT(*) as count FROM spa_services');
+    const servicesCount = parseInt(servicesCheck.rows[0]?.count || 0);
+    
+    // Only seed if tables are empty (one-time only)
+    if (servicesCount > 0) {
+      logDebug('SPA services already exist, skipping test data seed');
+      return;
+    }
+    
+    logDebug('Seeding SPA test data...');
+    
+    // 1. Seed SPA Services (3-4 services)
+    const services = [
+      {
+        id: 'svc_1',
+        name: 'Swedish Massage',
+        duration_min: 50,
+        price: 120,
+        currency: 'EUR',
+        category: 'Massage',
+        short_description: 'Relaxing full-body massage',
+        description: 'Classic Swedish massage technique for complete relaxation and stress relief',
+        display_order: 1
+      },
+      {
+        id: 'svc_2',
+        name: 'Deep Tissue Massage',
+        duration_min: 60,
+        price: 150,
+        currency: 'EUR',
+        category: 'Massage',
+        short_description: 'Intensive muscle therapy',
+        description: 'Deep pressure massage to release chronic muscle tension',
+        display_order: 2
+      },
+      {
+        id: 'svc_3',
+        name: 'Hot Stone Massage',
+        duration_min: 75,
+        price: 180,
+        currency: 'EUR',
+        category: 'Massage',
+        short_description: 'Heated stones for deep relaxation',
+        description: 'Smooth heated stones combined with massage for ultimate relaxation',
+        display_order: 3
+      },
+      {
+        id: 'svc_4',
+        name: 'Aromatherapy Massage',
+        duration_min: 50,
+        price: 130,
+        currency: 'EUR',
+        category: 'Massage',
+        short_description: 'Essential oils massage',
+        description: 'Massage with essential oils for enhanced relaxation and healing',
+        display_order: 4
+      }
+    ];
+    
+    for (const service of services) {
+      await pool.query(`
+        INSERT INTO spa_services (id, name, duration_min, price, currency, category, short_description, description, display_order, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
+        ON CONFLICT (id) DO NOTHING
+      `, [
+        service.id,
+        service.name,
+        service.duration_min,
+        service.price,
+        service.currency,
+        service.category,
+        service.short_description,
+        service.description,
+        service.display_order
+      ]);
+    }
+    
+    logDebug(`✅ Seeded ${services.length} SPA services`);
+    
+    // 2. Seed Therapists (7 therapists)
+    const therapists = [
+      { id: 't_1', name: 'Ayşe', level: 'Senior', tags: ['Relax', 'Aromatherapy'] },
+      { id: 't_2', name: 'Mehmet', level: 'Standard', tags: ['Sports', 'Deep Tissue'] },
+      { id: 't_3', name: 'Zeynep', level: 'Senior', tags: ['Hot Stone', 'Relax'] },
+      { id: 't_4', name: 'Can', level: 'Standard', tags: ['Sports', 'Aromatherapy'] },
+      { id: 't_5', name: 'Elif', level: 'Senior', tags: ['Relax', 'Hot Stone', 'Aromatherapy'] },
+      { id: 't_6', name: 'Burak', level: 'Standard', tags: ['Deep Tissue', 'Sports'] },
+      { id: 't_7', name: 'Selin', level: 'Senior', tags: ['Relax', 'Aromatherapy', 'Hot Stone'] }
+    ];
+    
+    // 3. Seed Availability Data (7 days, multiple slots per day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Time slots (9:00 to 18:00, 50-minute sessions)
+    const timeSlots = [
+      { start: 9, end: 9.83 },    // 9:00-9:50
+      { start: 10, end: 10.83 },  // 10:00-10:50
+      { start: 11, end: 11.83 },  // 11:00-11:50
+      { start: 12, end: 12.83 },  // 12:00-12:50
+      { start: 14, end: 14.83 },  // 14:00-14:50
+      { start: 15, end: 15.83 },  // 15:00-15:50
+      { start: 16, end: 16.83 },  // 16:00-16:50
+      { start: 17, end: 17.83 }   // 17:00-17:50
+    ];
+    
+    let availabilityCount = 0;
+    
+    // Generate 7 days of availability
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const currentDate = new Date(today);
+      currentDate.setDate(today.getDate() + dayOffset);
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      // For each service
+      for (const service of services) {
+        // For each time slot
+        for (const slot of timeSlots) {
+          // Randomly decide if slot is available (80% chance available, 15% limited, 5% full)
+          const rand = Math.random();
+          let availability_status = 'AVAILABLE';
+          let therapistCount = 0;
+          
+          if (rand < 0.80) {
+            availability_status = 'AVAILABLE';
+            therapistCount = Math.floor(Math.random() * 4) + 3; // 3-6 therapists
+          } else if (rand < 0.95) {
+            availability_status = 'LIMITED';
+            therapistCount = Math.floor(Math.random() * 2) + 1; // 1-2 therapists
+          } else {
+            availability_status = 'FULL';
+            therapistCount = 0;
+          }
+          
+          // Create timezone-aware timestamps (Europe/Istanbul - UTC+3)
+          const startDateTime = new Date(`${dateStr}T${String(Math.floor(slot.start)).padStart(2, '0')}:${String(Math.floor((slot.start % 1) * 60)).padStart(2, '0')}:00+03:00`);
+          const endDateTime = new Date(`${dateStr}T${String(Math.floor(slot.end)).padStart(2, '0')}:${String(Math.floor((slot.end % 1) * 60)).padStart(2, '0')}:00+03:00`);
+          
+          // If FULL, insert one row with empty string for therapist_id (to match unique index)
+          if (availability_status === 'FULL') {
+            try {
+              await pool.query(`
+                INSERT INTO spa_availability (
+                  service_id, date, start_time, end_time, 
+                  availability_status, therapist_id, therapist_display_name, 
+                  therapist_level, therapist_tags, last_updated_at
+                )
+                VALUES ($1, $2::date, $3, $4, $5, '', NULL, NULL, '[]'::jsonb, CURRENT_TIMESTAMP)
+              `, [service.id, dateStr, startDateTime.toISOString(), endDateTime.toISOString(), availability_status]);
+              availabilityCount++;
+            } catch (error) {
+              // Ignore unique constraint errors (already exists)
+              if (!error.message.includes('unique') && !error.message.includes('duplicate')) {
+                console.error('Error inserting FULL slot:', error.message);
+              }
+            }
+          } else {
+            // For AVAILABLE/LIMITED, assign random therapists
+            const shuffledTherapists = [...therapists].sort(() => Math.random() - 0.5);
+            const selectedTherapists = shuffledTherapists.slice(0, therapistCount);
+            
+            for (const therapist of selectedTherapists) {
+              try {
+                await pool.query(`
+                  INSERT INTO spa_availability (
+                    service_id, date, start_time, end_time, 
+                    availability_status, therapist_id, therapist_display_name, 
+                    therapist_level, therapist_tags, last_updated_at
+                  )
+                  VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9::jsonb, CURRENT_TIMESTAMP)
+                `, [
+                  service.id,
+                  dateStr,
+                  startDateTime.toISOString(),
+                  endDateTime.toISOString(),
+                  availability_status,
+                  therapist.id,
+                  therapist.name,
+                  therapist.level,
+                  JSON.stringify(therapist.tags)
+                ]);
+                availabilityCount++;
+              } catch (error) {
+                // Ignore unique constraint errors (already exists)
+                if (!error.message.includes('unique') && !error.message.includes('duplicate')) {
+                  console.error('Error inserting therapist slot:', error.message);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    logDebug(`✅ Seeded ${availabilityCount} availability records for 7 days`);
+    logDebug('✅ SPA test data seeding completed');
+    
+  } catch (error) {
+    console.error('❌ Error seeding SPA test data:', error);
+    console.error('   Stack:', error.stack);
+    // Don't throw - this is optional test data
   }
 }
 
