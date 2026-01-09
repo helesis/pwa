@@ -151,6 +151,14 @@
             display: block;
         }
 
+        .restaurant-subtab-content {
+            display: none;
+        }
+
+        .restaurant-subtab-content.active {
+            display: block;
+        }
+
         .card {
             background: white;
             border-radius: 12px;
@@ -614,6 +622,7 @@
             <button class="tab" onclick="switchTab('activities')"><i data-lucide="sparkles" class="icon icon-md"></i> Hikayeler</button>
             <button class="tab" onclick="switchTab('activities-calendar')"><i data-lucide="calendar" class="icon icon-md"></i> Aktiviteler Takvimi</button>
             <button class="tab" onclick="switchTab('posts')"><i data-lucide="image" class="icon icon-md"></i> Postlar</button>
+            <button class="tab" onclick="switchTab('restaurants')"><i data-lucide="utensils-crossed" class="icon icon-md"></i> A'la Carte Rezervasyonlar</button>
         </div>
 
         <!-- Assistants Tab -->
@@ -719,6 +728,128 @@
                 </div>
                 <div id="posts-list">
                     <div class="loading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Restaurants Tab -->
+        <div id="restaurants-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">A'la Carte Rezervasyon Yönetimi</h2>
+                </div>
+                
+                <!-- Sub-tabs for restaurant management -->
+                <div class="tabs" style="margin-top: 20px; border-bottom: 2px solid var(--border);">
+                    <button class="tab active" onclick="switchRestaurantSubTab('restaurants-list')" id="restaurants-list-tab-btn">
+                        <i data-lucide="utensils" class="icon icon-md"></i> Restoranlar
+                    </button>
+                    <button class="tab" onclick="switchRestaurantSubTab('sessions')" id="sessions-tab-btn">
+                        <i data-lucide="clock" class="icon icon-md"></i> Seanslar
+                    </button>
+                    <button class="tab" onclick="switchRestaurantSubTab('table-setup')" id="table-setup-tab-btn">
+                        <i data-lucide="table" class="icon icon-md"></i> Masa Kurulumu
+                    </button>
+                    <button class="tab" onclick="switchRestaurantSubTab('calendar')" id="calendar-tab-btn">
+                        <i data-lucide="calendar" class="icon icon-md"></i> Takvim
+                    </button>
+                    <button class="tab" onclick="switchRestaurantSubTab('pricing-rules')" id="pricing-rules-tab-btn">
+                        <i data-lucide="dollar-sign" class="icon icon-md"></i> Fiyat & Kurallar
+                    </button>
+                </div>
+
+                <!-- Restaurants List Sub-tab -->
+                <div id="restaurants-list-subtab" class="restaurant-subtab-content active">
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="openRestaurantModal()">+ Yeni Restoran</button>
+                    </div>
+                    <div id="restaurants-list" style="margin-top: 20px;">
+                        <div class="loading">Yükleniyor...</div>
+                    </div>
+                </div>
+
+                <!-- Sessions Sub-tab -->
+                <div id="sessions-subtab" class="restaurant-subtab-content">
+                    <div style="margin-top: 20px;">
+                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
+                            <label class="form-label">Restoran Seç</label>
+                            <select id="sessions-restaurant-select" class="form-input" onchange="loadSessionTemplates()">
+                                <option value="">-- Restoran Seçin --</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="openSessionTemplateModal()" id="new-session-btn" disabled>+ Yeni Seans Şablonu</button>
+                    </div>
+                    <div id="session-templates-list" style="margin-top: 20px;">
+                        <div class="empty-state">
+                            <p>Önce bir restoran seçin</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Setup Sub-tab -->
+                <div id="table-setup-subtab" class="restaurant-subtab-content">
+                    <div style="margin-top: 20px;">
+                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
+                            <label class="form-label">Restoran Seç</label>
+                            <select id="table-setup-restaurant-select" class="form-input" onchange="loadTableSetupSessions()">
+                                <option value="">-- Restoran Seçin --</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
+                            <label class="form-label">Seans Şablonu Seç</label>
+                            <select id="table-setup-session-select" class="form-input" onchange="loadTableDefaults()" disabled>
+                                <option value="">-- Önce restoran seçin --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="table-setup-form" style="margin-top: 20px;">
+                        <div class="empty-state">
+                            <p>Önce restoran ve seans şablonu seçin</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Sub-tab -->
+                <div id="calendar-subtab" class="restaurant-subtab-content">
+                    <div style="margin-top: 20px;">
+                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px; display: inline-block; margin-right: 15px;">
+                            <label class="form-label">Restoran Seç</label>
+                            <select id="calendar-restaurant-select" class="form-input" onchange="loadCalendar()">
+                                <option value="">-- Restoran Seçin --</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="max-width: 200px; margin-bottom: 15px; display: inline-block; margin-right: 15px;">
+                            <label class="form-label">Başlangıç Tarihi</label>
+                            <input type="date" id="calendar-from-date" class="form-input" onchange="loadCalendar()">
+                        </div>
+                        <div class="form-group" style="max-width: 200px; margin-bottom: 15px; display: inline-block; margin-right: 15px;">
+                            <label class="form-label">Bitiş Tarihi</label>
+                            <input type="date" id="calendar-to-date" class="form-input" onchange="loadCalendar()">
+                        </div>
+                        <button class="btn btn-primary" onclick="generateSessionInstances()">Seansları Oluştur</button>
+                    </div>
+                    <div id="calendar-instances-list" style="margin-top: 20px;">
+                        <div class="empty-state">
+                            <p>Önce bir restoran seçin ve tarih aralığı belirleyin</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing & Rules Sub-tab -->
+                <div id="pricing-rules-subtab" class="restaurant-subtab-content">
+                    <div style="margin-top: 20px;">
+                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
+                            <label class="form-label">Restoran Seç</label>
+                            <select id="pricing-restaurant-select" class="form-input" onchange="loadPricingRules()">
+                                <option value="">-- Restoran Seçin --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="pricing-rules-form" style="margin-top: 20px;">
+                        <div class="empty-state">
+                            <p>Önce bir restoran seçin</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1207,6 +1338,56 @@
                 }
             }
             if (tabName === 'posts') loadPosts();
+            if (tabName === 'restaurants') {
+                loadRestaurants();
+                switchRestaurantSubTab('restaurants-list');
+            }
+        }
+
+        // Restaurant sub-tab switching
+        function switchRestaurantSubTab(subTabName) {
+            // Remove active from all sub-tab buttons
+            document.querySelectorAll('#restaurants-tab .tabs .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active from all sub-tab contents
+            document.querySelectorAll('.restaurant-subtab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Add active to clicked button
+            const btnId = `${subTabName}-tab-btn`;
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.classList.add('active');
+            }
+            
+            // Add active to corresponding content
+            const contentId = `${subTabName}-subtab`;
+            const content = document.getElementById(contentId);
+            if (content) {
+                content.classList.add('active');
+            }
+            
+            // Load data based on sub-tab
+            if (subTabName === 'restaurants-list') {
+                loadRestaurants();
+            } else if (subTabName === 'sessions') {
+                loadRestaurantsForSelect('sessions-restaurant-select');
+            } else if (subTabName === 'table-setup') {
+                loadRestaurantsForSelect('table-setup-restaurant-select');
+            } else if (subTabName === 'calendar') {
+                loadRestaurantsForSelect('calendar-restaurant-select');
+                // Set default date range (next 14 days)
+                const today = new Date();
+                const toDate = new Date();
+                toDate.setDate(today.getDate() + 14);
+                document.getElementById('calendar-from-date').value = today.toISOString().split('T')[0];
+                document.getElementById('calendar-to-date').value = toDate.toISOString().split('T')[0];
+            } else if (subTabName === 'pricing-rules') {
+                loadRestaurantsForSelect('pricing-restaurant-select');
+            }
         }
 
         // Load assistants
@@ -4376,6 +4557,280 @@
             }
             
             return dates;
+        }
+
+        // ============================================
+        // RESTAURANT RESERVATIONS FUNCTIONS
+        // ============================================
+
+        let currentRestaurantId = null;
+        let currentSessionTemplateId = null;
+
+        // Load restaurants list
+        async function loadRestaurants() {
+            try {
+                const response = await fetch('/admin/restaurants');
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Restoranlar yüklenemedi');
+                }
+
+                const restaurants = result.data || [];
+                const listEl = document.getElementById('restaurants-list');
+                
+                if (restaurants.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🍽️</div>
+                            <p>Henüz restoran eklenmemiş</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listEl.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Ad</th>
+                                <th>Açıklama</th>
+                                <th>Fiyat</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${restaurants.map(restaurant => `
+                                <tr>
+                                    <td>${restaurant.name}</td>
+                                    <td>${restaurant.description ? (restaurant.description.substring(0, 50) + '...') : '-'}</td>
+                                    <td>${restaurant.price_per_person} ${restaurant.currency}</td>
+                                    <td>
+                                        <span class="badge ${restaurant.active ? 'badge-success' : 'badge-danger'}">
+                                            ${restaurant.active ? 'Aktif' : 'Pasif'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="editRestaurant(${restaurant.id})">Düzenle</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurant.id})">Sil</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Error loading restaurants:', error);
+                document.getElementById('restaurants-list').innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: var(--danger);">Hata: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load restaurants for select dropdowns
+        async function loadRestaurantsForSelect(selectId) {
+            try {
+                const response = await fetch('/admin/restaurants');
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Restoranlar yüklenemedi');
+                }
+
+                const restaurants = result.data || [];
+                const selectEl = document.getElementById(selectId);
+                
+                selectEl.innerHTML = '<option value="">-- Restoran Seçin --</option>';
+                restaurants.forEach(restaurant => {
+                    const option = document.createElement('option');
+                    option.value = restaurant.id;
+                    option.textContent = restaurant.name;
+                    selectEl.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading restaurants for select:', error);
+            }
+        }
+
+        // Load session templates for selected restaurant
+        async function loadSessionTemplates() {
+            const restaurantId = document.getElementById('sessions-restaurant-select').value;
+            const listEl = document.getElementById('session-templates-list');
+            const newSessionBtn = document.getElementById('new-session-btn');
+
+            if (!restaurantId) {
+                listEl.innerHTML = '<div class="empty-state"><p>Önce bir restoran seçin</p></div>';
+                newSessionBtn.disabled = true;
+                return;
+            }
+
+            newSessionBtn.disabled = false;
+
+            try {
+                // TODO: Implement API endpoint
+                // const response = await fetch(`/admin/restaurants/${restaurantId}/session-templates`);
+                // const result = await response.json();
+                
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <p>API endpoint henüz implement edilmedi</p>
+                        <p>Restoran ID: ${restaurantId}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading session templates:', error);
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: var(--danger);">Hata: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load table setup sessions
+        async function loadTableSetupSessions() {
+            const restaurantId = document.getElementById('table-setup-restaurant-select').value;
+            const sessionSelect = document.getElementById('table-setup-session-select');
+
+            if (!restaurantId) {
+                sessionSelect.disabled = true;
+                sessionSelect.innerHTML = '<option value="">-- Önce restoran seçin --</option>';
+                document.getElementById('table-setup-form').innerHTML = '<div class="empty-state"><p>Önce restoran ve seans şablonu seçin</p></div>';
+                return;
+            }
+
+            sessionSelect.disabled = false;
+            // TODO: Load session templates for this restaurant
+            sessionSelect.innerHTML = '<option value="">-- Seans şablonu seçin --</option>';
+        }
+
+        // Load table defaults
+        async function loadTableDefaults() {
+            const sessionTemplateId = document.getElementById('table-setup-session-select').value;
+            const formEl = document.getElementById('table-setup-form');
+
+            if (!sessionTemplateId) {
+                formEl.innerHTML = '<div class="empty-state"><p>Önce restoran ve seans şablonu seçin</p></div>';
+                return;
+            }
+
+            // TODO: Load and display table defaults form
+            formEl.innerHTML = `
+                <div class="empty-state">
+                    <p>Masa kurulumu formu henüz implement edilmedi</p>
+                    <p>Seans Şablonu ID: ${sessionTemplateId}</p>
+                </div>
+            `;
+        }
+
+        // Load calendar
+        async function loadCalendar() {
+            const restaurantId = document.getElementById('calendar-restaurant-select').value;
+            const fromDate = document.getElementById('calendar-from-date').value;
+            const toDate = document.getElementById('calendar-to-date').value;
+            const listEl = document.getElementById('calendar-instances-list');
+
+            if (!restaurantId || !fromDate || !toDate) {
+                listEl.innerHTML = '<div class="empty-state"><p>Önce bir restoran seçin ve tarih aralığı belirleyin</p></div>';
+                return;
+            }
+
+            // TODO: Implement API endpoint
+            listEl.innerHTML = `
+                <div class="empty-state">
+                    <p>Takvim görünümü henüz implement edilmedi</p>
+                    <p>Restoran ID: ${restaurantId}</p>
+                    <p>Tarih Aralığı: ${fromDate} - ${toDate}</p>
+                </div>
+            `;
+        }
+
+        // Generate session instances
+        async function generateSessionInstances() {
+            const restaurantId = document.getElementById('calendar-restaurant-select').value;
+            const fromDate = document.getElementById('calendar-from-date').value;
+            const toDate = document.getElementById('calendar-to-date').value;
+
+            if (!restaurantId || !fromDate || !toDate) {
+                showAlert('Lütfen restoran ve tarih aralığı seçin', 'error');
+                return;
+            }
+
+            if (!confirm(`${fromDate} ile ${toDate} arasındaki seansları oluşturmak istediğinize emin misiniz?`)) {
+                return;
+            }
+
+            try {
+                // TODO: Implement API endpoint
+                // const response = await fetch('/admin/session-instances/generate', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ restaurant_id: restaurantId, from_date: fromDate, to_date: toDate })
+                // });
+                
+                showAlert('Seans oluşturma API endpoint henüz implement edilmedi', 'warning');
+            } catch (error) {
+                console.error('Error generating session instances:', error);
+                showAlert('Seanslar oluşturulurken hata oluştu', 'error');
+            }
+        }
+
+        // Load pricing and rules
+        async function loadPricingRules() {
+            const restaurantId = document.getElementById('pricing-restaurant-select').value;
+            const formEl = document.getElementById('pricing-rules-form');
+
+            if (!restaurantId) {
+                formEl.innerHTML = '<div class="empty-state"><p>Önce bir restoran seçin</p></div>';
+                return;
+            }
+
+            // TODO: Load restaurant pricing and rules
+            formEl.innerHTML = `
+                <div class="empty-state">
+                    <p>Fiyat ve kurallar formu henüz implement edilmedi</p>
+                    <p>Restoran ID: ${restaurantId}</p>
+                </div>
+            `;
+        }
+
+        // Open restaurant modal
+        function openRestaurantModal(restaurantId = null) {
+            currentRestaurantId = restaurantId;
+            // TODO: Implement restaurant modal
+            alert('Restoran modal henüz implement edilmedi');
+        }
+
+        // Edit restaurant
+        function editRestaurant(restaurantId) {
+            openRestaurantModal(restaurantId);
+        }
+
+        // Delete restaurant
+        async function deleteRestaurant(restaurantId) {
+            if (!confirm('Bu restoranı silmek istediğinize emin misiniz?')) {
+                return;
+            }
+
+            try {
+                // TODO: Implement API endpoint
+                // const response = await fetch(`/admin/restaurants/${restaurantId}`, { method: 'DELETE' });
+                showAlert('Restoran silme API endpoint henüz implement edilmedi', 'warning');
+                // loadRestaurants();
+            } catch (error) {
+                console.error('Error deleting restaurant:', error);
+                showAlert('Restoran silinirken hata oluştu', 'error');
+            }
+        }
+
+        // Open session template modal
+        function openSessionTemplateModal(templateId = null) {
+            currentSessionTemplateId = templateId;
+            // TODO: Implement session template modal
+            alert('Seans şablonu modal henüz implement edilmedi');
         }
     </script>
 </body>
