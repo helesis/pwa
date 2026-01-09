@@ -672,6 +672,51 @@ async function addNewTablesIfNeeded() {
           await pool.query(`ALTER TABLE info_posts ADD COLUMN ${col.name} ${col.type};`);
         }
       }
+      
+      // Migrate existing single image_url/video_url to JSON arrays
+      const migrationCheck = await pool.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'info_posts' 
+        AND column_name IN ('image_url', 'video_url')
+      `);
+      
+      const hasImageUrl = migrationCheck.rows.some(r => r.column_name === 'image_url');
+      const hasVideoUrl = migrationCheck.rows.some(r => r.column_name === 'video_url');
+      
+      if (hasImageUrl || hasVideoUrl) {
+        // Check if already migrated (check if any value is JSON array)
+        const sampleCheck = await pool.query(`
+          SELECT image_url, video_url 
+          FROM info_posts 
+          LIMIT 1
+        `);
+        
+        const needsMigration = sampleCheck.rows.length > 0 && 
+          sampleCheck.rows[0].image_url && 
+          !sampleCheck.rows[0].image_url.trim().startsWith('[');
+        
+        if (needsMigration) {
+          logDebug('Migrating image_url and video_url to JSON arrays...');
+          // Convert single values to JSON arrays
+          await pool.query(`
+            UPDATE info_posts 
+            SET 
+              image_url = CASE 
+                WHEN image_url IS NOT NULL AND image_url != '' 
+                THEN json_build_array(image_url)::text
+                ELSE NULL 
+              END,
+              video_url = CASE 
+                WHEN video_url IS NOT NULL AND video_url != '' 
+                THEN json_build_array(video_url)::text
+                ELSE NULL 
+              END
+          `);
+          logDebug('Migration completed: image_url and video_url converted to JSON arrays');
+        }
+      }
     }
 
     // Check and add post_likes table
@@ -3423,6 +3468,27 @@ app.post('/api/admin/activities/:id/upload', upload.single('file'), async (req, 
   }
 });
 
+// Helper function to parse JSON arrays in post data
+function parsePostMedia(post) {
+  if (post.image_url) {
+    try {
+      post.image_url = JSON.parse(post.image_url);
+    } catch (e) {
+      // If not JSON, convert to array
+      post.image_url = [post.image_url];
+    }
+  }
+  if (post.video_url) {
+    try {
+      post.video_url = JSON.parse(post.video_url);
+    } catch (e) {
+      // If not JSON, convert to array
+      post.video_url = [post.video_url];
+    }
+  }
+  return post;
+}
+
 // Get all info posts - Public
 app.get('/api/info-posts', async (req, res) => {
   try {
@@ -3431,7 +3497,8 @@ app.get('/api/info-posts', async (req, res) => {
       WHERE is_active = true 
       ORDER BY display_order ASC, created_at ASC
     `);
-    res.json(result.rows);
+    const posts = result.rows.map(parsePostMedia);
+    res.json(posts);
   } catch (error) {
     console.error('Error fetching info posts:', error);
     res.status(500).json({ error: 'Database error' });
@@ -3446,10 +3513,11 @@ app.get('/api/info-posts', async (req, res) => {
 app.get('/api/admin/info-posts', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT * FROM info_posts 
+      SELECT * FROM info_posts
       ORDER BY display_order ASC, created_at DESC
     `);
-    res.json(result.rows);
+    const posts = result.rows.map(parsePostMedia);
+    res.json(posts);
   } catch (error) {
     console.error('Error fetching info posts (admin):', error);
     res.status(500).json({ error: 'Database error' });
@@ -3462,12 +3530,12 @@ app.get('/api/admin/info-posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT * FROM info_posts WHERE id = $1', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    
-    res.json(result.rows[0]);
+
+    res.json(parsePostMedia(result.rows[0]));
   } catch (error) {
     console.error('Error fetching info post (admin):', error);
     res.status(500).json({ error: 'Database error' });
@@ -3483,11 +3551,29 @@ app.post('/api/admin/info-posts', requireAssistant, async (req, res) => {
       return res.status(400).json({ error: 'post_id and title are required' });
     }
 
-    // Only one media type should be set
-    const finalImageUrl = image_url || null;
-    const finalVideoUrl = video_url || null;
-    const mediaImage = finalVideoUrl ? null : finalImageUrl;
-    const mediaVideo = finalVideoUrl ? finalVideoUrl : null;
+    // Handle arrays: convert single values to arrays, ensure arrays are JSON strings
+    let mediaImage = null;
+    let mediaVideo = null;
+    
+    if (image_url) {
+      if (Array.isArray(image_url)) {
+        mediaImage = JSON.stringify(image_url.filter(url => url && url.trim()));
+      } else if (typeof image_url === 'string') {
+        // Single value - convert to array
+        const trimmed = image_url.trim();
+        mediaImage = trimmed ? JSON.stringify([trimmed]) : null;
+      }
+    }
+    
+    if (video_url) {
+      if (Array.isArray(video_url)) {
+        mediaVideo = JSON.stringify(video_url.filter(url => url && url.trim()));
+      } else if (typeof video_url === 'string') {
+        // Single value - convert to array
+        const trimmed = video_url.trim();
+        mediaVideo = trimmed ? JSON.stringify([trimmed]) : null;
+      }
+    }
     
     const result = await pool.query(`
       INSERT INTO info_posts (post_id, title, icon, location, image_url, video_url, caption, display_order, is_active)
@@ -3505,7 +3591,26 @@ app.post('/api/admin/info-posts', requireAssistant, async (req, res) => {
       is_active !== undefined ? is_active : true
     ]);
     
-    res.json(result.rows[0]);
+    // Parse JSON arrays in response
+    const post = result.rows[0];
+    if (post.image_url) {
+      try {
+        post.image_url = JSON.parse(post.image_url);
+      } catch (e) {
+        // If not JSON, convert to array
+        post.image_url = [post.image_url];
+      }
+    }
+    if (post.video_url) {
+      try {
+        post.video_url = JSON.parse(post.video_url);
+      } catch (e) {
+        // If not JSON, convert to array
+        post.video_url = [post.video_url];
+      }
+    }
+    
+    res.json(post);
   } catch (error) {
     console.error('Error creating info post:', error);
     if (error.code === '23505') { // Unique violation
@@ -3532,15 +3637,29 @@ app.put('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
     if (display_order !== undefined) { updateFields.push(`display_order = $${paramCount++}`); values.push(display_order); }
     if (is_active !== undefined) { updateFields.push(`is_active = $${paramCount++}`); values.push(is_active); }
 
-    // Media: set one, clear the other
-    if (image_url) {
-      updateFields.push(`image_url = $${paramCount++}`);
-      values.push(image_url);
-      updateFields.push(`video_url = NULL`);
-    } else if (video_url) {
-      updateFields.push(`video_url = $${paramCount++}`);
-      values.push(video_url);
-      updateFields.push(`image_url = NULL`);
+    // Media: handle arrays
+    if (image_url !== undefined) {
+      if (image_url === null || (Array.isArray(image_url) && image_url.length === 0)) {
+        updateFields.push(`image_url = NULL`);
+      } else {
+        const imageArray = Array.isArray(image_url) 
+          ? image_url.filter(url => url && url.trim())
+          : [image_url.trim()];
+        updateFields.push(`image_url = $${paramCount++}`);
+        values.push(imageArray.length > 0 ? JSON.stringify(imageArray) : null);
+      }
+    }
+    
+    if (video_url !== undefined) {
+      if (video_url === null || (Array.isArray(video_url) && video_url.length === 0)) {
+        updateFields.push(`video_url = NULL`);
+      } else {
+        const videoArray = Array.isArray(video_url)
+          ? video_url.filter(url => url && url.trim())
+          : [video_url.trim()];
+        updateFields.push(`video_url = $${paramCount++}`);
+        values.push(videoArray.length > 0 ? JSON.stringify(videoArray) : null);
+      }
     }
 
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
@@ -3557,7 +3676,24 @@ app.put('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
       return res.status(404).json({ error: 'Post not found' });
     }
     
-    res.json(result.rows[0]);
+    // Parse JSON arrays in response
+    const post = result.rows[0];
+    if (post.image_url) {
+      try {
+        post.image_url = JSON.parse(post.image_url);
+      } catch (e) {
+        post.image_url = [post.image_url];
+      }
+    }
+    if (post.video_url) {
+      try {
+        post.video_url = JSON.parse(post.video_url);
+      } catch (e) {
+        post.video_url = [post.video_url];
+      }
+    }
+    
+    res.json(post);
   } catch (error) {
     console.error('Error updating info post:', error);
     res.status(500).json({ error: 'Database error' });
@@ -3582,7 +3718,7 @@ app.delete('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
   }
 });
 
-// Upload photo/video for info post (supports both file upload and URL)
+// Upload photo/video for info post (supports both file upload and URL, adds to existing array)
 app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -3594,21 +3730,16 @@ app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, 
       const fileUrl = `/uploads/${req.file.filename}`;
       const filePath = join(uploadsDir, req.file.filename);
       
-      // Verify file was actually saved
       if (fs.existsSync(filePath)) {
-        console.log(`✅ File uploaded successfully: ${req.file.filename}`);
-        console.log(`   Path: ${filePath}`);
-        console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
+        logDebug(`File uploaded successfully: ${req.file.filename}`);
       } else {
-        console.error(`❌ File upload failed: ${req.file.filename} not found in ${uploadsDir}`);
+        console.error(`File upload failed: ${req.file.filename} not found`);
       }
       
       if (req.file.mimetype.startsWith('image/')) {
         image_url = fileUrl;
-        video_url = null;
       } else if (req.file.mimetype.startsWith('video/')) {
         video_url = fileUrl;
-        image_url = null;
       }
     }
     
@@ -3616,20 +3747,52 @@ app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, 
       return res.status(400).json({ error: 'image_url, video_url, or file is required' });
     }
 
+    // Get current post to append to existing arrays
+    const currentPost = await pool.query('SELECT image_url, video_url FROM info_posts WHERE id = $1', [id]);
+    if (currentPost.rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
     const updateFields = [];
     const values = [];
     let paramCount = 1;
 
     if (image_url) {
+      // Parse existing array or create new one
+      let existingImages = [];
+      if (currentPost.rows[0].image_url) {
+        try {
+          existingImages = JSON.parse(currentPost.rows[0].image_url);
+        } catch (e) {
+          existingImages = [currentPost.rows[0].image_url];
+        }
+      }
+      // Add new image if not already in array
+      if (!existingImages.includes(image_url)) {
+        existingImages.push(image_url);
+      }
       updateFields.push(`image_url = $${paramCount++}`);
-      values.push(image_url);
-      updateFields.push(`video_url = NULL`);
+      values.push(JSON.stringify(existingImages));
     }
+    
     if (video_url) {
+      // Parse existing array or create new one
+      let existingVideos = [];
+      if (currentPost.rows[0].video_url) {
+        try {
+          existingVideos = JSON.parse(currentPost.rows[0].video_url);
+        } catch (e) {
+          existingVideos = [currentPost.rows[0].video_url];
+        }
+      }
+      // Add new video if not already in array
+      if (!existingVideos.includes(video_url)) {
+        existingVideos.push(video_url);
+      }
       updateFields.push(`video_url = $${paramCount++}`);
-      values.push(video_url);
-      updateFields.push(`image_url = NULL`);
+      values.push(JSON.stringify(existingVideos));
     }
+    
     updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(id);
     
@@ -3640,11 +3803,24 @@ app.post('/api/admin/info-posts/:id/upload', upload.single('file'), async (req, 
       RETURNING *
     `, values);
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Post not found' });
+    // Parse JSON arrays in response
+    const post = result.rows[0];
+    if (post.image_url) {
+      try {
+        post.image_url = JSON.parse(post.image_url);
+      } catch (e) {
+        post.image_url = [post.image_url];
+      }
+    }
+    if (post.video_url) {
+      try {
+        post.video_url = JSON.parse(post.video_url);
+      } catch (e) {
+        post.video_url = [post.video_url];
+      }
     }
     
-    res.json(result.rows[0]);
+    res.json(post);
   } catch (error) {
     console.error('Error uploading media for info post:', error);
     res.status(500).json({ error: 'Database error', message: error.message });
@@ -3664,7 +3840,7 @@ app.get('/api/info-posts/:postId', async (req, res) => {
       return res.status(404).json({ error: 'Post not found' });
     }
     
-    res.json(result.rows[0]);
+    res.json(parsePostMedia(result.rows[0]));
   } catch (error) {
     console.error('Error fetching info post:', error);
     res.status(500).json({ error: 'Database error' });

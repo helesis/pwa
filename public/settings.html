@@ -1146,13 +1146,22 @@
                     <textarea id="post-caption" class="form-input" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Medya (Foto/Video URL)</label>
-                    <input type="text" id="post-image-url" class="form-input" placeholder="Fotoğraf URL (opsiyonel)">
+                    <label class="form-label">Fotoğraflar</label>
+                    <input type="file" id="post-image-files" class="form-input" accept="image/*" multiple style="padding: 8px;">
                     <div style="height: 8px;"></div>
-                    <input type="text" id="post-video-url" class="form-input" placeholder="Video URL (opsiyonel)">
-                    <div style="font-size: 12px; color: #667781; margin-top: 6px;">
-                        Not: Video URL girerseniz fotoğraf alanı otomatik boşaltılır (ve tersi).
+                    <div id="post-image-urls-container" style="margin-top: 8px;">
+                        <input type="text" class="form-input post-image-url-input" placeholder="Fotoğraf URL (opsiyonel)" style="margin-bottom: 4px;">
                     </div>
+                    <button type="button" class="btn btn-secondary" onclick="addImageUrlInput()" style="margin-top: 4px; padding: 6px 12px; font-size: 12px;">+ URL Ekle</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Videolar</label>
+                    <input type="file" id="post-video-files" class="form-input" accept="video/*" multiple style="padding: 8px;">
+                    <div style="height: 8px;"></div>
+                    <div id="post-video-urls-container" style="margin-top: 8px;">
+                        <input type="text" class="form-input post-video-url-input" placeholder="Video URL (opsiyonel)" style="margin-bottom: 4px;">
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addVideoUrlInput()" style="margin-top: 4px; padding: 6px 12px; font-size: 12px;">+ URL Ekle</button>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Sıra (opsiyonel)</label>
@@ -3169,13 +3178,29 @@
                 
                 listEl.innerHTML = `
                     <div style="display: flex; flex-direction: column; gap: 24px;">
-                        ${posts.map(p => `
+                        ${posts.map(p => {
+                            const imageUrls = Array.isArray(p.image_url) ? p.image_url : (p.image_url ? [p.image_url] : []);
+                            const videoUrls = Array.isArray(p.video_url) ? p.video_url : (p.video_url ? [p.video_url] : []);
+                            const hasMedia = imageUrls.length > 0 || videoUrls.length > 0;
+                            
+                            return `
                             <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e4e6e9;">
                                 <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-                                    ${p.video_url ? `
-                                        <video src="${p.video_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" controls></video>
-                                    ` : p.image_url ? `
-                                        <img src="${p.image_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" alt="Post Image">
+                                    ${hasMedia ? `
+                                        <div style="flex: 1; display: flex; flex-wrap: wrap; gap: 8px; min-width: 200px;">
+                                            ${imageUrls.map((url, idx) => `
+                                                <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0;">
+                                                    <img src="${url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #e4e6e9;" alt="Post Image ${idx + 1}">
+                                                    <button onclick="removePostMedia(${p.id}, 'image', ${idx})" style="position: absolute; top: 4px; right: 4px; background: rgba(255,0,0,0.9); color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,0,0,1)'" onmouseout="this.style.background='rgba(255,0,0,0.9)'" title="Sil">×</button>
+                                                </div>
+                                            `).join('')}
+                                            ${videoUrls.map((url, idx) => `
+                                                <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0;">
+                                                    <video src="${url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #e4e6e9;" controls></video>
+                                                    <button onclick="removePostMedia(${p.id}, 'video', ${idx})" style="position: absolute; top: 4px; right: 4px; background: rgba(255,0,0,0.9); color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,0,0,1)'" onmouseout="this.style.background='rgba(255,0,0,0.9)'" title="Sil">×</button>
+                                                </div>
+                                            `).join('')}
+                                        </div>
                                     ` : `
                                         <div style="width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">
                                             Fotoğraf Yok
@@ -3222,7 +3247,8 @@
                                     </div>
                                 </div>
                             </div>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </div>
                 `;
             } catch (error) {
@@ -3233,23 +3259,82 @@
             }
         }
 
+        function addImageUrlInput() {
+            const container = document.getElementById('post-image-urls-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input post-image-url-input';
+            input.placeholder = 'Fotoğraf URL (opsiyonel)';
+            input.style.marginBottom = '4px';
+            container.appendChild(input);
+        }
+
+        function addVideoUrlInput() {
+            const container = document.getElementById('post-video-urls-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input post-video-url-input';
+            input.placeholder = 'Video URL (opsiyonel)';
+            input.style.marginBottom = '4px';
+            container.appendChild(input);
+        }
+
         function openPostModal(id = null) {
             currentPostId = id;
             document.getElementById('post-modal-title').textContent = id ? 'Post Düzenle' : 'Yeni Post';
             document.getElementById('post-modal').classList.add('active');
+            
+            // Reset form
+            document.getElementById('post-image-files').value = '';
+            document.getElementById('post-video-files').value = '';
+            document.getElementById('post-image-urls-container').innerHTML = '<input type="text" class="form-input post-image-url-input" placeholder="Fotoğraf URL (opsiyonel)" style="margin-bottom: 4px;">';
+            document.getElementById('post-video-urls-container').innerHTML = '<input type="text" class="form-input post-video-url-input" placeholder="Video URL (opsiyonel)" style="margin-bottom: 4px;">';
             
             if (id) {
                 fetch(`/api/admin/info-posts/${id}`)
                     .then(res => res.json())
                     .then(data => {
                         document.getElementById('post-post-id').value = data.post_id || '';
-                        document.getElementById('post-post-id').disabled = true; // Don't allow changing post_id
+                        document.getElementById('post-post-id').disabled = true;
                         document.getElementById('post-title').value = data.title || '';
                         document.getElementById('post-icon').value = data.icon || '';
                         document.getElementById('post-location').value = data.location || '';
                         document.getElementById('post-caption').value = data.caption || '';
-                        document.getElementById('post-image-url').value = data.image_url || '';
-                        document.getElementById('post-video-url').value = data.video_url || '';
+                        
+                        // Handle arrays for images
+                        const imageUrls = Array.isArray(data.image_url) ? data.image_url : (data.image_url ? [data.image_url] : []);
+                        const imageContainer = document.getElementById('post-image-urls-container');
+                        imageContainer.innerHTML = '';
+                        imageUrls.forEach(url => {
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.className = 'form-input post-image-url-input';
+                            input.placeholder = 'Fotoğraf URL (opsiyonel)';
+                            input.value = url;
+                            input.style.marginBottom = '4px';
+                            imageContainer.appendChild(input);
+                        });
+                        if (imageUrls.length === 0) {
+                            addImageUrlInput();
+                        }
+                        
+                        // Handle arrays for videos
+                        const videoUrls = Array.isArray(data.video_url) ? data.video_url : (data.video_url ? [data.video_url] : []);
+                        const videoContainer = document.getElementById('post-video-urls-container');
+                        videoContainer.innerHTML = '';
+                        videoUrls.forEach(url => {
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.className = 'form-input post-video-url-input';
+                            input.placeholder = 'Video URL (opsiyonel)';
+                            input.value = url;
+                            input.style.marginBottom = '4px';
+                            videoContainer.appendChild(input);
+                        });
+                        if (videoUrls.length === 0) {
+                            addVideoUrlInput();
+                        }
+                        
                         document.getElementById('post-display-order').value = data.display_order || 0;
                         document.getElementById('post-is-active').checked = data.is_active !== false;
                     });
@@ -3274,10 +3359,6 @@
             const icon = document.getElementById('post-icon').value.trim();
             const location = document.getElementById('post-location').value.trim();
             const caption = document.getElementById('post-caption').value.trim();
-            const image_url_raw = document.getElementById('post-image-url').value.trim();
-            const video_url_raw = document.getElementById('post-video-url').value.trim();
-            const image_url = video_url_raw ? null : (image_url_raw || null);
-            const video_url = video_url_raw || null;
             const display_order = parseInt(document.getElementById('post-display-order').value) || 0;
             const is_active = document.getElementById('post-is-active').checked;
             
@@ -3287,21 +3368,198 @@
             }
             
             try {
-                const url = currentPostId 
-                    ? `/api/admin/info-posts/${currentPostId}`
-                    : '/api/admin/info-posts';
-                const method = currentPostId ? 'PUT' : 'POST';
+                // Collect image URLs from inputs
+                const imageUrlInputs = document.querySelectorAll('.post-image-url-input');
+                const imageUrls = Array.from(imageUrlInputs)
+                    .map(input => input.value.trim())
+                    .filter(url => url);
                 
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ post_id, title, icon, location, caption, image_url, video_url, display_order, is_active })
-                });
+                // Collect video URLs from inputs
+                const videoUrlInputs = document.querySelectorAll('.post-video-url-input');
+                const videoUrls = Array.from(videoUrlInputs)
+                    .map(input => input.value.trim())
+                    .filter(url => url);
                 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to save post');
+                // Upload image files first (get URLs)
+                const imageFiles = document.getElementById('post-image-files').files;
+                const uploadedImageUrls = [];
+                for (let file of imageFiles) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    // For new posts, upload to a temporary endpoint or use a generic upload
+                    const uploadUrl = currentPostId 
+                        ? `/api/admin/info-posts/${currentPostId}/upload`
+                        : '/api/admin/upload'; // We'll need to create this or handle differently
+                    
+                    try {
+                        if (currentPostId) {
+                            const uploadResponse = await fetch(uploadUrl, {
+                                method: 'POST',
+                                credentials: 'include',
+                                body: formData
+                            });
+                            if (uploadResponse.ok) {
+                                const result = await uploadResponse.json();
+                                if (result.image_url) {
+                                    const urls = Array.isArray(result.image_url) ? result.image_url : [result.image_url];
+                                    uploadedImageUrls.push(...urls);
+                                }
+                            }
+                        } else {
+                            // For new posts, we'll upload files after creating the post
+                            // Store file for later upload
+                            uploadedImageUrls.push(file);
+                        }
+                    } catch (e) {
+                        console.warn('File upload failed, will use URL only:', e);
+                    }
+                }
+                
+                // Upload video files
+                const videoFiles = document.getElementById('post-video-files').files;
+                const uploadedVideoUrls = [];
+                for (let file of videoFiles) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const uploadUrl = currentPostId 
+                        ? `/api/admin/info-posts/${currentPostId}/upload`
+                        : '/api/admin/upload';
+                    
+                    try {
+                        if (currentPostId) {
+                            const uploadResponse = await fetch(uploadUrl, {
+                                method: 'POST',
+                                credentials: 'include',
+                                body: formData
+                            });
+                            if (uploadResponse.ok) {
+                                const result = await uploadResponse.json();
+                                if (result.video_url) {
+                                    const urls = Array.isArray(result.video_url) ? result.video_url : [result.video_url];
+                                    uploadedVideoUrls.push(...urls);
+                                }
+                            }
+                        } else {
+                            uploadedVideoUrls.push(file);
+                        }
+                    } catch (e) {
+                        console.warn('File upload failed, will use URL only:', e);
+                    }
+                }
+                
+                // For new posts, create post first, then upload files
+                let postId = currentPostId;
+                if (!currentPostId) {
+                    // Create post first with URLs only
+                    const createResponse = await fetch('/api/admin/info-posts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ 
+                            post_id, 
+                            title, 
+                            icon, 
+                            location, 
+                            caption, 
+                            image_url: imageUrls.length > 0 ? imageUrls : null,
+                            video_url: videoUrls.length > 0 ? videoUrls : null,
+                            display_order, 
+                            is_active 
+                        })
+                    });
+                    
+                    if (!createResponse.ok) {
+                        const error = await createResponse.json();
+                        throw new Error(error.error || 'Failed to create post');
+                    }
+                    
+                    const createdPost = await createResponse.json();
+                    postId = createdPost.id;
+                    
+                    // Now upload files to the newly created post
+                    for (let file of imageFiles) {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        try {
+                            const uploadResponse = await fetch(`/api/admin/info-posts/${postId}/upload`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                body: formData
+                            });
+                            if (uploadResponse.ok) {
+                                const result = await uploadResponse.json();
+                                if (result.image_url) {
+                                    const urls = Array.isArray(result.image_url) ? result.image_url : [result.image_url];
+                                    uploadedImageUrls.push(...urls);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('File upload failed:', e);
+                        }
+                    }
+                    
+                    for (let file of videoFiles) {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        try {
+                            const uploadResponse = await fetch(`/api/admin/info-posts/${postId}/upload`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                body: formData
+                            });
+                            if (uploadResponse.ok) {
+                                const result = await uploadResponse.json();
+                                if (result.video_url) {
+                                    const urls = Array.isArray(result.video_url) ? result.video_url : [result.video_url];
+                                    uploadedVideoUrls.push(...urls);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('File upload failed:', e);
+                        }
+                    }
+                    
+                    // Update post with all URLs (uploaded + manual)
+                    const allImageUrls = [...uploadedImageUrls.filter(url => typeof url === 'string'), ...imageUrls].filter((v, i, a) => a.indexOf(v) === i);
+                    const allVideoUrls = [...uploadedVideoUrls.filter(url => typeof url === 'string'), ...videoUrls].filter((v, i, a) => a.indexOf(v) === i);
+                    
+                    if (allImageUrls.length > 0 || allVideoUrls.length > 0) {
+                        await fetch(`/api/admin/info-posts/${postId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ 
+                                image_url: allImageUrls.length > 0 ? allImageUrls : null,
+                                video_url: allVideoUrls.length > 0 ? allVideoUrls : null
+                            })
+                        });
+                    }
+                } else {
+                    // Update existing post
+                    const allImageUrls = [...uploadedImageUrls.filter(url => typeof url === 'string'), ...imageUrls].filter((v, i, a) => a.indexOf(v) === i);
+                    const allVideoUrls = [...uploadedVideoUrls.filter(url => typeof url === 'string'), ...videoUrls].filter((v, i, a) => a.indexOf(v) === i);
+                    
+                    const response = await fetch(`/api/admin/info-posts/${currentPostId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ 
+                            post_id, 
+                            title, 
+                            icon, 
+                            location, 
+                            caption, 
+                            image_url: allImageUrls.length > 0 ? allImageUrls : null,
+                            video_url: allVideoUrls.length > 0 ? allVideoUrls : null,
+                            display_order, 
+                            is_active 
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to update post');
+                    }
                 }
                 
                 closePostModal();
@@ -3334,6 +3592,77 @@
 
         async function editPost(id) {
             openPostModal(id);
+        }
+
+        async function removePostMedia(postId, type, index) {
+            if (!confirm(`${type === 'image' ? 'Fotoğrafı' : 'Videoyu'} silmek istediğinize emin misiniz?`)) return;
+            
+            try {
+                // Get current post data
+                const response = await fetch(`/api/admin/info-posts/${postId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch post');
+                
+                const post = await response.json();
+                
+                // Parse arrays (handle both JSON string and array)
+                let imageUrls = [];
+                if (post.image_url) {
+                    if (Array.isArray(post.image_url)) {
+                        imageUrls = [...post.image_url];
+                    } else if (typeof post.image_url === 'string') {
+                        try {
+                            imageUrls = JSON.parse(post.image_url);
+                        } catch (e) {
+                            imageUrls = [post.image_url];
+                        }
+                    }
+                }
+                
+                let videoUrls = [];
+                if (post.video_url) {
+                    if (Array.isArray(post.video_url)) {
+                        videoUrls = [...post.video_url];
+                    } else if (typeof post.video_url === 'string') {
+                        try {
+                            videoUrls = JSON.parse(post.video_url);
+                        } catch (e) {
+                            videoUrls = [post.video_url];
+                        }
+                    }
+                }
+                
+                // Remove item from array
+                if (type === 'image' && index < imageUrls.length) {
+                    imageUrls.splice(index, 1);
+                } else if (type === 'video' && index < videoUrls.length) {
+                    videoUrls.splice(index, 1);
+                }
+                
+                // Update post
+                const updateResponse = await fetch(`/api/admin/info-posts/${postId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        image_url: imageUrls.length > 0 ? imageUrls : null,
+                        video_url: videoUrls.length > 0 ? videoUrls : null
+                    })
+                });
+                
+                if (!updateResponse.ok) {
+                    const error = await updateResponse.json();
+                    throw new Error(error.error || 'Failed to remove media');
+                }
+                
+                loadPosts();
+                showAlert(`${type === 'image' ? 'Fotoğraf' : 'Video'} başarıyla silindi`, 'success');
+            } catch (error) {
+                console.error('Error removing media:', error);
+                showAlert('Medya silinirken hata oluştu: ' + error.message, 'error');
+            }
         }
 
         async function uploadPostMedia(postId, type) {
