@@ -3789,18 +3789,150 @@ app.get('/api/map/search', async (req, res) => {
       return res.json([]);
     }
     
-    const searchTerm = `%${q.trim().toLowerCase()}%`;
+    // Translation map for common search terms (translate to Turkish for database search)
+    // Database stores names in Turkish, so we translate search terms to Turkish
+    const translationMap = {
+      // English to Turkish (based on database location names)
+      'reception': 'resepsiyon',
+      'lobby': 'lobby',
+      'restaurant': 'restoran',
+      'restaurant terrace': 'restoran teras',
+      'spa': 'spa',
+      'beach club': 'beach club',
+      'beach': 'sahil',
+      'pool': 'havuz',
+      'main pool': 'ana havuz',
+      'activity pool': 'aktivite havuz',
+      'family pool': 'family havuz',
+      'bar': 'bar',
+      'lobby bar': 'lobby bar',
+      'lounge bar': 'lounge bar',
+      'beach bar': 'sahil bar',
+      'cinema': 'sinema',
+      'game': 'oyun',
+      'game room': 'oyun salon',
+      'shop': 'shop',
+      'shops': 'shops',
+      'doctor': 'doktor',
+      'tennis': 'tenis',
+      'tennis court': 'tenis court',
+      'volleyball': 'voleybol',
+      'volleyball court': 'voleybol court',
+      'aquapark': 'aquapark',
+      'aqua park': 'aquapark',
+      'bakery': 'pastane',
+      'terrace': 'teras',
+      'ice cream': 'dondurma',
+      'fruit': 'meyve',
+      'family': 'aile',
+      'activity': 'aktivite',
+      'main': 'ana',
+      'court': 'court',
+      'water sports': 'su sporlar',
+      'animation': 'animasyon',
+      'desk': 'desk',
+      'animation desk': 'animasyon desk',
+      'cuisine': 'cuisine',
+      'cuisine 24': 'cuisine 24',
+      'boccia': 'boccia',
+      'luna park': 'luna park',
+      'pier': 'iskele',
+      'wc': 'wc',
+      'toilet': 'wc',
+      'elevator': 'asansör',
+      'lift': 'asansör',
+      // German to Turkish
+      'empfang': 'resepsiyon',
+      'restaurant': 'restoran',
+      'strand': 'sahil',
+      'pool': 'havuz',
+      'bar': 'bar',
+      'kino': 'sinema',
+      'spiel': 'oyun',
+      'laden': 'shop',
+      'arzt': 'doktor',
+      'tennis': 'tenis',
+      'volleyball': 'voleybol',
+      'bäckerei': 'pastane',
+      'terrasse': 'teras',
+      'eis': 'dondurma',
+      'obst': 'meyve',
+      'familie': 'aile',
+      'aktivität': 'aktivite',
+      'haupt': 'ana',
+      'platz': 'court',
+      'wassersport': 'su sporlar',
+      'animation': 'animasyon',
+      'küche': 'cuisine',
+      // Russian to Turkish
+      'ресепшн': 'resepsiyon',
+      'ресторан': 'restoran',
+      'пляж': 'sahil',
+      'бассейн': 'havuz',
+      'бар': 'bar',
+      'кино': 'sinema',
+      'игра': 'oyun',
+      'магазин': 'shop',
+      'доктор': 'doktor',
+      'теннис': 'tenis',
+      'волейбол': 'voleybol',
+      'пекарня': 'pastane',
+      'терраса': 'teras',
+      'мороженое': 'dondurma',
+      'фрукты': 'meyve',
+      'семья': 'aile',
+      'активность': 'aktivite',
+      'главный': 'ana',
+      'корт': 'court',
+      'водный спорт': 'su sporlar',
+      'анимация': 'animasyon',
+      'кухня': 'cuisine',
+    };
+    
+    // Try to translate the search term to Turkish
+    const searchQuery = q.trim().toLowerCase();
+    let searchTerm = translationMap[searchQuery] || searchQuery;
+    
+    // Also try partial matches in translation map
+    for (const [key, value] of Object.entries(translationMap)) {
+      if (searchQuery.includes(key)) {
+        searchTerm = value;
+        break;
+      }
+    }
+    
+    // Search in database with Turkish names
+    // Use ILIKE for case-insensitive search
+    searchTerm = `%${searchTerm}%`;
+    
     const result = await pool.query(`
       SELECT id, name, category, latitude, longitude, distance_km
       FROM map_search_locations
       WHERE LOWER(name) LIKE $1
-      ORDER BY name
+      ORDER BY id, name
       LIMIT 20
     `, [searchTerm]);
     
     res.json(result.rows);
   } catch (error) {
     console.error('Error searching map locations:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get featured/popular locations for map chips (non-room locations: id >= 1000)
+app.get('/api/map/locations', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, category, latitude, longitude, distance_km
+      FROM map_search_locations
+      WHERE id >= 1000
+      ORDER BY id, name
+    `);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching map locations:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });

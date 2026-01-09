@@ -2571,12 +2571,8 @@
                                     data-i18n-placeholder="mapSearchPlaceholder"
                                 />
                             </div>
-                            <div class="map-suggestions">
-                                <button type="button" class="map-chip" data-map-target="room" data-value="101" data-i18n-room="101"></button>
-                                <button type="button" class="map-chip" data-map-target="room" data-value="102" data-i18n-room="102"></button>
-                                <button type="button" class="map-chip" data-map-target="outlet" data-value="lobby" data-i18n="lobby"></button>
-                                <button type="button" class="map-chip" data-map-target="outlet" data-value="restaurant" data-i18n="mainRestaurant"></button>
-                                <button type="button" class="map-chip" data-map-target="outlet" data-value="spa" data-i18n="spa"></button>
+                            <div class="map-suggestions" id="mapSuggestions">
+                                <!-- Map chips will be loaded dynamically from database -->
                             </div>
                         </div>
                         <div class="map-container" style="height: 500px; min-height: 500px;">
@@ -5167,6 +5163,7 @@
             // Initialize map when switching to map section
             if (section === 'map') {
                 initMap();
+                loadMapChips(); // Load map chips from database
                 setupMapSearch(); // Setup map search functionality
                 updatePermissionBanner(); // Update banner based on permission state
                 startLocationTracking(); // Start tracking when map opens
@@ -7360,72 +7357,115 @@
             }
         }
 
+        // Store locations data from database
+        let mapLocationsData = {};
+
+        async function loadMapChips() {
+            try {
+                const response = await fetch('/api/map/locations');
+                if (!response.ok) {
+                    console.error('Failed to load map locations');
+                    return;
+                }
+                
+                const locations = await response.json();
+                mapLocationsData = {};
+                
+                // Store locations by id for quick lookup
+                locations.forEach(loc => {
+                    mapLocationsData[loc.id] = {
+                        name: loc.name,
+                        latitude: parseFloat(loc.latitude),
+                        longitude: parseFloat(loc.longitude),
+                        category: loc.category
+                    };
+                });
+                
+                // Create map chip buttons
+                const suggestionsContainer = document.getElementById('mapSuggestions');
+                if (!suggestionsContainer) return;
+                
+                suggestionsContainer.innerHTML = '';
+                
+                // Create chips for each location (sorted by id)
+                locations.sort((a, b) => a.id - b.id).forEach(loc => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'map-chip';
+                    chip.setAttribute('data-location-id', loc.id);
+                    chip.textContent = loc.name; // Use database name directly
+                    suggestionsContainer.appendChild(chip);
+                });
+                
+                // Setup click handlers
+                setupMapChips();
+            } catch (error) {
+                console.error('Error loading map locations:', error);
+            }
+        }
+
         function setupMapChips() {
             const mapChips = document.querySelectorAll('.map-chip');
             mapChips.forEach(chip => {
-                chip.addEventListener('click', (e) => {
-                    const target = e.target.getAttribute('data-map-target');
-                    const value = e.target.getAttribute('data-value');
+                // Remove existing listeners to avoid duplicates
+                const newChip = chip.cloneNode(true);
+                chip.parentNode.replaceChild(newChip, chip);
+                
+                newChip.addEventListener('click', async (e) => {
+                    const locationId = parseInt(e.target.getAttribute('data-location-id'));
                     
                     if (!map) {
                         initMap();
                         return;
                     }
 
-                    // Define locations for different targets (lat, lng)
-                    // Base coordinates: Voyage Sorgun (36.777, 31.404)
-                    const locations = {
-                        'room': {
-                            '101': [36.7772, 31.4043],
-                            '102': [36.7771, 31.4041]
-                        },
-                        'outlet': {
-                            'lobby': [36.77709681280941, 31.404080701222686],
-                            'restaurant': [36.7770, 31.4040],
-                            'spa': [36.7772, 31.4042]
-                        }
-                    };
+                    // Get location data from stored data
+                    const locationData = mapLocationsData[locationId];
+                    if (!locationData || !locationData.latitude || !locationData.longitude) {
+                        console.error('Location not found or missing coordinates:', locationId);
+                        return;
+                    }
 
-                    const location = locations[target]?.[value];
-                    if (location) {
-                        map.easeTo({
-                            center: [location[1], location[0]], // [lng, lat]
-                            zoom: 18,
-                            duration: 500
-                        });
+                    const lat = locationData.latitude;
+                    const lng = locationData.longitude;
 
-                        // Add temporary marker
-                        const tempEl = document.createElement('div');
-                        tempEl.style.cssText = `
-                            width: 30px;
-                            height: 30px;
-                            border-radius: 50%;
-                            background: #FF9800;
-                            border: 3px solid white;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                        `;
-                        tempEl.innerHTML = '<i data-lucide="navigation" style="color: white; width: 16px; height: 16px;"></i>';
+                    map.easeTo({
+                        center: [lng, lat], // [lng, lat]
+                        zoom: 18,
+                        duration: 500
+                    });
 
-                        // Remove previous temp marker if exists
-                        if (window.tempMarker) {
-                            window.tempMarker.remove();
-                        }
+                    // Add temporary marker
+                    const tempEl = document.createElement('div');
+                    tempEl.style.cssText = `
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        background: #FF9800;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+                    tempEl.innerHTML = '<i data-lucide="navigation" style="color: white; width: 16px; height: 16px;"></i>';
 
-                        window.tempMarker = new mapboxgl.Marker(tempEl)
-                            .setLngLat([location[1], location[0]])
-                            .setPopup(new mapboxgl.Popup().setHTML(`<b>${e.target.textContent}</b>`))
-                            .addTo(map)
-                            .togglePopup();
+                    // Remove previous temp marker if exists
+                    if (window.tempMarker) {
+                        window.tempMarker.remove();
+                    }
 
-                        // Re-initialize Lucide icons
-                        if (typeof lucide !== 'undefined') {
-                            setTimeout(() => {
-                                lucide.createIcons();
-                            }, 100);
-                        }
+                    window.tempMarker = new mapboxgl.Marker(tempEl)
+                        .setLngLat([lng, lat])
+                        .setPopup(new mapboxgl.Popup().setHTML(`<b>${locationData.name}</b>`))
+                        .addTo(map)
+                        .togglePopup();
+
+                    // Re-initialize Lucide icons
+                    if (typeof lucide !== 'undefined') {
+                        setTimeout(() => {
+                            lucide.createIcons();
+                        }, 100);
                     }
                 });
             });
@@ -8097,8 +8137,10 @@
                 'mapSearchLabel': 'Gitmek istediğiniz yer',
                 'mapSearchPlaceholder': 'Oda numarası veya alan adı yazın',
                 'room': 'Oda',
+                'reception': 'Resepsiyon',
                 'lobby': 'Lobby',
                 'mainRestaurant': 'Ana Restoran',
+                'beachClub': 'Beach Club',
                 'spa': 'SPA',
                 'voyageSorgun': 'Voyage Sorgun',
                 
@@ -8181,8 +8223,10 @@
                 'mapSearchLabel': 'Where do you want to go?',
                 'mapSearchPlaceholder': 'Type room number or area name',
                 'room': 'Room',
+                'reception': 'Reception',
                 'lobby': 'Lobby',
                 'mainRestaurant': 'Main Restaurant',
+                'beachClub': 'Beach Club',
                 'spa': 'SPA',
                 'voyageSorgun': 'Voyage Sorgun',
                 
@@ -8272,8 +8316,10 @@
                 'mapSearchLabel': 'Wohin möchten Sie gehen?',
                 'mapSearchPlaceholder': 'Zimmernummer oder Bereich eingeben',
                 'room': 'Zimmer',
+                'reception': 'Rezeption',
                 'lobby': 'Lobby',
                 'mainRestaurant': 'Hauptrestaurant',
+                'beachClub': 'Strandclub',
                 'spa': 'SPA',
                 'voyageSorgun': 'Voyage Sorgun',
                 
@@ -8363,8 +8409,10 @@
                 'mapSearchLabel': 'Куда вы хотите пойти?',
                 'mapSearchPlaceholder': 'Введите номер комнаты или название зоны',
                 'room': 'Комната',
+                'reception': 'Ресепшн',
                 'lobby': 'Лобби',
                 'mainRestaurant': 'Главный ресторан',
+                'beachClub': 'Пляжный клуб',
                 'spa': 'СПА',
                 'voyageSorgun': 'Voyage Sorgun',
                 
