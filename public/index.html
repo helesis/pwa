@@ -356,7 +356,7 @@
             padding-left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right)));
             padding-top: 16px;
-            padding-bottom: 0; /* Input container artık içinde, padding gerekmez */
+            padding-bottom: calc(16px + 143px); /* Space for input container */
             background: white;
             scroll-behavior: smooth;
             display: flex;
@@ -788,13 +788,20 @@
             display: flex;
             gap: 8px;
             align-items: flex-end;
-            position: sticky;
+            position: fixed;
             bottom: 0;
+            left: 0;
+            right: 0;
             z-index: 1001; /* Navigation bar'ın (z-index: 1000) üstünde olmalı */
             flex-shrink: 0;
             width: 100%;
-            margin-top: auto; /* Input container'ı en alta it */
             min-height: 143px;
+            box-sizing: border-box;
+        }
+        
+        /* Only show input container when chat section is active */
+        #chatSection:not(.active) .input-container {
+            display: none !important;
         }
 
         .input-wrapper {
@@ -808,7 +815,6 @@
             padding: 9px 16px;
             transition: all 0.2s ease;
             min-height: 42px;
-            margin-bottom: 36px;
         }
 
         .input-wrapper:focus-within {
@@ -2369,9 +2375,10 @@
                         <div class="typing-dot"></div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Input Container -->
-                <div class="input-container">
+            <!-- Input Container (moved outside chat-container) -->
+            <div class="input-container">
                 <div class="input-wrapper">
                     <textarea 
                         id="messageInput" 
@@ -2386,7 +2393,6 @@
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">
                         <i data-lucide="send" class="icon icon-md"></i>
                     </button>
-                </div>
                 </div>
             </div>
         </div>
@@ -5148,6 +5154,7 @@
             // Initialize map when switching to map section
             if (section === 'map') {
                 initMap();
+                setupMapSearch(); // Setup map search functionality
                 updatePermissionBanner(); // Update banner based on permission state
                 startLocationTracking(); // Start tracking when map opens
             } else {
@@ -7408,6 +7415,110 @@
                         }
                     }
                 });
+            });
+        }
+
+        // Map search functionality
+        let searchMarkers = [];
+        let searchTimeout = null;
+        
+        function setupMapSearch() {
+            const searchInput = document.getElementById('mapSearchInput');
+            if (!searchInput || !map) return;
+            
+            // Clear previous markers
+            function clearSearchMarkers() {
+                searchMarkers.forEach(marker => marker.remove());
+                searchMarkers = [];
+            }
+            
+            // Search and mark locations on map
+            async function searchAndMarkLocations(query) {
+                if (!query || query.trim().length === 0) {
+                    clearSearchMarkers();
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/map/search?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) {
+                        console.error('Map search failed');
+                        return;
+                    }
+                    
+                    const locations = await response.json();
+                    clearSearchMarkers();
+                    
+                    if (locations.length === 0) {
+                        return;
+                    }
+                    
+                    // Mark all matching locations on map
+                    locations.forEach(location => {
+                        const markerEl = document.createElement('div');
+                        markerEl.style.cssText = `
+                            width: 30px;
+                            height: 30px;
+                            background: #1A4D6D;
+                            border-radius: 50%;
+                            border: 3px solid white;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                        `;
+                        markerEl.innerHTML = '<i data-lucide="map-pin" style="color: white; width: 16px; height: 16px;"></i>';
+                        
+                        const marker = new mapboxgl.Marker(markerEl)
+                            .setLngLat([location.longitude, location.latitude])
+                            .setPopup(new mapboxgl.Popup().setHTML(`
+                                <b>${location.name}</b><br>
+                                <small>${location.category}</small>${location.distance_km ? `<br><small>${location.distance_km} km</small>` : ''}
+                            `))
+                            .addTo(map);
+                        
+                        searchMarkers.push(marker);
+                        
+                        // Re-initialize Lucide icons
+                        if (typeof lucide !== 'undefined') {
+                            setTimeout(() => {
+                                lucide.createIcons();
+                            }, 100);
+                        }
+                    });
+                    
+                    // Fit map to show all markers
+                    if (searchMarkers.length > 0 && map) {
+                        const bounds = new mapboxgl.LngLatBounds();
+                        searchMarkers.forEach(marker => {
+                            bounds.extend(marker.getLngLat());
+                        });
+                        map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
+                    }
+                } catch (error) {
+                    console.error('Error searching map locations:', error);
+                }
+            }
+            
+            // Debounced search
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    searchAndMarkLocations(query);
+                }, 300);
+            });
+            
+            // Clear markers when input is cleared
+            searchInput.addEventListener('input', (e) => {
+                if (e.target.value.trim().length === 0) {
+                    clearSearchMarkers();
+                }
             });
         }
 

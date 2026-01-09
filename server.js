@@ -625,6 +625,218 @@ async function addNewTablesIfNeeded() {
       logDebug('Created user_locations table');
     }
 
+    // Check and add map_search_locations table (for map search functionality)
+    const mapSearchCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'map_search_locations'
+      );
+    `);
+    
+    if (!mapSearchCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE map_search_locations (
+          id INTEGER PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          category VARCHAR(50) NOT NULL,
+          latitude DECIMAL(10, 8) NOT NULL,
+          longitude DECIMAL(11, 8) NOT NULL,
+          distance_km DECIMAL(6, 2),
+          geom GEOMETRY(Point, 4326),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE INDEX idx_map_search_locations_geom ON map_search_locations USING GIST (geom);
+        CREATE INDEX idx_map_search_locations_category ON map_search_locations(category);
+      `);
+      logDebug('Created map_search_locations table');
+      
+      // Insert default locations data
+      const locations = [
+        // Restaurant locations (1101-1136, 1201-1237, 1301-1337, 1401-1429)
+        ...Array.from({length: 36}, (_, i) => ({id: 1101 + i, name: `Location ${1101 + i}`, category: 'Restaurant', lat: 36.757326638368916, lng: 31.419320129375695, dist: 2.8})),
+        ...Array.from({length: 37}, (_, i) => ({id: 1201 + i, name: `Location ${1201 + i}`, category: 'Restaurant', lat: 36.757326638368916, lng: 31.419320129375695, dist: 2.8})),
+        ...Array.from({length: 37}, (_, i) => ({id: 1301 + i, name: `Location ${1301 + i}`, category: 'Restaurant', lat: 36.757326638368916, lng: 31.419320129375695, dist: 2.8})),
+        ...Array.from({length: 29}, (_, i) => ({id: 1401 + i, name: `Location ${1401 + i}`, category: 'Restaurant', lat: 36.757326638368916, lng: 31.419320129375695, dist: 2.8})),
+        // Entertainment locations (4001-4072, 4101-4108)
+        {id: 4001, name: 'Location 4001', category: 'Entertainment', lat: 36.75899418475455, lng: 31.41885376733623, dist: 2.86},
+        {id: 4002, name: 'Location 4002', category: 'Entertainment', lat: 36.75899418475455, lng: 31.41885376733623, dist: 2.86},
+        {id: 4003, name: 'Location 4003', category: 'Entertainment', lat: 36.75899418475455, lng: 31.41885376733623, dist: 2.86},
+        {id: 4004, name: 'Location 4004', category: 'Entertainment', lat: 36.75899418475455, lng: 31.41885376733623, dist: 2.86},
+        {id: 4005, name: 'Location 4005', category: 'Entertainment', lat: 36.75895980269552, lng: 31.419014699859424, dist: 2.84},
+        {id: 4006, name: 'Location 4006', category: 'Entertainment', lat: 36.75895980269552, lng: 31.419014699859424, dist: 2.84},
+        {id: 4007, name: 'Location 4007', category: 'Entertainment', lat: 36.75895980269552, lng: 31.419014699859424, dist: 2.84},
+        {id: 4008, name: 'Location 4008', category: 'Entertainment', lat: 36.75895980269552, lng: 31.419014699859424, dist: 2.84},
+        {id: 4009, name: 'Location 4009', category: 'Entertainment', lat: 36.75881797653912, lng: 31.418977148937348, dist: 2.84},
+        {id: 4010, name: 'Location 4010', category: 'Entertainment', lat: 36.75881797653912, lng: 31.418977148937348, dist: 2.84},
+        {id: 4011, name: 'Location 4011', category: 'Entertainment', lat: 36.75881797653912, lng: 31.418977148937348, dist: 2.84},
+        {id: 4012, name: 'Location 4012', category: 'Entertainment', lat: 36.75881797653912, lng: 31.418977148937348, dist: 2.84},
+        {id: 4013, name: 'Location 4013', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41862309738633, dist: 2.87},
+        {id: 4014, name: 'Location 4014', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41862309738633, dist: 2.87},
+        {id: 4015, name: 'Location 4015', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41862309738633, dist: 2.87},
+        {id: 4016, name: 'Location 4016', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41862309738633, dist: 2.87},
+        {id: 4017, name: 'Location 4017', category: 'Entertainment', lat: 36.75851713230893, lng: 31.41867137714329, dist: 2.87},
+        {id: 4018, name: 'Location 4018', category: 'Entertainment', lat: 36.75851713230893, lng: 31.41867137714329, dist: 2.87},
+        {id: 4019, name: 'Location 4019', category: 'Entertainment', lat: 36.75851713230893, lng: 31.41867137714329, dist: 2.87},
+        {id: 4020, name: 'Location 4020', category: 'Entertainment', lat: 36.75851713230893, lng: 31.41867137714329, dist: 2.87},
+        {id: 4021, name: 'Location 4021', category: 'Entertainment', lat: 36.758418283232885, lng: 31.418499715785217, dist: 2.88},
+        {id: 4022, name: 'Location 4022', category: 'Entertainment', lat: 36.758418283232885, lng: 31.418499715785217, dist: 2.88},
+        {id: 4023, name: 'Location 4023', category: 'Entertainment', lat: 36.758418283232885, lng: 31.418499715785217, dist: 2.88},
+        {id: 4024, name: 'Location 4024', category: 'Entertainment', lat: 36.758418283232885, lng: 31.418499715785217, dist: 2.88},
+        {id: 4025, name: 'Location 4025', category: 'Entertainment', lat: 36.7582936472598, lng: 31.418295867922517, dist: 2.9},
+        {id: 4026, name: 'Location 4026', category: 'Entertainment', lat: 36.7582936472598, lng: 31.418295867922517, dist: 2.9},
+        {id: 4027, name: 'Location 4027', category: 'Entertainment', lat: 36.7582936472598, lng: 31.418295867922517, dist: 2.9},
+        {id: 4028, name: 'Location 4028', category: 'Entertainment', lat: 36.7582936472598, lng: 31.418295867922517, dist: 2.9},
+        {id: 4029, name: 'Location 4029', category: 'Entertainment', lat: 36.7582936472598, lng: 31.417898901031982, dist: 2.94},
+        {id: 4030, name: 'Location 4030', category: 'Entertainment', lat: 36.7582936472598, lng: 31.417898901031982, dist: 2.94},
+        {id: 4031, name: 'Location 4031', category: 'Entertainment', lat: 36.7582936472598, lng: 31.417898901031982, dist: 2.94},
+        {id: 4032, name: 'Location 4032', category: 'Entertainment', lat: 36.7582936472598, lng: 31.417898901031982, dist: 2.94},
+        {id: 4033, name: 'Location 4033', category: 'Entertainment', lat: 36.75822488249828, lng: 31.418033011467976, dist: 2.92},
+        {id: 4034, name: 'Location 4034', category: 'Entertainment', lat: 36.75822488249828, lng: 31.418033011467976, dist: 2.92},
+        {id: 4035, name: 'Location 4035', category: 'Entertainment', lat: 36.75822488249828, lng: 31.418033011467976, dist: 2.92},
+        {id: 4036, name: 'Location 4036', category: 'Entertainment', lat: 36.75822488249828, lng: 31.418033011467976, dist: 2.92},
+        {id: 4037, name: 'Location 4037', category: 'Entertainment', lat: 36.75819479789574, lng: 31.418311961174833, dist: 2.9},
+        {id: 4038, name: 'Location 4038', category: 'Entertainment', lat: 36.75819479789574, lng: 31.418311961174833, dist: 2.9},
+        {id: 4039, name: 'Location 4039', category: 'Entertainment', lat: 36.75819479789574, lng: 31.418311961174833, dist: 2.9},
+        {id: 4040, name: 'Location 4040', category: 'Entertainment', lat: 36.75819479789574, lng: 31.418311961174833, dist: 2.9},
+        {id: 4041, name: 'Location 4041', category: 'Entertainment', lat: 36.757670464356586, lng: 31.418542631124733, dist: 2.87},
+        {id: 4042, name: 'Location 4042', category: 'Entertainment', lat: 36.757670464356586, lng: 31.418542631124733, dist: 2.87},
+        {id: 4043, name: 'Location 4043', category: 'Entertainment', lat: 36.757670464356586, lng: 31.418542631124733, dist: 2.87},
+        {id: 4044, name: 'Location 4044', category: 'Entertainment', lat: 36.757670464356586, lng: 31.418542631124733, dist: 2.87},
+        {id: 4045, name: 'Location 4045', category: 'Entertainment', lat: 36.758078757175426, lng: 31.418049104720293, dist: 2.92},
+        {id: 4046, name: 'Location 4046', category: 'Entertainment', lat: 36.758078757175426, lng: 31.418049104720293, dist: 2.92},
+        {id: 4047, name: 'Location 4047', category: 'Entertainment', lat: 36.758078757175426, lng: 31.418049104720293, dist: 2.92},
+        {id: 4048, name: 'Location 4048', category: 'Entertainment', lat: 36.758078757175426, lng: 31.418049104720293, dist: 2.92},
+        {id: 4049, name: 'Location 4049', category: 'Entertainment', lat: 36.757893951221384, lng: 31.41807056239005, dist: 2.92},
+        {id: 4050, name: 'Location 4050', category: 'Entertainment', lat: 36.757893951221384, lng: 31.41807056239005, dist: 2.92},
+        {id: 4051, name: 'Location 4051', category: 'Entertainment', lat: 36.757893951221384, lng: 31.41807056239005, dist: 2.92},
+        {id: 4052, name: 'Location 4052', category: 'Entertainment', lat: 36.757893951221384, lng: 31.41807056239005, dist: 2.92},
+        {id: 4053, name: 'Location 4053', category: 'Entertainment', lat: 36.757816590457246, lng: 31.41821003724348, dist: 2.91},
+        {id: 4054, name: 'Location 4054', category: 'Entertainment', lat: 36.757816590457246, lng: 31.41821003724348, dist: 2.91},
+        {id: 4055, name: 'Location 4055', category: 'Entertainment', lat: 36.757816590457246, lng: 31.41821003724348, dist: 2.91},
+        {id: 4056, name: 'Location 4056', category: 'Entertainment', lat: 36.757816590457246, lng: 31.41821003724348, dist: 2.91},
+        {id: 4057, name: 'Location 4057', category: 'Entertainment', lat: 36.75777361222123, lng: 31.418092020059806, dist: 2.92},
+        {id: 4058, name: 'Location 4058', category: 'Entertainment', lat: 36.75777361222123, lng: 31.418092020059806, dist: 2.92},
+        {id: 4059, name: 'Location 4059', category: 'Entertainment', lat: 36.75777361222123, lng: 31.418092020059806, dist: 2.92},
+        {id: 4060, name: 'Location 4060', category: 'Entertainment', lat: 36.75777361222123, lng: 31.418092020059806, dist: 2.92},
+        {id: 4061, name: 'Location 4061', category: 'Entertainment', lat: 36.75768765567699, lng: 31.418134935399323, dist: 2.91},
+        {id: 4062, name: 'Location 4062', category: 'Entertainment', lat: 36.75768765567699, lng: 31.418134935399323, dist: 2.91},
+        {id: 4063, name: 'Location 4063', category: 'Entertainment', lat: 36.75768765567699, lng: 31.418134935399323, dist: 2.91},
+        {id: 4064, name: 'Location 4064', category: 'Entertainment', lat: 36.75768765567699, lng: 31.418134935399323, dist: 2.91},
+        {id: 4065, name: 'Location 4065', category: 'Entertainment', lat: 36.757485657418854, lng: 31.417882807779666, dist: 2.93},
+        {id: 4066, name: 'Location 4066', category: 'Entertainment', lat: 36.757485657418854, lng: 31.417882807779666, dist: 2.93},
+        {id: 4067, name: 'Location 4067', category: 'Entertainment', lat: 36.757485657418854, lng: 31.417882807779666, dist: 2.93},
+        {id: 4068, name: 'Location 4068', category: 'Entertainment', lat: 36.757485657418854, lng: 31.417882807779666, dist: 2.93},
+        {id: 4069, name: 'Location 4069', category: 'Entertainment', lat: 36.757425487622115, lng: 31.418054469137733, dist: 2.92},
+        {id: 4070, name: 'Location 4070', category: 'Entertainment', lat: 36.757425487622115, lng: 31.418054469137733, dist: 2.92},
+        {id: 4071, name: 'Location 4071', category: 'Entertainment', lat: 36.757425487622115, lng: 31.418054469137733, dist: 2.92},
+        {id: 4072, name: 'Location 4072', category: 'Entertainment', lat: 36.757425487622115, lng: 31.418054469137733, dist: 2.92},
+        {id: 4101, name: 'Location 4101', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41836024093179, dist: 2.89},
+        {id: 4102, name: 'Location 4102', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41836024093179, dist: 2.89},
+        {id: 4103, name: 'Location 4103', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41836024093179, dist: 2.89},
+        {id: 4104, name: 'Location 4104', category: 'Entertainment', lat: 36.75794552502077, lng: 31.41836024093179, dist: 2.89},
+        {id: 4105, name: 'Location 4105', category: 'Entertainment', lat: 36.75769625133575, lng: 31.41795790962382, dist: 2.93},
+        {id: 4106, name: 'Location 4106', category: 'Entertainment', lat: 36.75769625133575, lng: 31.41795790962382, dist: 2.93},
+        {id: 4107, name: 'Location 4107', category: 'Entertainment', lat: 36.75769625133575, lng: 31.41795790962382, dist: 2.93},
+        {id: 4108, name: 'Location 4108', category: 'Entertainment', lat: 36.75769625133575, lng: 31.41795790962382, dist: 2.93},
+        // Nature locations (6001-6032, 6101-6115, 6201-6215, 6301-6305)
+        {id: 6001, name: 'Location 6001', category: 'Nature', lat: 36.75815181987165, lng: 31.419634290073684, dist: 2.78},
+        {id: 6002, name: 'Location 6002', category: 'Nature', lat: 36.75815181987165, lng: 31.419634290073684, dist: 2.78},
+        {id: 6003, name: 'Location 6003', category: 'Nature', lat: 36.75815181987165, lng: 31.419634290073684, dist: 2.78},
+        {id: 6004, name: 'Location 6004', category: 'Nature', lat: 36.75815181987165, lng: 31.419634290073684, dist: 2.78},
+        {id: 6005, name: 'Location 6005', category: 'Nature', lat: 36.75815181987165, lng: 31.419355340366824, dist: 2.8},
+        {id: 6006, name: 'Location 6006', category: 'Nature', lat: 36.75815181987165, lng: 31.419355340366824, dist: 2.8},
+        {id: 6007, name: 'Location 6007', category: 'Nature', lat: 36.75815181987165, lng: 31.419355340366824, dist: 2.8},
+        {id: 6008, name: 'Location 6008', category: 'Nature', lat: 36.75815181987165, lng: 31.419355340366824, dist: 2.8},
+        {id: 6009, name: 'Location 6009', category: 'Nature', lat: 36.75772203830625, lng: 31.419462628715614, dist: 2.79},
+        {id: 6010, name: 'Location 6010', category: 'Nature', lat: 36.75772203830625, lng: 31.419462628715614, dist: 2.79},
+        {id: 6011, name: 'Location 6011', category: 'Nature', lat: 36.75772203830625, lng: 31.419462628715614, dist: 2.79},
+        {id: 6012, name: 'Location 6012', category: 'Nature', lat: 36.75772203830625, lng: 31.419462628715614, dist: 2.79},
+        {id: 6013, name: 'Location 6013', category: 'Nature', lat: 36.75782518610156, lng: 31.41972012075272, dist: 2.77},
+        {id: 6014, name: 'Location 6014', category: 'Nature', lat: 36.75782518610156, lng: 31.41972012075272, dist: 2.77},
+        {id: 6015, name: 'Location 6015', category: 'Nature', lat: 36.75782518610156, lng: 31.41972012075272, dist: 2.77},
+        {id: 6016, name: 'Location 6016', category: 'Nature', lat: 36.75782518610156, lng: 31.41972012075272, dist: 2.77},
+        {id: 6017, name: 'Location 6017', category: 'Nature', lat: 36.75764467736874, lng: 31.419709391917838, dist: 2.77},
+        {id: 6018, name: 'Location 6018', category: 'Nature', lat: 36.75764467736874, lng: 31.419709391917838, dist: 2.77},
+        {id: 6019, name: 'Location 6019', category: 'Nature', lat: 36.75764467736874, lng: 31.419709391917838, dist: 2.77},
+        {id: 6020, name: 'Location 6020', category: 'Nature', lat: 36.75764467736874, lng: 31.419709391917838, dist: 2.77},
+        {id: 6021, name: 'Location 6021', category: 'Nature', lat: 36.75758450769675, lng: 31.41992396861542, dist: 2.75},
+        {id: 6022, name: 'Location 6022', category: 'Nature', lat: 36.75758450769675, lng: 31.41992396861542, dist: 2.75},
+        {id: 6023, name: 'Location 6023', category: 'Nature', lat: 36.75758450769675, lng: 31.41992396861542, dist: 2.75},
+        {id: 6024, name: 'Location 6024', category: 'Nature', lat: 36.75758450769675, lng: 31.41992396861542, dist: 2.75},
+        {id: 6025, name: 'Location 6025', category: 'Nature', lat: 36.75758450769675, lng: 31.41992396861542, dist: 2.75},
+        {id: 6026, name: 'Location 6026', category: 'Nature', lat: 36.75758450769675, lng: 31.41992396861542, dist: 2.75},
+        {id: 6027, name: 'Location 6027', category: 'Nature', lat: 36.75775642092009, lng: 31.420041985799095, dist: 2.74},
+        {id: 6028, name: 'Location 6028', category: 'Nature', lat: 36.75775642092009, lng: 31.420041985799095, dist: 2.74},
+        {id: 6029, name: 'Location 6029', category: 'Nature', lat: 36.75775642092009, lng: 31.420041985799095, dist: 2.74},
+        {id: 6030, name: 'Location 6030', category: 'Nature', lat: 36.75775642092009, lng: 31.420041985799095, dist: 2.74},
+        {id: 6031, name: 'Location 6031', category: 'Nature', lat: 36.75775642092009, lng: 31.420041985799095, dist: 2.74},
+        {id: 6032, name: 'Location 6032', category: 'Nature', lat: 36.75775642092009, lng: 31.420041985799095, dist: 2.74},
+        {id: 6101, name: 'Location 6101', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6102, name: 'Location 6102', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6103, name: 'Location 6103', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6104, name: 'Location 6104', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6105, name: 'Location 6105', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6106, name: 'Location 6106', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6107, name: 'Location 6107', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6108, name: 'Location 6108', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6109, name: 'Location 6109', category: 'Nature', lat: 36.757893951221384, lng: 31.419387526871464, dist: 2.8},
+        {id: 6110, name: 'Location 6110', category: 'Nature', lat: 36.757893951221384, lng: 31.419387526871464, dist: 2.8},
+        {id: 6111, name: 'Location 6111', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6112, name: 'Location 6112', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6113, name: 'Location 6113', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6114, name: 'Location 6114', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6115, name: 'Location 6115', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6201, name: 'Location 6201', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6202, name: 'Location 6202', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6203, name: 'Location 6203', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6204, name: 'Location 6204', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6205, name: 'Location 6205', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6206, name: 'Location 6206', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6207, name: 'Location 6207', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6208, name: 'Location 6208', category: 'Nature', lat: 36.75847845225084, lng: 31.419559188229528, dist: 2.79},
+        {id: 6209, name: 'Location 6209', category: 'Nature', lat: 36.757893951221384, lng: 31.419387526871464, dist: 2.8},
+        {id: 6210, name: 'Location 6210', category: 'Nature', lat: 36.757893951221384, lng: 31.419387526871464, dist: 2.8},
+        {id: 6211, name: 'Location 6211', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6212, name: 'Location 6212', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6213, name: 'Location 6213', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6214, name: 'Location 6214', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6215, name: 'Location 6215', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6301, name: 'Location 6301', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6302, name: 'Location 6302', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6303, name: 'Location 6303', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6304, name: 'Location 6304', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75},
+        {id: 6305, name: 'Location 6305', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75}
+      ];
+      
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const loc of locations) {
+          await client.query(`
+            INSERT INTO map_search_locations (id, name, category, latitude, longitude, distance_km, geom) 
+            VALUES ($1, $2, $3, $4, $5, $6, ST_SetSRID(ST_MakePoint($5, $4), 4326))
+            ON CONFLICT (id) DO UPDATE SET
+              name = EXCLUDED.name,
+              category = EXCLUDED.category,
+              latitude = EXCLUDED.latitude,
+              longitude = EXCLUDED.longitude,
+              distance_km = EXCLUDED.distance_km,
+              geom = EXCLUDED.geom
+          `, [loc.id, loc.name, loc.category, loc.lat, loc.lng, loc.dist]);
+        }
+        await client.query('COMMIT');
+        logDebug(`Inserted ${locations.length} map search locations`);
+      } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Failed to insert map search locations:', error);
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+
     // Check and add info_posts table
     const postsCheck = await pool.query(`
       SELECT EXISTS (
@@ -3513,6 +3725,30 @@ function parsePostMedia(post) {
 }
 
 // Get all info posts - Public
+// Map search endpoint - search locations by name
+app.get('/api/map/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length === 0) {
+      return res.json([]);
+    }
+    
+    const searchTerm = `%${q.trim().toLowerCase()}%`;
+    const result = await pool.query(`
+      SELECT id, name, category, latitude, longitude, distance_km
+      FROM map_search_locations
+      WHERE LOWER(name) LIKE $1
+      ORDER BY name
+      LIMIT 20
+    `, [searchTerm]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error searching map locations:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.get('/api/info-posts', async (req, res) => {
   try {
     const result = await pool.query(`
