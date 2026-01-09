@@ -6488,6 +6488,171 @@
         // Mapbox access token
         const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWxpbXVyc2l0IiwiYSI6ImNtazRnYTRjZjAwa2IzZXF2cWJnaW9ocDcifQ.EL6OVUXoR22l0vrNPzVyoQ';
 
+        // Flag to prevent repeated cinematic animation
+        let hasPlayedCinematicAnimation = false;
+
+        // Snapchat-style 3D view setup
+        function setup3DView() {
+            if (!map || !map.isStyleLoaded()) return;
+
+            // 1. Add 3D buildings (fill-extrusion)
+            try {
+                const style = map.getStyle();
+                let buildingSource = null;
+                let buildingSourceLayer = null;
+
+                // Check for building data in composite source
+                if (style.sources && style.sources.composite) {
+                    buildingSource = 'composite';
+                    buildingSourceLayer = 'building';
+                } else {
+                    // Try to find building source-layer in existing sources
+                    for (const [sourceId, source] of Object.entries(style.sources || {})) {
+                        if (source.type === 'vector' && source.url) {
+                            // Check layers for building references
+                            const buildingLayer = style.layers.find(layer => 
+                                layer.source === sourceId && 
+                                layer['source-layer'] && 
+                                layer['source-layer'].toLowerCase().includes('building')
+                            );
+                            if (buildingLayer) {
+                                buildingSource = sourceId;
+                                buildingSourceLayer = buildingLayer['source-layer'];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (buildingSource && buildingSourceLayer) {
+                    // Find insertion point (before first symbol layer or after waterway-label)
+                    let insertBeforeLayer = null;
+                    const layers = style.layers || [];
+                    
+                    for (let i = 0; i < layers.length; i++) {
+                        const layer = layers[i];
+                        if (layer.type === 'symbol') {
+                            insertBeforeLayer = layer.id;
+                            break;
+                        }
+                        if (layer.id && layer.id.includes('waterway-label')) {
+                            insertBeforeLayer = layers[i + 1]?.id || null;
+                            break;
+                        }
+                    }
+
+                    // Check if building layer already exists
+                    const existingBuildingLayer = map.getLayer('3d-buildings');
+                    if (!existingBuildingLayer) {
+                        map.addLayer({
+                            'id': '3d-buildings',
+                            'source': buildingSource,
+                            'source-layer': buildingSourceLayer,
+                            'type': 'fill-extrusion',
+                            'minzoom': 15,
+                            'paint': {
+                                'fill-extrusion-color': '#d0d0d0',
+                                'fill-extrusion-opacity': 0.9,
+                                'fill-extrusion-height': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ['zoom'],
+                                    15, 0,
+                                    15.5, ['get', 'height'] || 0,
+                                    16, ['*', ['get', 'height'] || 0, 1.1]
+                                ],
+                                'fill-extrusion-base': ['get', 'min_height'] || 0
+                            }
+                        }, insertBeforeLayer);
+
+                        console.log('✅ 3D buildings layer added');
+                    }
+                } else {
+                    console.warn('Selected style has no building layer/source-layer for 3D extrusions.');
+                }
+            } catch (error) {
+                console.warn('Could not add 3D buildings:', error);
+            }
+
+            // 2. Atmosphere / Light / Fog / Sky (v3 compatible)
+            try {
+                // Fog (if available in v3)
+                if (typeof map.setFog === 'function') {
+                    map.setFog({
+                        'range': [0.5, 8],
+                        'color': '#ffffff',
+                        'horizon-blend': 0.1,
+                        'high-color': '#245bde',
+                        'space-color': '#000000',
+                        'star-intensity': 0.15
+                    });
+                }
+            } catch (error) {
+                // Fog API not available, silently skip
+            }
+
+            try {
+                // Light (if available)
+                if (typeof map.setLight === 'function') {
+                    map.setLight({
+                        'anchor': 'viewport',
+                        'color': '#ffffff',
+                        'intensity': 0.8,
+                        'position': [1.15, 210, 30]
+                    });
+                }
+            } catch (error) {
+                // Light API not available, silently skip
+            }
+
+            try {
+                // Sky layer (if available)
+                if (typeof map.addLayer === 'function') {
+                    const style = map.getStyle();
+                    const hasSky = style.layers.some(layer => layer.id === 'sky');
+                    
+                    if (!hasSky && style.sources && style.sources.mapbox) {
+                        map.addLayer({
+                            'id': 'sky',
+                            'type': 'sky',
+                            'paint': {
+                                'sky-type': 'atmosphere',
+                                'sky-atmosphere-sun': [0.0, 0.0],
+                                'sky-atmosphere-sun-intensity': 15,
+                                'sky-atmosphere-color': '#ffd700',
+                                'sky-atmosphere-halo-color': '#ffffff',
+                                'sky-atmosphere-space-color': '#000000',
+                                'sky-atmosphere-star-intensity': 0.2
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                // Sky layer not available, silently skip
+            }
+
+            // 3. Cinematic camera animation (only once)
+            if (!hasPlayedCinematicAnimation) {
+                hasPlayedCinematicAnimation = true;
+                
+                // Wait a bit for map to stabilize
+                setTimeout(() => {
+                    map.easeTo({
+                        zoom: 15.5,
+                        pitch: 62,
+                        bearing: -20,
+                        duration: 1600,
+                        easing: (t) => {
+                            // Smooth easing function
+                            return t < 0.5 
+                                ? 2 * t * t 
+                                : -1 + (4 - 2 * t) * t;
+                        }
+                    });
+                }, 300);
+            }
+        }
+
         function initMap() {
             const mapContainer = document.getElementById('mapContainer');
             if (!mapContainer) return;
@@ -6553,7 +6718,16 @@
                     center: [hotelLng, hotelLat],
                     zoom: 15,
                     pitch: 0,
-                    bearing: 0
+                    bearing: 0,
+                    // Snapchat-style 3D camera settings
+                    antialias: true,
+                    cooperativeGestures: true,
+                    dragRotate: true,
+                    touchPitch: true,
+                    scrollZoom: {
+                        around: 'center',
+                        smooth: true
+                    }
                 });
 
                 // Add error handler
@@ -6576,6 +6750,9 @@
 
                 map.on('style.load', () => {
                     console.log('✅ Mapbox style loaded');
+                    
+                    // Snapchat-style 3D buildings and atmosphere
+                    setup3DView();
                 });
             } catch (error) {
                 console.error('Error initializing map:', error);
@@ -6585,6 +6762,11 @@
 
             // Wait for map to load
             map.on('load', () => {
+                // Initial cinematic animation (if style already loaded)
+                if (map.isStyleLoaded() && !hasPlayedCinematicAnimation) {
+                    setup3DView();
+                }
+                
                 // Add hotel marker
                 const hotelEl = document.createElement('div');
                 hotelEl.className = 'hotel-marker';
