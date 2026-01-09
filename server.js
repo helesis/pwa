@@ -3620,8 +3620,8 @@ app.post('/api/admin/info-posts', requireAssistant, async (req, res) => {
   }
 });
 
-// Update info post
-app.put('/api/admin/info-posts/:id', requireAssistant, async (req, res) => {
+// Update info post - No auth required (for media management)
+app.put('/api/admin/info-posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, icon, caption, display_order, is_active, image_url, video_url, location } = req.body;
