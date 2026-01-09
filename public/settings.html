@@ -1311,6 +1311,110 @@
         </div>
     </div>
 
+    <!-- Restaurant Modal -->
+    <div id="restaurant-modal" class="modal" onclick="if(event.target === this) closeRestaurantModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="restaurant-modal-title">Yeni Restoran</h3>
+                <button class="close-btn" onclick="closeRestaurantModal()">&times;</button>
+            </div>
+            <form id="restaurant-form" onsubmit="saveRestaurant(event)">
+                <div class="form-group">
+                    <label class="form-label">Restoran Adı *</label>
+                    <input type="text" id="restaurant-name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <textarea id="restaurant-description" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fotoğraflar</label>
+                    <div id="restaurant-photos-preview" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;"></div>
+                    <input type="file" id="restaurant-photos-input" accept="image/*" multiple onchange="handleRestaurantPhotosChange(event)">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('restaurant-photos-input').click()" style="margin-top: 10px;">
+                        Fotoğraf Ekle
+                    </button>
+                    <input type="hidden" id="restaurant-photos-data">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="restaurant-active" checked> Aktif
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kişi Başına Fiyat *</label>
+                    <input type="number" id="restaurant-price-per-person" class="form-input" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Para Birimi *</label>
+                    <select id="restaurant-currency" class="form-input" required>
+                        <option value="TRY">TRY (₺)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                    </select>
+                </div>
+                
+                <!-- Rules Section (Collapsible) -->
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary" onclick="toggleRestaurantRules()" style="width: 100%; margin-bottom: 10px;">
+                        <i data-lucide="settings" class="icon icon-md"></i> Kurallar ve Ayarlar
+                    </button>
+                    <div id="restaurant-rules-section" style="display: none; padding: 15px; background: var(--voyage-light-blue); border-radius: 8px;">
+                        <div class="form-group">
+                            <label class="form-label">Oda Başına Günlük Maksimum Rezervasyon</label>
+                            <input type="number" id="restaurant-max-per-room-per-day" class="form-input" min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Konaklama Başına Maksimum Rezervasyon (Opsiyonel)</label>
+                            <input type="number" id="restaurant-max-per-stay" class="form-input" min="1" placeholder="Sınırsız için boş bırakın">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Rezervasyon Kapanış Süresi (Dakika)</label>
+                            <input type="number" id="restaurant-cutoff-minutes" class="form-input" min="0" value="120">
+                            <small style="color: var(--text-light);">Seans başlangıcından kaç dakika önce rezervasyon kapanır</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">İptal Son Tarih (Dakika)</label>
+                            <input type="number" id="restaurant-cancellation-deadline-minutes" class="form-input" min="0" value="240">
+                            <small style="color: var(--text-light);">Seans başlangıcından kaç dakika önce iptal edilebilir</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Çocuk Fiyatlandırma Politikası</label>
+                            <select id="restaurant-child-pricing-policy" class="form-input">
+                                <option value="free_under_12">12 Yaş Altı Ücretsiz</option>
+                                <option value="half_price">Yarım Fiyat</option>
+                                <option value="full_price">Tam Fiyat</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="restaurant-allow-mix-table"> Masa Karıştırmaya İzin Ver
+                            </label>
+                            <small style="color: var(--text-light); display: block; margin-top: 5px;">Birden fazla masaya bölünmüş rezervasyonlara izin ver</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="restaurant-deposit-required"> Depozito Gerekli
+                            </label>
+                            <small style="color: var(--text-light); display: block; margin-top: 5px;">(Gelecek özellik)</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="restaurant-ask-table-preference"> Masa/Alan Tercihi Sor
+                            </label>
+                            <small style="color: var(--text-light); display: block; margin-top: 5px;">Rezervasyon yaparken misafirlere sigara/sigarasız alan tercihi sorulsun</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeRestaurantModal()">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let currentAssistantId = null;
         let currentTeamId = null;
@@ -4572,11 +4676,15 @@
                 const response = await fetch('/admin/restaurants');
                 const result = await response.json();
                 
-                if (!result.success) {
+                // Handle both {success: true, data: [...]} and direct array responses
+                let restaurants = [];
+                if (result.success && result.data) {
+                    restaurants = result.data;
+                } else if (Array.isArray(result)) {
+                    restaurants = result;
+                } else if (!result.success) {
                     throw new Error(result.error || 'Restoranlar yüklenemedi');
                 }
-
-                const restaurants = result.data || [];
                 const listEl = document.getElementById('restaurants-list');
                 
                 if (restaurants.length === 0) {
@@ -4636,11 +4744,15 @@
                 const response = await fetch('/admin/restaurants');
                 const result = await response.json();
                 
-                if (!result.success) {
+                // Handle both {success: true, data: [...]} and direct array responses
+                let restaurants = [];
+                if (result.success && result.data) {
+                    restaurants = result.data;
+                } else if (Array.isArray(result)) {
+                    restaurants = result;
+                } else if (!result.success) {
                     throw new Error(result.error || 'Restoranlar yüklenemedi');
                 }
-
-                const restaurants = result.data || [];
                 const selectEl = document.getElementById(selectId);
                 
                 selectEl.innerHTML = '<option value="">-- Restoran Seçin --</option>';
@@ -4798,10 +4910,280 @@
         }
 
         // Open restaurant modal
-        function openRestaurantModal(restaurantId = null) {
+        async function openRestaurantModal(restaurantId = null) {
             currentRestaurantId = restaurantId;
-            // TODO: Implement restaurant modal
-            alert('Restoran modal henüz implement edilmedi');
+            const modal = document.getElementById('restaurant-modal');
+            const title = document.getElementById('restaurant-modal-title');
+            const form = document.getElementById('restaurant-form');
+            
+            // Reset form
+            form.reset();
+            document.getElementById('restaurant-photos-preview').innerHTML = '';
+            document.getElementById('restaurant-photos-data').value = '';
+            document.getElementById('restaurant-active').checked = true;
+            document.getElementById('restaurant-rules-section').style.display = 'none';
+            
+            // Set default values
+            document.getElementById('restaurant-max-per-room-per-day').value = 1;
+            document.getElementById('restaurant-cutoff-minutes').value = 120;
+            document.getElementById('restaurant-cancellation-deadline-minutes').value = 240;
+            document.getElementById('restaurant-child-pricing-policy').value = 'free_under_12';
+            document.getElementById('restaurant-allow-mix-table').checked = false;
+            document.getElementById('restaurant-deposit-required').checked = false;
+            document.getElementById('restaurant-ask-table-preference').checked = false;
+            
+            if (restaurantId) {
+                title.textContent = 'Restoran Düzenle';
+                // Load restaurant data
+                try {
+                    const response = await fetch(`/admin/restaurants/${restaurantId}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.data) {
+                        const restaurant = result.data;
+                        document.getElementById('restaurant-name').value = restaurant.name || '';
+                        document.getElementById('restaurant-description').value = restaurant.description || '';
+                        document.getElementById('restaurant-active').checked = restaurant.active !== false;
+                        document.getElementById('restaurant-price-per-person').value = restaurant.price_per_person || '';
+                        document.getElementById('restaurant-currency').value = restaurant.currency || 'TRY';
+                        
+                        // Load photos
+                        if (restaurant.photos && Array.isArray(restaurant.photos) && restaurant.photos.length > 0) {
+                            displayRestaurantPhotos(restaurant.photos);
+                        }
+                        
+                        // Load rules
+                        if (restaurant.rules_json) {
+                            const rules = restaurant.rules_json;
+                            document.getElementById('restaurant-max-per-room-per-day').value = rules.max_reservation_per_room_per_day || 1;
+                            document.getElementById('restaurant-max-per-stay').value = rules.max_reservation_per_stay || '';
+                            document.getElementById('restaurant-cutoff-minutes').value = rules.cutoff_minutes || 120;
+                            document.getElementById('restaurant-cancellation-deadline-minutes').value = rules.cancellation_deadline_minutes || 240;
+                            document.getElementById('restaurant-child-pricing-policy').value = rules.child_pricing_policy || 'free_under_12';
+                            document.getElementById('restaurant-allow-mix-table').checked = rules.allow_mix_table || false;
+                            document.getElementById('restaurant-deposit-required').checked = rules.deposit_required || false;
+                            document.getElementById('restaurant-ask-table-preference').checked = rules.ask_table_preference || false;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading restaurant:', error);
+                    showAlert('Restoran yüklenirken hata oluştu', 'error');
+                }
+            } else {
+                title.textContent = 'Yeni Restoran';
+            }
+            
+            modal.classList.add('active');
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        // Close restaurant modal
+        function closeRestaurantModal() {
+            const modal = document.getElementById('restaurant-modal');
+            modal.classList.remove('active');
+            currentRestaurantId = null;
+        }
+
+        // Save restaurant
+        async function saveRestaurant(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('restaurant-name').value.trim();
+            const description = document.getElementById('restaurant-description').value.trim();
+            const active = document.getElementById('restaurant-active').checked;
+            const pricePerPerson = parseFloat(document.getElementById('restaurant-price-per-person').value);
+            const currency = document.getElementById('restaurant-currency').value;
+            
+            if (!name || !pricePerPerson || pricePerPerson < 0) {
+                showAlert('Lütfen tüm gerekli alanları doldurun', 'error');
+                return;
+            }
+            
+            // Get photos (stored as JSON array in hidden input)
+            const photosData = document.getElementById('restaurant-photos-data').value;
+            let photos = [];
+            if (photosData) {
+                try {
+                    photos = JSON.parse(photosData);
+                } catch (e) {
+                    console.error('Error parsing photos:', e);
+                }
+            }
+            
+            // Build rules JSON
+            const rules = {
+                max_reservation_per_room_per_day: parseInt(document.getElementById('restaurant-max-per-room-per-day').value) || 1,
+                max_reservation_per_stay: document.getElementById('restaurant-max-per-stay').value ? parseInt(document.getElementById('restaurant-max-per-stay').value) : null,
+                cutoff_minutes: parseInt(document.getElementById('restaurant-cutoff-minutes').value) || 120,
+                cancellation_deadline_minutes: parseInt(document.getElementById('restaurant-cancellation-deadline-minutes').value) || 240,
+                child_pricing_policy: document.getElementById('restaurant-child-pricing-policy').value || 'free_under_12',
+                allow_mix_table: document.getElementById('restaurant-allow-mix-table').checked || false,
+                deposit_required: document.getElementById('restaurant-deposit-required').checked || false,
+                ask_table_preference: document.getElementById('restaurant-ask-table-preference').checked || false
+            };
+            
+            const restaurantData = {
+                name,
+                description: description || null,
+                photos,
+                active,
+                price_per_person: pricePerPerson,
+                currency,
+                rules_json: rules
+            };
+            
+            try {
+                let response;
+                if (currentRestaurantId) {
+                    // Update
+                    response = await fetch(`/admin/restaurants/${currentRestaurantId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(restaurantData)
+                    });
+                } else {
+                    // Create
+                    response = await fetch('/admin/restaurants', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(restaurantData)
+                    });
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(currentRestaurantId ? 'Restoran güncellendi' : 'Restoran oluşturuldu', 'success');
+                    closeRestaurantModal();
+                    loadRestaurants();
+                } else {
+                    showAlert(result.error || 'Restoran kaydedilemedi', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving restaurant:', error);
+                showAlert('Restoran kaydedilirken hata oluştu', 'error');
+            }
+        }
+
+        // Handle restaurant photos change
+        function handleRestaurantPhotosChange(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            
+            const photos = [];
+            const previewEl = document.getElementById('restaurant-photos-preview');
+            
+            Array.from(files).forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const photoData = e.target.result;
+                        photos.push(photoData);
+                        
+                        // Display preview
+                        const photoDiv = document.createElement('div');
+                        photoDiv.style.position = 'relative';
+                        photoDiv.style.width = '100px';
+                        photoDiv.style.height = '100px';
+                        photoDiv.style.borderRadius = '8px';
+                        photoDiv.style.overflow = 'hidden';
+                        photoDiv.style.border = '2px solid var(--border)';
+                        
+                        const img = document.createElement('img');
+                        img.src = photoData;
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.textContent = '×';
+                        removeBtn.style.position = 'absolute';
+                        removeBtn.style.top = '5px';
+                        removeBtn.style.right = '5px';
+                        removeBtn.style.background = 'var(--danger)';
+                        removeBtn.style.color = 'white';
+                        removeBtn.style.border = 'none';
+                        removeBtn.style.borderRadius = '50%';
+                        removeBtn.style.width = '24px';
+                        removeBtn.style.height = '24px';
+                        removeBtn.style.cursor = 'pointer';
+                        removeBtn.onclick = () => {
+                            photos.splice(photos.indexOf(photoData), 1);
+                            photoDiv.remove();
+                            updateRestaurantPhotosData();
+                        };
+                        
+                        photoDiv.appendChild(img);
+                        photoDiv.appendChild(removeBtn);
+                        previewEl.appendChild(photoDiv);
+                        
+                        updateRestaurantPhotosData();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Display existing restaurant photos
+        function displayRestaurantPhotos(photos) {
+            const previewEl = document.getElementById('restaurant-photos-preview');
+            previewEl.innerHTML = '';
+            
+            photos.forEach((photoUrl, index) => {
+                const photoDiv = document.createElement('div');
+                photoDiv.style.position = 'relative';
+                photoDiv.style.width = '100px';
+                photoDiv.style.height = '100px';
+                photoDiv.style.borderRadius = '8px';
+                photoDiv.style.overflow = 'hidden';
+                photoDiv.style.border = '2px solid var(--border)';
+                
+                const img = document.createElement('img');
+                img.src = photoUrl;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '×';
+                removeBtn.style.position = 'absolute';
+                removeBtn.style.top = '5px';
+                removeBtn.style.right = '5px';
+                removeBtn.style.background = 'var(--danger)';
+                removeBtn.style.color = 'white';
+                removeBtn.style.border = 'none';
+                removeBtn.style.borderRadius = '50%';
+                removeBtn.style.width = '24px';
+                removeBtn.style.height = '24px';
+                removeBtn.style.cursor = 'pointer';
+                removeBtn.onclick = () => {
+                    photos.splice(index, 1);
+                    photoDiv.remove();
+                    updateRestaurantPhotosData();
+                };
+                
+                photoDiv.appendChild(img);
+                photoDiv.appendChild(removeBtn);
+                previewEl.appendChild(photoDiv);
+            });
+            
+            document.getElementById('restaurant-photos-data').value = JSON.stringify(photos);
+        }
+
+        // Update restaurant photos data
+        function updateRestaurantPhotosData() {
+            const previewEl = document.getElementById('restaurant-photos-preview');
+            const photos = [];
+            previewEl.querySelectorAll('img').forEach(img => {
+                photos.push(img.src);
+            });
+            document.getElementById('restaurant-photos-data').value = JSON.stringify(photos);
+        }
+
+        // Toggle restaurant rules section
+        function toggleRestaurantRules() {
+            const section = document.getElementById('restaurant-rules-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
         }
 
         // Edit restaurant
@@ -4816,10 +5198,17 @@
             }
 
             try {
-                // TODO: Implement API endpoint
-                // const response = await fetch(`/admin/restaurants/${restaurantId}`, { method: 'DELETE' });
-                showAlert('Restoran silme API endpoint henüz implement edilmedi', 'warning');
-                // loadRestaurants();
+                const response = await fetch(`/admin/restaurants/${restaurantId}`, { 
+                    method: 'DELETE' 
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Restoran silindi', 'success');
+                    loadRestaurants();
+                } else {
+                    showAlert(result.error || 'Restoran silinemedi', 'error');
+                }
             } catch (error) {
                 console.error('Error deleting restaurant:', error);
                 showAlert('Restoran silinirken hata oluştu', 'error');

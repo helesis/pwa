@@ -9202,7 +9202,199 @@
                 console.log('✅ Gallery input listener attached');
             }
         });
+        // ============================================
+        // RESTAURANT RESERVATION FUNCTIONS
+        // ============================================
+
+        // Open restaurant reservation modal
+        async function openRestaurantReservationModal(restaurantId, sessionInstanceId, restaurantData = null) {
+            const modal = document.getElementById('restaurantReservationModal');
+            const form = document.getElementById('restaurantReservationForm');
+            
+            // Set restaurant and session IDs
+            document.getElementById('reservation-restaurant-id').value = restaurantId;
+            document.getElementById('reservation-session-instance-id').value = sessionInstanceId;
+            
+            // Reset form
+            form.reset();
+            document.getElementById('reservation-pax-adult').value = 1;
+            document.getElementById('reservation-pax-child').value = 0;
+            document.getElementById('reservation-special-requests').value = '';
+            
+            // Load restaurant data if not provided
+            let restaurant = restaurantData;
+            if (!restaurant) {
+                try {
+                    const response = await fetch(`/restaurants/${restaurantId}`);
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        restaurant = result.data;
+                    }
+                } catch (error) {
+                    console.error('Error loading restaurant:', error);
+                }
+            }
+            
+            // Check if restaurant asks for table preference
+            const tablePreferenceSection = document.getElementById('reservation-table-preference-section');
+            if (restaurant && restaurant.rules_json && restaurant.rules_json.ask_table_preference) {
+                tablePreferenceSection.style.display = 'block';
+                // Reset radio buttons
+                document.getElementById('reservation-preference-smoking').checked = false;
+                document.getElementById('reservation-preference-non-smoking').checked = false;
+                // Reset visual styles
+                const smokingLabel = document.getElementById('reservation-preference-smoking-label');
+                const nonSmokingLabel = document.getElementById('reservation-preference-non-smoking-label');
+                smokingLabel.style.border = '2px solid #dee2e6';
+                smokingLabel.style.background = 'white';
+                nonSmokingLabel.style.border = '2px solid #dee2e6';
+                nonSmokingLabel.style.background = 'white';
+            } else {
+                tablePreferenceSection.style.display = 'none';
+            }
+            
+            // Set modal title
+            const titleEl = document.getElementById('restaurantReservationModalTitle');
+            if (restaurant) {
+                titleEl.textContent = `${restaurant.name} - Rezervasyon`;
+            }
+            
+            // Show modal
+            modal.style.display = 'flex';
+        }
+
+        // Select table preference (visual feedback)
+        function selectTablePreference(preference) {
+            const smokingLabel = document.getElementById('reservation-preference-smoking-label');
+            const nonSmokingLabel = document.getElementById('reservation-preference-non-smoking-label');
+            const smokingRadio = document.getElementById('reservation-preference-smoking');
+            const nonSmokingRadio = document.getElementById('reservation-preference-non-smoking');
+            
+            // Reset styles
+            smokingLabel.style.border = '2px solid #dee2e6';
+            smokingLabel.style.background = 'white';
+            nonSmokingLabel.style.border = '2px solid #dee2e6';
+            nonSmokingLabel.style.background = 'white';
+            
+            // Apply selected style
+            if (preference === 'smoking') {
+                smokingRadio.checked = true;
+                smokingLabel.style.border = '2px solid #1A4D6D';
+                smokingLabel.style.background = '#E8F1F5';
+            } else {
+                nonSmokingRadio.checked = true;
+                nonSmokingLabel.style.border = '2px solid #1A4D6D';
+                nonSmokingLabel.style.background = '#E8F1F5';
+            }
+        }
+
+        // Close restaurant reservation modal
+        function closeRestaurantReservationModal() {
+            const modal = document.getElementById('restaurantReservationModal');
+            modal.style.display = 'none';
+        }
+
+        // Submit restaurant reservation
+        async function submitRestaurantReservation(event) {
+            event.preventDefault();
+            
+            const restaurantId = document.getElementById('reservation-restaurant-id').value;
+            const sessionInstanceId = document.getElementById('reservation-session-instance-id').value;
+            const paxAdult = parseInt(document.getElementById('reservation-pax-adult').value);
+            const paxChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
+            const specialRequests = document.getElementById('reservation-special-requests').value.trim();
+            
+            // Get table preference if available
+            const tablePreference = document.querySelector('input[name="table-preference"]:checked');
+            const tablePreferenceValue = tablePreference ? tablePreference.value : null;
+            
+            if (!restaurantId || !sessionInstanceId || !paxAdult || paxAdult < 1) {
+                alert('Lütfen tüm gerekli alanları doldurun');
+                return;
+            }
+            
+            const reservationData = {
+                restaurant_id: parseInt(restaurantId),
+                session_instance_id: parseInt(sessionInstanceId),
+                pax_adult: paxAdult,
+                pax_child: paxChild,
+                special_requests: specialRequests || null,
+                table_preference: tablePreferenceValue // Add table preference to reservation data
+            };
+            
+            try {
+                const response = await fetch('/reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reservationData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Rezervasyonunuz başarıyla oluşturuldu!');
+                    closeRestaurantReservationModal();
+                    // Reload reservations if function exists
+                    if (typeof loadRestaurantReservations === 'function') {
+                        loadRestaurantReservations();
+                    }
+                } else {
+                    alert(result.error || 'Rezervasyon oluşturulamadı');
+                }
+            } catch (error) {
+                console.error('Error creating reservation:', error);
+                alert('Rezervasyon oluşturulurken hata oluştu');
+            }
+        }
+
     </script>
+    <div id="restaurantReservationModal" class="modal" onclick="if(event.target === this) closeRestaurantReservationModal()" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #E8F1F5;">
+                <h3 style="font-size: 20px; font-weight: 600; color: #1A4D6D; margin: 0;" id="restaurantReservationModalTitle">Restoran Rezervasyonu</h3>
+                <button onclick="closeRestaurantReservationModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6C757D; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <form id="restaurantReservationForm" onsubmit="submitRestaurantReservation(event)">
+                <input type="hidden" id="reservation-restaurant-id">
+                <input type="hidden" id="reservation-session-instance-id">
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Yetişkin Sayısı *</label>
+                    <input type="number" id="reservation-pax-adult" class="form-input" min="1" value="1" required style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 16px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Çocuk Sayısı</label>
+                    <input type="number" id="reservation-pax-child" class="form-input" min="0" value="0" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 16px;">
+                </div>
+                
+                <!-- Masa/Alan Tercihi (Conditional) -->
+                <div id="reservation-table-preference-section" style="margin-bottom: 15px; display: none;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Masa/Alan Tercihi <span style="color: #6C757D; font-weight: 400;">(Opsiyonel)</span></label>
+                    <div style="display: flex; gap: 10px;">
+                        <label style="flex: 1; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white;" id="reservation-preference-smoking-label" onclick="selectTablePreference('smoking')">
+                            <input type="radio" name="table-preference" value="smoking" id="reservation-preference-smoking" style="display: none;">
+                            <span style="font-size: 14px; color: #2C3E50; font-weight: 500;">🚬 Sigara</span>
+                        </label>
+                        <label style="flex: 1; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white;" id="reservation-preference-non-smoking-label" onclick="selectTablePreference('non-smoking')">
+                            <input type="radio" name="table-preference" value="non-smoking" id="reservation-preference-non-smoking" style="display: none;">
+                            <span style="font-size: 14px; color: #2C3E50; font-weight: 500;">🚭 Sigarasız</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Özel İstekler (Opsiyonel)</label>
+                    <textarea id="reservation-special-requests" rows="3" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 24px;">
+                    <button type="button" onclick="closeRestaurantReservationModal()" style="flex: 1; padding: 12px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">İptal</button>
+                    <button type="submit" style="flex: 1; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Rezervasyon Yap</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Story Viewer Modal -->
     <div id="storyViewerModal" class="story-viewer-modal">
