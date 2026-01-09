@@ -45,7 +45,8 @@ app.use(cors({
   credentials: true
 }));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase limit for restaurant photos
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = join(__dirname, 'public', 'uploads');

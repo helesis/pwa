@@ -1328,12 +1328,15 @@
                     <textarea id="restaurant-description" class="form-input" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Fotoğraflar</label>
+                    <label class="form-label">Fotoğraflar (URL'ler)</label>
                     <div id="restaurant-photos-preview" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;"></div>
-                    <input type="file" id="restaurant-photos-input" accept="image/*" multiple onchange="handleRestaurantPhotosChange(event)">
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('restaurant-photos-input').click()" style="margin-top: 10px;">
-                        Fotoğraf Ekle
-                    </button>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" id="restaurant-photo-url-input" class="form-input" placeholder="Fotoğraf URL'si (örn: /uploads/photo.jpg)" style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="addRestaurantPhotoUrl()">URL Ekle</button>
+                    </div>
+                    <small style="color: var(--text-light); display: block; margin-top: 5px;">
+                        Fotoğraf URL'lerini ekleyin (örn: /uploads/photo.jpg veya https://example.com/photo.jpg)
+                    </small>
                     <input type="hidden" id="restaurant-photos-data">
                 </div>
                 <div class="form-group">
@@ -5181,26 +5184,26 @@
             }
             
             // Get photos (stored as JSON array in hidden input)
-            // Limit photo size to prevent 413 errors - only keep URLs, not base64
+            // Filter out base64 images to prevent 413 errors - only keep URLs
             const photosData = document.getElementById('restaurant-photos-data').value;
             let photos = [];
             if (photosData) {
                 try {
                     const parsedPhotos = JSON.parse(photosData);
-                    // Filter out base64 images that are too large (keep only URLs)
+                    // Filter out base64 data URLs - only keep regular URLs
                     photos = parsedPhotos.filter(photo => {
-                        // If it's a base64 data URL and too large, skip it
-                        if (photo.startsWith('data:image/')) {
-                            // Base64 images can be very large, limit to 500KB
-                            const base64Length = photo.length;
-                            const sizeInKB = (base64Length * 3) / 4 / 1024;
-                            if (sizeInKB > 500) {
-                                showAlert('Bazı fotoğraflar çok büyük ve atlandı. Lütfen daha küçük fotoğraflar kullanın.', 'warning');
-                                return false;
-                            }
+                        // Skip base64 data URLs (they're too large for JSON payload)
+                        if (photo && photo.startsWith('data:image/')) {
+                            console.warn('Base64 photo skipped (too large for API). Please use file upload instead.');
+                            return false;
                         }
-                        return true;
+                        // Keep regular URLs
+                        return photo && (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('/'));
                     });
+                    
+                    if (parsedPhotos.length > photos.length) {
+                        showAlert(`${parsedPhotos.length - photos.length} fotoğraf atlandı (base64 formatı çok büyük). Lütfen fotoğrafları URL olarak ekleyin veya dosya yükleme özelliğini kullanın.`, 'warning');
+                    }
                 } catch (e) {
                     console.error('Error parsing photos:', e);
                 }
@@ -5303,80 +5306,65 @@
             }
         }
 
-        // Handle restaurant photos change
-        function handleRestaurantPhotosChange(event) {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
+        // Add restaurant photo URL
+        function addRestaurantPhotoUrl() {
+            const urlInput = document.getElementById('restaurant-photo-url-input');
+            const url = urlInput.value.trim();
             
-            const photos = [];
+            if (!url) {
+                showAlert('Lütfen bir URL girin', 'warning');
+                return;
+            }
+            
+            // Validate URL format
+            if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+                showAlert('Geçerli bir URL girin (http://, https:// veya / ile başlamalı)', 'warning');
+                return;
+            }
+            
             const previewEl = document.getElementById('restaurant-photos-preview');
-            const maxSizeKB = 500; // Max 500KB per photo
+            const photoDiv = document.createElement('div');
+            photoDiv.style.position = 'relative';
+            photoDiv.style.width = '100px';
+            photoDiv.style.height = '100px';
+            photoDiv.style.borderRadius = '8px';
+            photoDiv.style.overflow = 'hidden';
+            photoDiv.style.border = '2px solid var(--border)';
             
-            Array.from(files).forEach((file, index) => {
-                if (file.type.startsWith('image/')) {
-                    // Check file size before reading
-                    const fileSizeKB = file.size / 1024;
-                    if (fileSizeKB > maxSizeKB) {
-                        showAlert(`Fotoğraf "${file.name}" çok büyük (${Math.round(fileSizeKB)}KB). Maksimum ${maxSizeKB}KB olmalı.`, 'warning');
-                        return;
-                    }
-                    
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const photoData = e.target.result;
-                        
-                        // Double check base64 size
-                        const base64Length = photoData.length;
-                        const sizeInKB = (base64Length * 3) / 4 / 1024;
-                        if (sizeInKB > maxSizeKB) {
-                            showAlert(`Fotoğraf "${file.name}" işlendikten sonra çok büyük oldu. Lütfen daha küçük bir fotoğraf seçin.`, 'warning');
-                            return;
-                        }
-                        
-                        photos.push(photoData);
-                        
-                        // Display preview
-                        const photoDiv = document.createElement('div');
-                        photoDiv.style.position = 'relative';
-                        photoDiv.style.width = '100px';
-                        photoDiv.style.height = '100px';
-                        photoDiv.style.borderRadius = '8px';
-                        photoDiv.style.overflow = 'hidden';
-                        photoDiv.style.border = '2px solid var(--border)';
-                        
-                        const img = document.createElement('img');
-                        img.src = photoData;
-                        img.style.width = '100%';
-                        img.style.height = '100%';
-                        img.style.objectFit = 'cover';
-                        
-                        const removeBtn = document.createElement('button');
-                        removeBtn.textContent = '×';
-                        removeBtn.style.position = 'absolute';
-                        removeBtn.style.top = '5px';
-                        removeBtn.style.right = '5px';
-                        removeBtn.style.background = 'var(--danger)';
-                        removeBtn.style.color = 'white';
-                        removeBtn.style.border = 'none';
-                        removeBtn.style.borderRadius = '50%';
-                        removeBtn.style.width = '24px';
-                        removeBtn.style.height = '24px';
-                        removeBtn.style.cursor = 'pointer';
-                        removeBtn.onclick = () => {
-                            photos.splice(photos.indexOf(photoData), 1);
-                            photoDiv.remove();
-                            updateRestaurantPhotosData();
-                        };
-                        
-                        photoDiv.appendChild(img);
-                        photoDiv.appendChild(removeBtn);
-                        previewEl.appendChild(photoDiv);
-                        
-                        updateRestaurantPhotosData();
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.onerror = () => {
+                showAlert('Fotoğraf yüklenemedi. URL\'yi kontrol edin.', 'warning');
+                photoDiv.remove();
+                updateRestaurantPhotosData();
+            };
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '×';
+            removeBtn.style.position = 'absolute';
+            removeBtn.style.top = '5px';
+            removeBtn.style.right = '5px';
+            removeBtn.style.background = 'var(--danger)';
+            removeBtn.style.color = 'white';
+            removeBtn.style.border = 'none';
+            removeBtn.style.borderRadius = '50%';
+            removeBtn.style.width = '24px';
+            removeBtn.style.height = '24px';
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.onclick = () => {
+                photoDiv.remove();
+                updateRestaurantPhotosData();
+            };
+            
+            photoDiv.appendChild(img);
+            photoDiv.appendChild(removeBtn);
+            previewEl.appendChild(photoDiv);
+            
+            urlInput.value = '';
+            updateRestaurantPhotosData();
         }
 
         // Display existing restaurant photos
@@ -5384,7 +5372,10 @@
             const previewEl = document.getElementById('restaurant-photos-preview');
             previewEl.innerHTML = '';
             
-            photos.forEach((photoUrl, index) => {
+            // Filter out base64 data URLs
+            const validPhotos = photos.filter(photo => photo && !photo.startsWith('data:image/'));
+            
+            validPhotos.forEach((photoUrl, index) => {
                 const photoDiv = document.createElement('div');
                 photoDiv.style.position = 'relative';
                 photoDiv.style.width = '100px';
@@ -5422,7 +5413,8 @@
                 previewEl.appendChild(photoDiv);
             });
             
-            document.getElementById('restaurant-photos-data').value = JSON.stringify(photos);
+            // Save only valid photos (URLs, not base64)
+            document.getElementById('restaurant-photos-data').value = JSON.stringify(validPhotos);
         }
 
         // Update restaurant photos data
@@ -5430,7 +5422,11 @@
             const previewEl = document.getElementById('restaurant-photos-preview');
             const photos = [];
             previewEl.querySelectorAll('img').forEach(img => {
-                photos.push(img.src);
+                // Only keep URLs, filter out base64 data URLs
+                const src = img.src;
+                if (src && !src.startsWith('data:image/')) {
+                    photos.push(src);
+                }
             });
             document.getElementById('restaurant-photos-data').value = JSON.stringify(photos);
         }
