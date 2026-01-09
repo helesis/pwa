@@ -5490,8 +5490,8 @@
             const imageUrls = Array.isArray(activity.image_url) ? activity.image_url : (activity.image_url ? [activity.image_url] : []);
             const videoUrls = Array.isArray(activity.video_url) ? activity.video_url : (activity.video_url ? [activity.video_url] : []);
             const allMedia = [
-                ...imageUrls.map(url => ({ type: 'image', url })),
-                ...videoUrls.map(url => ({ type: 'video', url }))
+                ...imageUrls.map(url => ({ type: 'image', url: toAbsoluteUrl(url) })),
+                ...videoUrls.map(url => ({ type: 'video', url: toAbsoluteUrl(url) }))
             ];
             
             if (allMedia.length === 0) {
@@ -5651,11 +5651,11 @@
                     storyEl.innerHTML = `
                         <div class="story-avatar">
                             ${hasVideo ? 
-                                `<video class="story-video active" muted loop autoplay playsinline><source src="${firstVideo}" type="video/mp4"></video>` : 
+                                `<video class="story-video active" muted loop autoplay playsinline><source src="${toAbsoluteUrl(firstVideo)}" type="video/mp4"></video>` : 
                                 ''
                             }
                             ${hasImage && !hasVideo ? 
-                                `<img src="${firstImage}" alt="${activity.title || ''}" onload="this.style.display='block'; this.parentElement.querySelector('.story-avatar-placeholder').style.display='none';" onerror="this.style.display='none';">` :
+                                `<img src="${toAbsoluteUrl(firstImage)}" alt="${activity.title || ''}" onload="this.style.display='block'; this.parentElement.querySelector('.story-avatar-placeholder').style.display='none';" onerror="this.style.display='none';">` :
                                 ''
                             }
                             <div class="story-avatar-placeholder" style="${hasVideo || hasImage ? 'display: none;' : ''}">
@@ -5693,6 +5693,22 @@
             } catch (error) {
                 console.error('Error loading activity stories:', error);
             }
+        }
+
+        // Helper function to convert relative URLs to absolute URLs
+        function toAbsoluteUrl(url) {
+            if (!url) return url;
+            url = url.trim();
+            // If already absolute URL (starts with http:// or https://), return as is
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            // If relative URL (starts with /), convert to absolute
+            if (url.startsWith('/')) {
+                return window.location.origin + url;
+            }
+            // Otherwise return as is
+            return url;
         }
 
         async function loadInfoPosts() {
@@ -5803,8 +5819,8 @@
                                 }
                                 
                                 const allMedia = [
-                                    ...imageUrls.map(url => ({ type: 'image', url: url.trim() })),
-                                    ...videoUrls.map(url => ({ type: 'video', url: url.trim() }))
+                                    ...imageUrls.map(url => ({ type: 'image', url: toAbsoluteUrl(url) })),
+                                    ...videoUrls.map(url => ({ type: 'video', url: toAbsoluteUrl(url) }))
                                 ].filter(media => media.url);
                                 
                                 if (allMedia.length === 0) {
