@@ -1152,6 +1152,110 @@ async function addNewTablesIfNeeded() {
       logDebug('Created restaurants table');
     }
 
+    // Check and create SPA services table if it doesn't exist
+    const spaServicesCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'spa_services'
+      );
+    `);
+
+    if (!spaServicesCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE spa_services (
+          id VARCHAR(50) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          duration_min INTEGER NOT NULL,
+          price DECIMAL(10, 2) NOT NULL,
+          currency VARCHAR(3) DEFAULT 'EUR',
+          category VARCHAR(100),
+          short_description TEXT,
+          description TEXT,
+          is_active BOOLEAN DEFAULT true,
+          display_order INTEGER DEFAULT 0,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX idx_spa_services_active ON spa_services(is_active) WHERE is_active = true;
+        CREATE INDEX idx_spa_services_display_order ON spa_services(display_order);
+      `);
+      logDebug('Created spa_services table');
+    }
+
+    // Check and create SPA availability table (snapshot from MSSQL replica)
+    const spaAvailabilityCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'spa_availability'
+      );
+    `);
+
+    if (!spaAvailabilityCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE spa_availability (
+          id SERIAL PRIMARY KEY,
+          service_id VARCHAR(50) NOT NULL REFERENCES spa_services(id) ON DELETE CASCADE,
+          date DATE NOT NULL,
+          start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+          end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+          availability_status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
+          therapist_id VARCHAR(50),
+          therapist_display_name VARCHAR(255),
+          therapist_level VARCHAR(50),
+          therapist_tags JSONB DEFAULT '[]'::jsonb,
+          last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(service_id, date, start_time, COALESCE(therapist_id, ''))
+        );
+
+        CREATE INDEX idx_spa_availability_service_date ON spa_availability(service_id, date);
+        CREATE INDEX idx_spa_availability_start_time ON spa_availability(start_time);
+        CREATE INDEX idx_spa_availability_status ON spa_availability(availability_status);
+        CREATE INDEX idx_spa_availability_last_updated ON spa_availability(last_updated_at);
+      `);
+      logDebug('Created spa_availability table');
+    }
+
+    // Check and create SPA requests table
+    const spaRequestsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'spa_requests'
+      );
+    `);
+
+    if (!spaRequestsCheck.rows[0].exists) {
+      await pool.query(`
+        CREATE TABLE spa_requests (
+          id SERIAL PRIMARY KEY,
+          request_id VARCHAR(100) UNIQUE NOT NULL,
+          guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+          service_id VARCHAR(50) NOT NULL REFERENCES spa_services(id),
+          start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+          end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+          therapist_id VARCHAR(50),
+          therapist_display_name VARCHAR(255),
+          note TEXT,
+          status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          cancelled_at TIMESTAMP WITH TIME ZONE NULL,
+          confirmed_at TIMESTAMP WITH TIME ZONE NULL,
+          rejected_at TIMESTAMP WITH TIME ZONE NULL
+        );
+
+        CREATE INDEX idx_spa_requests_guest_unique_id ON spa_requests(guest_unique_id);
+        CREATE INDEX idx_spa_requests_status ON spa_requests(status);
+        CREATE INDEX idx_spa_requests_start_time ON spa_requests(start_time);
+        CREATE INDEX idx_spa_requests_service_id ON spa_requests(service_id);
+        CREATE INDEX idx_spa_requests_request_id ON spa_requests(request_id);
+      `);
+      logDebug('Created spa_requests table');
+    }
+
     // Seed initial data if tables are empty
     await seedInitialData();
   } catch (error) {
@@ -5521,6 +5625,7 @@ app.get('/join-team', (req, res) => {
 // Get all restaurants (admin)
 app.get('/admin/restaurants', async (req, res) => {
   try {
+    console.log('GET /admin/restaurants - Fetching restaurants...');
     const result = await pool.query(`
       SELECT 
         id, name, description, photos, active, 
@@ -5531,16 +5636,55 @@ app.get('/admin/restaurants', async (req, res) => {
       ORDER BY created_at DESC
     `);
     
-    const restaurants = result.rows.map(row => ({
-      ...row,
-      photos: Array.isArray(row.photos) ? row.photos : (row.photos ? JSON.parse(row.photos) : []),
-      rules_json: typeof row.rules_json === 'object' ? row.rules_json : (row.rules_json ? JSON.parse(row.rules_json) : {})
-    }));
+    console.log('Raw database rows:', result.rows.length);
     
+    const restaurants = result.rows.map(row => {
+      let photos = [];
+      let rules_json = {};
+      
+      // Parse photos
+      if (row.photos) {
+        if (Array.isArray(row.photos)) {
+          photos = row.photos;
+        } else if (typeof row.photos === 'string') {
+          try {
+            photos = JSON.parse(row.photos);
+          } catch (e) {
+            console.warn('Error parsing photos:', e);
+            photos = [];
+          }
+        } else {
+          photos = row.photos;
+        }
+      }
+      
+      // Parse rules_json
+      if (row.rules_json) {
+        if (typeof row.rules_json === 'object') {
+          rules_json = row.rules_json;
+        } else if (typeof row.rules_json === 'string') {
+          try {
+            rules_json = JSON.parse(row.rules_json);
+          } catch (e) {
+            console.warn('Error parsing rules_json:', e);
+            rules_json = {};
+          }
+        }
+      }
+      
+      return {
+        ...row,
+        photos,
+        rules_json
+      };
+    });
+    
+    console.log('Sending restaurants:', restaurants.length);
     res.json({ success: true, data: restaurants });
   } catch (error) {
     console.error('Error fetching restaurants:', error);
-    res.status(500).json({ success: false, error: 'Database error' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
   }
 });
 
@@ -5575,9 +5719,11 @@ app.get('/admin/restaurants/:id', async (req, res) => {
 // Create restaurant (admin)
 app.post('/admin/restaurants', async (req, res) => {
   try {
+    console.log('POST /admin/restaurants - Request body:', req.body);
     const { name, description, photos, active, price_per_person, currency, rules_json } = req.body;
     
     if (!name || !price_per_person) {
+      console.log('Validation failed: name or price_per_person missing');
       return res.status(400).json({ success: false, error: 'Name and price_per_person are required' });
     }
     
@@ -5608,6 +5754,31 @@ app.post('/admin/restaurants', async (req, res) => {
       }
     }
     
+    // Check if restaurants table exists
+    try {
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'restaurants'
+        );
+      `);
+      
+      if (!tableCheck.rows[0].exists) {
+        console.error('Restaurants table does not exist. Please run the schema migration.');
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Restaurants table does not exist. Please run the database schema migration.' 
+        });
+      }
+    } catch (tableError) {
+      console.error('Error checking restaurants table:', tableError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Database error: ' + tableError.message 
+      });
+    }
+    
     const result = await pool.query(`
       INSERT INTO restaurants (name, description, photos, active, price_per_person, currency, rules_json)
       VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7::jsonb)
@@ -5626,12 +5797,16 @@ app.post('/admin/restaurants', async (req, res) => {
     ]);
     
     const restaurant = result.rows[0];
+    console.log('Restaurant created:', restaurant);
+    
     restaurant.photos = Array.isArray(restaurant.photos) ? restaurant.photos : (restaurant.photos ? JSON.parse(restaurant.photos) : []);
     restaurant.rules_json = typeof restaurant.rules_json === 'object' ? restaurant.rules_json : (restaurant.rules_json ? JSON.parse(restaurant.rules_json) : {});
     
+    console.log('Sending response:', { success: true, data: restaurant });
     res.status(201).json({ success: true, data: restaurant });
   } catch (error) {
     console.error('Error creating restaurant:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ success: false, error: 'Database error: ' + error.message });
   }
 });
@@ -5751,6 +5926,368 @@ app.delete('/admin/restaurants/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting restaurant:', error);
     res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// ============================================================================
+// SPA BOOKING API ENDPOINTS
+// ============================================================================
+
+// Get all SPA services
+app.get('/api/spa/services', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, name, duration_min, price, currency, category, 
+        short_description, description, is_active, display_order
+      FROM spa_services
+      WHERE is_active = true
+      ORDER BY display_order ASC, name ASC
+    `);
+    
+    const services = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      durationMin: row.duration_min,
+      price: parseFloat(row.price),
+      currency: row.currency,
+      category: row.category || null,
+      shortDescription: row.short_description || null
+    }));
+    
+    res.json(services);
+  } catch (error) {
+    console.error('Error fetching SPA services:', error);
+    res.status(500).json({ error: 'Failed to fetch services' });
+  }
+});
+
+// Get SPA availability for date range
+app.get('/api/spa/availability', async (req, res) => {
+  try {
+    const { serviceId, from, to } = req.query;
+    
+    if (!serviceId || !from || !to) {
+      return res.status(400).json({ error: 'serviceId, from, and to are required' });
+    }
+    
+    // Get the most recent snapshot timestamp
+    const snapshotResult = await pool.query(`
+      SELECT MAX(last_updated_at) as last_updated_at
+      FROM spa_availability
+      WHERE service_id = $1 AND date BETWEEN $2::date AND $3::date
+    `, [serviceId, from, to]);
+    
+    const lastUpdatedAt = snapshotResult.rows[0]?.last_updated_at || new Date().toISOString();
+    
+    // Get availability data - group by date, start_time, end_time
+    const availabilityResult = await pool.query(`
+      SELECT 
+        date,
+        start_time,
+        end_time,
+        availability_status,
+        therapist_id,
+        therapist_display_name,
+        therapist_level,
+        therapist_tags
+      FROM spa_availability
+      WHERE service_id = $1 
+        AND date BETWEEN $2::date AND $3::date
+        AND availability_status IN ('AVAILABLE', 'LIMITED', 'FULL')
+      ORDER BY date ASC, start_time ASC, therapist_id ASC
+    `, [serviceId, from, to]);
+    
+    // Group by date and slot (date + start_time + end_time), then by therapists
+    const daysMap = new Map();
+    const slotsMap = new Map(); // Key: date_start_end
+    
+    availabilityResult.rows.forEach(row => {
+      const dateStr = row.date.toISOString().split('T')[0];
+      const startTimeStr = row.start_time.toISOString();
+      const endTimeStr = row.end_time.toISOString();
+      const slotKey = `${dateStr}_${startTimeStr}_${endTimeStr}`;
+      
+      // Initialize day if needed
+      if (!daysMap.has(dateStr)) {
+        daysMap.set(dateStr, {
+          date: dateStr,
+          slots: [],
+          availableCount: 0,
+          limitedCount: 0,
+          fullCount: 0
+        });
+      }
+      
+      const day = daysMap.get(dateStr);
+      
+      // Initialize or get slot
+      if (!slotsMap.has(slotKey)) {
+        const slot = {
+          start: startTimeStr,
+          end: endTimeStr,
+          availability: null, // Will be calculated later
+          therapists: [],
+          isFull: false // Track if slot is marked as FULL
+        };
+        slotsMap.set(slotKey, slot);
+        day.slots.push(slot);
+      }
+      
+      const slot = slotsMap.get(slotKey);
+      
+      // Check if slot is marked as FULL
+      if (row.availability_status === 'FULL') {
+        slot.isFull = true;
+        slot.therapists = []; // Clear therapists if full
+      } else if (row.therapist_id) {
+        // Add therapist to slot if available
+        const tags = Array.isArray(row.therapist_tags) 
+          ? row.therapist_tags 
+          : (row.therapist_tags ? (typeof row.therapist_tags === 'string' ? JSON.parse(row.therapist_tags) : []) : []);
+        
+        slot.therapists.push({
+          id: row.therapist_id,
+          displayName: row.therapist_display_name || 'Unknown',
+          level: row.therapist_level || null,
+          tags: tags
+        });
+      }
+    });
+    
+    // Finalize slot availability based on therapist count and FULL status
+    slotsMap.forEach((slot) => {
+      if (slot.isFull) {
+        slot.availability = 'FULL';
+        slot.therapists = [];
+      } else {
+        const therapistCount = slot.therapists.length;
+        if (therapistCount === 0) {
+          slot.availability = 'FULL';
+        } else if (therapistCount <= 2) {
+          slot.availability = 'LIMITED';
+        } else {
+          slot.availability = 'AVAILABLE';
+        }
+      }
+      // Remove temporary isFull property
+      delete slot.isFull;
+    });
+    
+    // Count slots by availability for heat calculation
+    daysMap.forEach((day) => {
+      day.availableCount = 0;
+      day.limitedCount = 0;
+      day.fullCount = 0;
+      
+      day.slots.forEach(slot => {
+        if (slot.availability === 'AVAILABLE') {
+          day.availableCount++;
+        } else if (slot.availability === 'LIMITED') {
+          day.limitedCount++;
+        } else {
+          day.fullCount++;
+        }
+      });
+    });
+    
+    // Calculate heat indicator (GREEN/YELLOW/RED)
+    const days = Array.from(daysMap.values()).map(day => {
+      const totalSlots = day.slots.length;
+      const availableRatio = totalSlots > 0 ? day.availableCount / totalSlots : 0;
+      
+      let heat = 'GREEN';
+      if (availableRatio < 0.3) {
+        heat = 'RED';
+      } else if (availableRatio < 0.6) {
+        heat = 'YELLOW';
+      }
+      
+      return {
+        ...day,
+        heat
+      };
+    });
+    
+    res.json({
+      serviceId,
+      from,
+      to,
+      lastUpdatedAt: new Date(lastUpdatedAt).toISOString(),
+      days
+    });
+  } catch (error) {
+    console.error('Error fetching SPA availability:', error);
+    res.status(500).json({ error: 'Failed to fetch availability' });
+  }
+});
+
+// Create SPA request
+app.post('/api/spa/requests', async (req, res) => {
+  try {
+    const guestUniqueId = req.cookies?.guest_unique_id;
+    
+    if (!guestUniqueId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const { serviceId, start, end, therapistId, note } = req.body;
+    
+    if (!serviceId || !start || !end) {
+      return res.status(400).json({ error: 'serviceId, start, and end are required' });
+    }
+    
+    // Verify guest exists
+    const guestCheck = await pool.query(`
+      SELECT guest_unique_id FROM rooms WHERE guest_unique_id = $1 AND is_active = true
+    `, [guestUniqueId]);
+    
+    if (guestCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Guest not found' });
+    }
+    
+    // Get service info and therapist info
+    const serviceResult = await pool.query(`
+      SELECT id, name FROM spa_services WHERE id = $1 AND is_active = true
+    `, [serviceId]);
+    
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+    
+    let therapistDisplayName = null;
+    if (therapistId) {
+      const therapistResult = await pool.query(`
+        SELECT therapist_display_name 
+        FROM spa_availability 
+        WHERE therapist_id = $1 
+        LIMIT 1
+      `, [therapistId]);
+      
+      if (therapistResult.rows.length > 0) {
+        therapistDisplayName = therapistResult.rows[0].therapist_display_name;
+      }
+    }
+    
+    // Generate unique request ID
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Insert request
+    const result = await pool.query(`
+      INSERT INTO spa_requests (
+        request_id, guest_unique_id, service_id, start_time, end_time, 
+        therapist_id, therapist_display_name, note, status
+      )
+      VALUES ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6, $7, $8, 'PENDING')
+      RETURNING request_id, status, created_at
+    `, [requestId, guestUniqueId, serviceId, start, end, therapistId || null, therapistDisplayName, note || null]);
+    
+    res.status(201).json({
+      requestId: result.rows[0].request_id,
+      status: result.rows[0].status,
+      createdAt: result.rows[0].created_at.toISOString()
+    });
+  } catch (error) {
+    console.error('Error creating SPA request:', error);
+    res.status(500).json({ error: 'Failed to create request' });
+  }
+});
+
+// List my SPA requests
+app.get('/api/spa/requests', async (req, res) => {
+  try {
+    const { mine } = req.query;
+    const guestUniqueId = req.cookies?.guest_unique_id;
+    
+    if (mine === 'true') {
+      if (!guestUniqueId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const result = await pool.query(`
+        SELECT 
+          sr.request_id,
+          sr.service_id,
+          ss.name as service_name,
+          sr.start_time,
+          sr.end_time,
+          sr.therapist_display_name,
+          sr.status,
+          sr.note,
+          sr.created_at,
+          sr.updated_at
+        FROM spa_requests sr
+        INNER JOIN spa_services ss ON sr.service_id = ss.id
+        WHERE sr.guest_unique_id = $1
+        ORDER BY sr.created_at DESC
+      `, [guestUniqueId]);
+      
+      const requests = result.rows.map(row => ({
+        requestId: row.request_id,
+        serviceName: row.service_name,
+        start: row.start_time.toISOString(),
+        end: row.end_time.toISOString(),
+        therapistDisplayName: row.therapist_display_name,
+        status: row.status,
+        updatedAt: row.updated_at.toISOString()
+      }));
+      
+      res.json(requests);
+    } else {
+      return res.status(400).json({ error: 'mine parameter must be true' });
+    }
+  } catch (error) {
+    console.error('Error fetching SPA requests:', error);
+    res.status(500).json({ error: 'Failed to fetch requests' });
+  }
+});
+
+// Cancel SPA request
+app.post('/api/spa/requests/:requestId/cancel', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const guestUniqueId = req.cookies?.guest_unique_id;
+    
+    if (!guestUniqueId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    // Check if request exists and belongs to guest
+    const checkResult = await pool.query(`
+      SELECT request_id, status 
+      FROM spa_requests 
+      WHERE request_id = $1 AND guest_unique_id = $2
+    `, [requestId, guestUniqueId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    
+    const request = checkResult.rows[0];
+    
+    // Only allow cancellation for PENDING or CONFIRMED requests
+    if (request.status !== 'PENDING' && request.status !== 'CONFIRMED') {
+      return res.status(400).json({ error: `Cannot cancel request with status: ${request.status}` });
+    }
+    
+    // Update request status
+    const result = await pool.query(`
+      UPDATE spa_requests
+      SET status = 'CANCELLED',
+          cancelled_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE request_id = $1 AND guest_unique_id = $2
+      RETURNING request_id
+    `, [requestId, guestUniqueId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error canceling SPA request:', error);
+    res.status(500).json({ error: 'Failed to cancel request' });
   }
 });
 
