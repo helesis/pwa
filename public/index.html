@@ -1996,11 +1996,13 @@
             height: 100%;
             display: flex;
             overflow-x: auto;
+            overflow-y: hidden;
             scroll-snap-type: x mandatory;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            position: relative;
         }
 
         .post-media-carousel::-webkit-scrollbar {
@@ -2009,10 +2011,14 @@
 
         .post-media-item {
             min-width: 100%;
+            width: 100%;
             height: 100%;
             scroll-snap-align: start;
             position: relative;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .post-media-item img,
@@ -2020,6 +2026,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
         }
 
         .post-media-indicators {
@@ -5697,6 +5704,17 @@
                 }
                 const posts = await response.json();
                 
+                // Debug: Log posts data
+                console.log('Loaded posts:', posts.map(p => ({
+                    id: p.id,
+                    post_id: p.post_id,
+                    title: p.title,
+                    image_url: p.image_url,
+                    video_url: p.video_url,
+                    image_url_type: typeof p.image_url,
+                    video_url_type: typeof p.video_url
+                })));
+                
                 const container = document.querySelector('.info-posts-container');
                 if (!container || posts.length === 0) return;
                 
@@ -5753,12 +5771,41 @@
                         <div class="post-image">
                             ${(() => {
                                 // Handle arrays for image_url and video_url
-                                const imageUrls = Array.isArray(post.image_url) ? post.image_url : (post.image_url ? [post.image_url] : []);
-                                const videoUrls = Array.isArray(post.video_url) ? post.video_url : (post.video_url ? [post.video_url] : []);
+                                // Backend already parses JSON, but handle both cases
+                                let imageUrls = [];
+                                let videoUrls = [];
+                                
+                                if (post.image_url) {
+                                    if (Array.isArray(post.image_url)) {
+                                        imageUrls = post.image_url.filter(url => url && url.trim());
+                                    } else if (typeof post.image_url === 'string') {
+                                        // Try to parse as JSON, if fails use as single value
+                                        try {
+                                            const parsed = JSON.parse(post.image_url);
+                                            imageUrls = Array.isArray(parsed) ? parsed.filter(url => url && url.trim()) : [post.image_url.trim()];
+                                        } catch (e) {
+                                            imageUrls = post.image_url.trim() ? [post.image_url.trim()] : [];
+                                        }
+                                    }
+                                }
+                                
+                                if (post.video_url) {
+                                    if (Array.isArray(post.video_url)) {
+                                        videoUrls = post.video_url.filter(url => url && url.trim());
+                                    } else if (typeof post.video_url === 'string') {
+                                        try {
+                                            const parsed = JSON.parse(post.video_url);
+                                            videoUrls = Array.isArray(parsed) ? parsed.filter(url => url && url.trim()) : [post.video_url.trim()];
+                                        } catch (e) {
+                                            videoUrls = post.video_url.trim() ? [post.video_url.trim()] : [];
+                                        }
+                                    }
+                                }
+                                
                                 const allMedia = [
-                                    ...imageUrls.map(url => ({ type: 'image', url })),
-                                    ...videoUrls.map(url => ({ type: 'video', url }))
-                                ];
+                                    ...imageUrls.map(url => ({ type: 'image', url: url.trim() })),
+                                    ...videoUrls.map(url => ({ type: 'video', url: url.trim() }))
+                                ].filter(media => media.url);
                                 
                                 if (allMedia.length === 0) {
                                     return `<div class="post-image-placeholder">
@@ -5780,12 +5827,12 @@
                                 
                                 // Multiple media - create scrollable carousel
                                 return `
-                                    <div class="post-media-carousel" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none;">
+                                    <div class="post-media-carousel" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; width: 100%; height: 100%;">
                                         ${allMedia.map((media, idx) => `
-                                            <div class="post-media-item" style="min-width: 100%; scroll-snap-align: start; position: relative;">
+                                            <div class="post-media-item" style="min-width: 100%; width: 100%; height: 100%; scroll-snap-align: start; position: relative; flex-shrink: 0;">
                                                 ${media.type === 'video' ? 
-                                                    `<video src="${media.url}" style="width: 100%; height: 100%; object-fit: cover;" controls playsinline></video>` :
-                                                    `<img src="${media.url}" alt="${post.title} ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none';" onload="this.style.display='block';">`
+                                                    `<video src="${media.url}" style="width: 100%; height: 100%; object-fit: cover; display: block;" controls playsinline></video>` :
+                                                    `<img src="${media.url}" alt="${post.title} ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover; display: block;" loading="lazy" onerror="console.error('Image load error for post ${post.post_id}:', '${media.url}'); this.style.opacity='0.3'; this.style.filter='grayscale(100%)';" onload="this.style.opacity='1'; this.style.filter='none';">`
                                                 }
                                             </div>
                                         `).join('')}
@@ -5824,14 +5871,23 @@
                         const indicators = postEl.querySelectorAll('.post-media-indicator');
                         if (indicators.length > 1) {
                             let currentIndex = 0;
-                            carousel.addEventListener('scroll', () => {
+                            const updateIndicators = () => {
                                 const newIndex = Math.round(carousel.scrollLeft / carousel.offsetWidth);
                                 if (newIndex !== currentIndex && newIndex >= 0 && newIndex < indicators.length) {
                                     currentIndex = newIndex;
                                     indicators.forEach((ind, idx) => {
                                         ind.classList.toggle('active', idx === currentIndex);
+                                        ind.style.background = idx === currentIndex ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)';
                                     });
                                 }
+                            };
+                            carousel.addEventListener('scroll', updateIndicators);
+                            
+                            // Debug: Log media URLs
+                            console.log('Post media loaded:', {
+                                postId: post.post_id,
+                                imageUrls: Array.isArray(post.image_url) ? post.image_url : (post.image_url ? [post.image_url] : []),
+                                videoUrls: Array.isArray(post.video_url) ? post.video_url : (post.video_url ? [post.video_url] : [])
                             });
                         }
                     }
