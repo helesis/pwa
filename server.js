@@ -1162,26 +1162,36 @@ async function addNewTablesIfNeeded() {
     `);
 
     if (!spaServicesCheck.rows[0].exists) {
-      await pool.query(`
-        CREATE TABLE spa_services (
-          id VARCHAR(50) PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          duration_min INTEGER NOT NULL,
-          price DECIMAL(10, 2) NOT NULL,
-          currency VARCHAR(3) DEFAULT 'EUR',
-          category VARCHAR(100),
-          short_description TEXT,
-          description TEXT,
-          is_active BOOLEAN DEFAULT true,
-          display_order INTEGER DEFAULT 0,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE INDEX idx_spa_services_active ON spa_services(is_active) WHERE is_active = true;
-        CREATE INDEX idx_spa_services_display_order ON spa_services(display_order);
-      `);
-      logDebug('Created spa_services table');
+      try {
+        await pool.query(`
+          CREATE TABLE spa_services (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            duration_min INTEGER NOT NULL,
+            price DECIMAL(10, 2) NOT NULL,
+            currency VARCHAR(3) DEFAULT 'EUR',
+            category VARCHAR(100),
+            short_description TEXT,
+            description TEXT,
+            is_active BOOLEAN DEFAULT true,
+            display_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        
+        await pool.query(`
+          CREATE INDEX idx_spa_services_active ON spa_services(is_active) WHERE is_active = true;
+          CREATE INDEX idx_spa_services_display_order ON spa_services(display_order);
+        `);
+        
+        logDebug('✅ Created spa_services table and indexes');
+      } catch (error) {
+        console.error('❌ Error creating spa_services table:', error.message);
+        console.error('   Stack:', error.stack);
+        // Don't continue if spa_services fails - other tables depend on it
+        throw error;
+      }
     }
 
     // Check and create SPA availability table (snapshot from MSSQL replica)
@@ -1194,28 +1204,44 @@ async function addNewTablesIfNeeded() {
     `);
 
     if (!spaAvailabilityCheck.rows[0].exists) {
-      await pool.query(`
-        CREATE TABLE spa_availability (
-          id SERIAL PRIMARY KEY,
-          service_id VARCHAR(50) NOT NULL REFERENCES spa_services(id) ON DELETE CASCADE,
-          date DATE NOT NULL,
-          start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-          end_time TIMESTAMP WITH TIME ZONE NOT NULL,
-          availability_status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
-          therapist_id VARCHAR(50),
-          therapist_display_name VARCHAR(255),
-          therapist_level VARCHAR(50),
-          therapist_tags JSONB DEFAULT '[]'::jsonb,
-          last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(service_id, date, start_time, COALESCE(therapist_id, ''))
-        );
-
-        CREATE INDEX idx_spa_availability_service_date ON spa_availability(service_id, date);
-        CREATE INDEX idx_spa_availability_start_time ON spa_availability(start_time);
-        CREATE INDEX idx_spa_availability_status ON spa_availability(availability_status);
-        CREATE INDEX idx_spa_availability_last_updated ON spa_availability(last_updated_at);
-      `);
-      logDebug('Created spa_availability table');
+      try {
+        // Create table first (without UNIQUE constraint - will add as index)
+        await pool.query(`
+          CREATE TABLE spa_availability (
+            id SERIAL PRIMARY KEY,
+            service_id VARCHAR(50) NOT NULL REFERENCES spa_services(id) ON DELETE CASCADE,
+            date DATE NOT NULL,
+            start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            availability_status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
+            therapist_id VARCHAR(50),
+            therapist_display_name VARCHAR(255),
+            therapist_level VARCHAR(50),
+            therapist_tags JSONB DEFAULT '[]'::jsonb,
+            last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        
+        // Create regular indexes
+        await pool.query(`
+          CREATE INDEX idx_spa_availability_service_date ON spa_availability(service_id, date);
+          CREATE INDEX idx_spa_availability_start_time ON spa_availability(start_time);
+          CREATE INDEX idx_spa_availability_status ON spa_availability(availability_status);
+          CREATE INDEX idx_spa_availability_last_updated ON spa_availability(last_updated_at);
+        `);
+        
+        // Create unique index separately (handling NULL therapist_id)
+        await pool.query(`
+          CREATE UNIQUE INDEX idx_spa_availability_unique_slot_therapist 
+          ON spa_availability(service_id, date, start_time, COALESCE(therapist_id, ''));
+        `);
+        
+        logDebug('✅ Created spa_availability table and indexes');
+      } catch (error) {
+        console.error('❌ Error creating spa_availability table:', error.message);
+        console.error('   Stack:', error.stack);
+        // Continue with other tables even if this fails
+      }
     }
 
     // Check and create SPA requests table
@@ -1228,32 +1254,43 @@ async function addNewTablesIfNeeded() {
     `);
 
     if (!spaRequestsCheck.rows[0].exists) {
-      await pool.query(`
-        CREATE TABLE spa_requests (
-          id SERIAL PRIMARY KEY,
-          request_id VARCHAR(100) UNIQUE NOT NULL,
-          guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
-          service_id VARCHAR(50) NOT NULL REFERENCES spa_services(id),
-          start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-          end_time TIMESTAMP WITH TIME ZONE NOT NULL,
-          therapist_id VARCHAR(50),
-          therapist_display_name VARCHAR(255),
-          note TEXT,
-          status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          cancelled_at TIMESTAMP WITH TIME ZONE NULL,
-          confirmed_at TIMESTAMP WITH TIME ZONE NULL,
-          rejected_at TIMESTAMP WITH TIME ZONE NULL
-        );
-
-        CREATE INDEX idx_spa_requests_guest_unique_id ON spa_requests(guest_unique_id);
-        CREATE INDEX idx_spa_requests_status ON spa_requests(status);
-        CREATE INDEX idx_spa_requests_start_time ON spa_requests(start_time);
-        CREATE INDEX idx_spa_requests_service_id ON spa_requests(service_id);
-        CREATE INDEX idx_spa_requests_request_id ON spa_requests(request_id);
-      `);
-      logDebug('Created spa_requests table');
+      try {
+        // Create table first
+        await pool.query(`
+          CREATE TABLE spa_requests (
+            id SERIAL PRIMARY KEY,
+            request_id VARCHAR(100) UNIQUE NOT NULL,
+            guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+            service_id VARCHAR(50) NOT NULL REFERENCES spa_services(id),
+            start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            therapist_id VARCHAR(50),
+            therapist_display_name VARCHAR(255),
+            note TEXT,
+            status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            cancelled_at TIMESTAMP WITH TIME ZONE NULL,
+            confirmed_at TIMESTAMP WITH TIME ZONE NULL,
+            rejected_at TIMESTAMP WITH TIME ZONE NULL
+          );
+        `);
+        
+        // Create indexes separately
+        await pool.query(`
+          CREATE INDEX idx_spa_requests_guest_unique_id ON spa_requests(guest_unique_id);
+          CREATE INDEX idx_spa_requests_status ON spa_requests(status);
+          CREATE INDEX idx_spa_requests_start_time ON spa_requests(start_time);
+          CREATE INDEX idx_spa_requests_service_id ON spa_requests(service_id);
+          CREATE INDEX idx_spa_requests_request_id ON spa_requests(request_id);
+        `);
+        
+        logDebug('Created spa_requests table');
+      } catch (error) {
+        console.error('❌ Error creating spa_requests table:', error.message);
+        console.error('   Stack:', error.stack);
+        // Don't throw - continue with seed data
+      }
     }
 
     // Seed initial data if tables are empty
