@@ -635,22 +635,64 @@ async function addNewTablesIfNeeded() {
     `);
     
     if (!mapSearchCheck.rows[0].exists) {
-      await pool.query(`
-        CREATE TABLE map_search_locations (
-          id INTEGER PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          category VARCHAR(50) NOT NULL,
-          latitude DECIMAL(10, 8) NOT NULL,
-          longitude DECIMAL(11, 8) NOT NULL,
-          distance_km DECIMAL(6, 2),
-          geom GEOMETRY(Point, 4326),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+      // Check if PostGIS extension exists
+      let hasPostGIS = false;
+      try {
+        const postgisCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM pg_extension WHERE extname = 'postgis'
+          );
+        `);
+        hasPostGIS = postgisCheck.rows[0].exists;
         
-        CREATE INDEX idx_map_search_locations_geom ON map_search_locations USING GIST (geom);
-        CREATE INDEX idx_map_search_locations_category ON map_search_locations(category);
-      `);
-      logDebug('Created map_search_locations table');
+        // Try to create PostGIS extension if it doesn't exist
+        if (!hasPostGIS) {
+          try {
+            await pool.query('CREATE EXTENSION IF NOT EXISTS postgis;');
+            hasPostGIS = true;
+            logDebug('PostGIS extension created');
+          } catch (extError) {
+            logDebug('PostGIS extension not available, creating table without geom column');
+          }
+        }
+      } catch (error) {
+        logDebug('Could not check PostGIS extension, creating table without geom column');
+      }
+      
+      // Create table with or without geom column based on PostGIS availability
+      if (hasPostGIS) {
+        await pool.query(`
+          CREATE TABLE map_search_locations (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            latitude DECIMAL(10, 8) NOT NULL,
+            longitude DECIMAL(11, 8) NOT NULL,
+            distance_km DECIMAL(6, 2),
+            geom GEOMETRY(Point, 4326),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE INDEX idx_map_search_locations_geom ON map_search_locations USING GIST (geom);
+          CREATE INDEX idx_map_search_locations_category ON map_search_locations(category);
+        `);
+        logDebug('Created map_search_locations table with PostGIS support');
+      } else {
+        await pool.query(`
+          CREATE TABLE map_search_locations (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            latitude DECIMAL(10, 8) NOT NULL,
+            longitude DECIMAL(11, 8) NOT NULL,
+            distance_km DECIMAL(6, 2),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE INDEX idx_map_search_locations_category ON map_search_locations(category);
+        `);
+        logDebug('Created map_search_locations table without PostGIS (geom column not available)');
+      }
       
       // Insert default locations data
       const locations = [
@@ -810,21 +852,35 @@ async function addNewTablesIfNeeded() {
         {id: 6305, name: 'Location 6305', category: 'Nature', lat: 36.757988503160455, lng: 31.41995615512006, dist: 2.75}
       ];
       
+      // Insert default locations data
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
         for (const loc of locations) {
-          await client.query(`
-            INSERT INTO map_search_locations (id, name, category, latitude, longitude, distance_km, geom) 
-            VALUES ($1, $2, $3, $4, $5, $6, ST_SetSRID(ST_MakePoint($5, $4), 4326))
-            ON CONFLICT (id) DO UPDATE SET
-              name = EXCLUDED.name,
-              category = EXCLUDED.category,
-              latitude = EXCLUDED.latitude,
-              longitude = EXCLUDED.longitude,
-              distance_km = EXCLUDED.distance_km,
-              geom = EXCLUDED.geom
-          `, [loc.id, loc.name, loc.category, loc.lat, loc.lng, loc.dist]);
+          if (hasPostGIS) {
+            await client.query(`
+              INSERT INTO map_search_locations (id, name, category, latitude, longitude, distance_km, geom) 
+              VALUES ($1, $2, $3, $4, $5, $6, ST_SetSRID(ST_MakePoint($5, $4), 4326))
+              ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                category = EXCLUDED.category,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                distance_km = EXCLUDED.distance_km,
+                geom = EXCLUDED.geom
+            `, [loc.id, loc.name, loc.category, loc.lat, loc.lng, loc.dist]);
+          } else {
+            await client.query(`
+              INSERT INTO map_search_locations (id, name, category, latitude, longitude, distance_km) 
+              VALUES ($1, $2, $3, $4, $5, $6)
+              ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                category = EXCLUDED.category,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                distance_km = EXCLUDED.distance_km
+            `, [loc.id, loc.name, loc.category, loc.lat, loc.lng, loc.dist]);
+          }
         }
         await client.query('COMMIT');
         logDebug(`Inserted ${locations.length} map search locations`);
