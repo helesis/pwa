@@ -7387,15 +7387,45 @@
                 
                 suggestionsContainer.innerHTML = '';
                 
-                // Create chips for each location (sorted by id)
-                locations.sort((a, b) => a.id - b.id).forEach(loc => {
-                    const chip = document.createElement('button');
-                    chip.type = 'button';
-                    chip.className = 'map-chip';
-                    chip.setAttribute('data-location-id', loc.id);
-                    chip.textContent = loc.name; // Use database name directly
-                    suggestionsContainer.appendChild(chip);
+                // Define featured location keywords for map chips (only these will be shown as chips)
+                const featuredKeywords = [
+                    { keywords: ['resepsiyon', 'lobby'], displayName: 'Resepsiyon' },
+                    { keywords: ['ana restoran', 'restoran teras'], displayName: 'Ana Restoran' },
+                    { keywords: ['sahil'], displayName: 'Sahil' },
+                    { keywords: ['aquapark'], displayName: 'Aquapark' },
+                    { keywords: ['beach club'], displayName: 'Beach Club' },
+                    { keywords: ['tenis court'], displayName: 'Tenis Court' }
+                ];
+                
+                // Filter and create chips only for featured locations
+                const featuredLocations = [];
+                
+                featuredKeywords.forEach((featured, index) => {
+                    const matchingLoc = locations.find(loc => {
+                        const name = loc.name.toLowerCase();
+                        return featured.keywords.some(keyword => name.includes(keyword));
+                    });
+                    
+                    if (matchingLoc) {
+                        featuredLocations.push({
+                            ...matchingLoc,
+                            displayName: featured.displayName,
+                            order: index
+                        });
+                    }
                 });
+                
+                // Create chips in the specified order
+                featuredLocations
+                    .sort((a, b) => a.order - b.order)
+                    .forEach(loc => {
+                        const chip = document.createElement('button');
+                        chip.type = 'button';
+                        chip.className = 'map-chip';
+                        chip.setAttribute('data-location-id', loc.id);
+                        chip.textContent = loc.displayName; // Use display name
+                        suggestionsContainer.appendChild(chip);
+                    });
                 
                 // Setup click handlers
                 setupMapChips();
