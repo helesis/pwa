@@ -5705,7 +5705,9 @@
             }
             // If relative URL (starts with /), convert to absolute
             if (url.startsWith('/')) {
-                return window.location.origin + url;
+                const absoluteUrl = window.location.origin + url;
+                console.log(`[toAbsoluteUrl] Converting: "${url}" -> "${absoluteUrl}" (origin: ${window.location.origin})`);
+                return absoluteUrl;
             }
             // Otherwise return as is
             return url;
@@ -5899,11 +5901,16 @@
                             };
                             carousel.addEventListener('scroll', updateIndicators);
                             
-                            // Debug: Log media URLs
+                            // Debug: Log media URLs (original and converted)
+                            const originalImageUrls = Array.isArray(post.image_url) ? post.image_url : (post.image_url ? [post.image_url] : []);
+                            const originalVideoUrls = Array.isArray(post.video_url) ? post.video_url : (post.video_url ? [post.video_url] : []);
+                            const convertedImageUrls = originalImageUrls.map(url => toAbsoluteUrl(url));
+                            const convertedVideoUrls = originalVideoUrls.map(url => toAbsoluteUrl(url));
                             console.log('Post media loaded:', {
                                 postId: post.post_id,
-                                imageUrls: Array.isArray(post.image_url) ? post.image_url : (post.image_url ? [post.image_url] : []),
-                                videoUrls: Array.isArray(post.video_url) ? post.video_url : (post.video_url ? [post.video_url] : [])
+                                original: { imageUrls: originalImageUrls, videoUrls: originalVideoUrls },
+                                converted: { imageUrls: convertedImageUrls, videoUrls: convertedVideoUrls },
+                                origin: window.location.origin
                             });
                         }
                     }
