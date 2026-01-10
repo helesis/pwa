@@ -9132,15 +9132,38 @@
         // Load restaurant reservations for guest
         async function loadRestaurantReservations() {
             const container = document.getElementById('restaurantReservations');
-            if (!container || !GUEST_UNIQUE_ID) return;
+            if (!container) {
+                console.warn('restaurantReservations container not found');
+                return;
+            }
+            
+            if (!GUEST_UNIQUE_ID) {
+                console.warn('GUEST_UNIQUE_ID not available, cannot load reservations');
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #667781;">
+                        Oturum bilgisi bulunamadı. Lütfen sayfayı yenileyin.
+                    </div>
+                `;
+                return;
+            }
             
             try {
+                console.log('Loading restaurant reservations for guest:', GUEST_UNIQUE_ID);
                 const response = await fetch(`/reservations?guest_unique_id=${encodeURIComponent(GUEST_UNIQUE_ID)}`);
+                
                 if (!response.ok) {
-                    throw new Error('Rezervasyonlar yüklenemedi');
+                    let errorMessage = 'Rezervasyonlar yüklenemedi';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const result = await response.json();
+                console.log('Reservations response:', result);
                 const reservations = result.success && result.data ? result.data : [];
                 
                 if (reservations.length === 0) {

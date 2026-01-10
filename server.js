@@ -1176,6 +1176,127 @@ async function addNewTablesIfNeeded() {
       logDebug('Created restaurants table');
     }
 
+    // Check and add restaurant_reservations table (only if restaurants table exists)
+    // First check if restaurants table exists (required for foreign key)
+    const restaurantsTableExistsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'restaurants'
+      );
+    `);
+    
+    if (!restaurantsTableExistsCheck.rows[0].exists) {
+      console.log('⚠️ restaurants table does not exist, skipping restaurant_reservations table creation');
+    } else {
+      const restaurantReservationsCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'restaurant_reservations'
+        );
+      `);
+      
+      if (!restaurantReservationsCheck.rows[0].exists) {
+        try {
+          await pool.query(`
+            CREATE TABLE restaurant_reservations (
+              id SERIAL PRIMARY KEY,
+              restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE RESTRICT,
+            guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+            reservation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+            pax_adult INTEGER NOT NULL DEFAULT 0,
+            pax_child INTEGER NOT NULL DEFAULT 0,
+            total_price DECIMAL(10, 2) NOT NULL,
+            currency VARCHAR(3) NOT NULL DEFAULT 'TRY',
+            status VARCHAR(20) DEFAULT 'confirmed',
+            special_requests TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            cancelled_at TIMESTAMP WITH TIME ZONE NULL,
+            CONSTRAINT positive_pax CHECK (pax_adult >= 0 AND pax_child >= 0 AND (pax_adult + pax_child) > 0),
+            CONSTRAINT positive_price CHECK (total_price >= 0)
+          );
+        `);
+        
+        // Create indexes (check if they exist first for older PostgreSQL versions)
+        try {
+          const guestIndexCheck = await pool.query(`
+            SELECT EXISTS (
+              SELECT FROM pg_indexes 
+              WHERE schemaname = 'public' 
+              AND tablename = 'restaurant_reservations' 
+              AND indexname = 'idx_restaurant_reservations_guest'
+            );
+          `);
+          
+          if (!guestIndexCheck.rows[0].exists) {
+            await pool.query(`
+              CREATE INDEX idx_restaurant_reservations_guest ON restaurant_reservations(guest_unique_id, reservation_date);
+            `);
+          }
+          
+          const restaurantIndexCheck = await pool.query(`
+            SELECT EXISTS (
+              SELECT FROM pg_indexes 
+              WHERE schemaname = 'public' 
+              AND tablename = 'restaurant_reservations' 
+              AND indexname = 'idx_restaurant_reservations_restaurant'
+            );
+          `);
+          
+          if (!restaurantIndexCheck.rows[0].exists) {
+            await pool.query(`
+              CREATE INDEX idx_restaurant_reservations_restaurant ON restaurant_reservations(restaurant_id, reservation_date);
+            `);
+          }
+          
+          // Conditional indexes
+          const statusIndexCheck = await pool.query(`
+            SELECT EXISTS (
+              SELECT FROM pg_indexes 
+              WHERE schemaname = 'public' 
+              AND tablename = 'restaurant_reservations' 
+              AND indexname = 'idx_restaurant_reservations_status'
+            );
+          `);
+          
+          if (!statusIndexCheck.rows[0].exists) {
+            await pool.query(`
+              CREATE INDEX idx_restaurant_reservations_status ON restaurant_reservations(status) WHERE status != 'cancelled';
+            `);
+          }
+          
+          const dateIndexCheck = await pool.query(`
+            SELECT EXISTS (
+              SELECT FROM pg_indexes 
+              WHERE schemaname = 'public' 
+              AND tablename = 'restaurant_reservations' 
+              AND indexname = 'idx_restaurant_reservations_date'
+            );
+          `);
+          
+          if (!dateIndexCheck.rows[0].exists) {
+            await pool.query(`
+              CREATE INDEX idx_restaurant_reservations_date ON restaurant_reservations(reservation_date) WHERE status != 'cancelled';
+            `);
+          }
+        } catch (indexError) {
+          console.warn('Warning: Some indexes may already exist:', indexError.message);
+          // Continue - indexes are optional
+        }
+        
+          logDebug('✅ Created restaurant_reservations table and indexes');
+        } catch (error) {
+          console.error('❌ Error creating restaurant_reservations table:', error.message);
+          console.error('   Stack:', error.stack);
+          // Continue with other tables even if this fails - table might already exist
+        }
+      } else {
+        logDebug('restaurant_reservations table already exists');
+      }
+    }
+
     // Check and create SPA services table if it doesn't exist
     const spaServicesCheck = await pool.query(`
       SELECT EXISTS (
@@ -6451,27 +6572,114 @@ app.get('/reservations', async (req, res) => {
       });
     }
     
-    const result = await pool.query(`
-      SELECT 
-        rr.id,
-        rr.restaurant_id,
-        rr.reservation_date,
-        rr.pax_adult,
-        rr.pax_child,
-        rr.total_price,
-        rr.currency,
-        rr.status,
-        rr.special_requests,
-        rr.created_at,
-        r.name as restaurant_name,
-        r.photos as restaurant_photos
-      FROM restaurant_reservations rr
-      INNER JOIN restaurants r ON r.id = rr.restaurant_id
-      WHERE rr.guest_unique_id = $1
-        AND rr.status != 'cancelled'
-      ORDER BY rr.reservation_date DESC, rr.created_at DESC
-    `, [guest_unique_id]);
+    // Check if restaurant_reservations table exists
+    let tableExists = false;
+    try {
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'restaurant_reservations'
+        );
+      `);
+      tableExists = tableCheck.rows[0].exists;
+    } catch (checkError) {
+      console.error('Error checking restaurant_reservations table:', checkError);
+      // Continue anyway - will catch error in query
+    }
     
+    if (!tableExists) {
+      // Table doesn't exist yet, return empty array (not an error)
+      console.log('restaurant_reservations table does not exist yet, returning empty array');
+      return res.json({ success: true, data: [] });
+    }
+    
+    // Try to get reservations with LEFT JOIN (safer if restaurants table missing)
+    let result;
+    try {
+      // First check if restaurants table exists
+      const restaurantsTableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'restaurants'
+        );
+      `);
+      
+      const restaurantsTableExists = restaurantsTableCheck.rows[0].exists;
+      
+      if (restaurantsTableExists) {
+        // Use LEFT JOIN if restaurants table exists
+        result = await pool.query(`
+          SELECT 
+            rr.id,
+            rr.restaurant_id,
+            rr.reservation_date,
+            rr.pax_adult,
+            rr.pax_child,
+            rr.total_price,
+            rr.currency,
+            rr.status,
+            rr.special_requests,
+            rr.created_at,
+            r.name as restaurant_name,
+            r.photos as restaurant_photos
+          FROM restaurant_reservations rr
+          LEFT JOIN restaurants r ON r.id = rr.restaurant_id
+          WHERE rr.guest_unique_id = $1
+            AND rr.status != 'cancelled'
+          ORDER BY rr.reservation_date DESC, rr.created_at DESC
+        `, [guest_unique_id]);
+      } else {
+        // Query without JOIN if restaurants table doesn't exist
+        console.log('restaurants table does not exist, querying without JOIN');
+        result = await pool.query(`
+          SELECT 
+            id,
+            restaurant_id,
+            reservation_date,
+            pax_adult,
+            pax_child,
+            total_price,
+            currency,
+            status,
+            special_requests,
+            created_at
+          FROM restaurant_reservations
+          WHERE guest_unique_id = $1
+            AND status != 'cancelled'
+          ORDER BY reservation_date DESC, created_at DESC
+        `, [guest_unique_id]);
+        
+        // Map results without restaurant info
+        const reservations = result.rows.map(row => ({
+          id: row.id,
+          restaurant: {
+            id: row.restaurant_id,
+            name: 'Restoran',
+            photos: []
+          },
+          reservation_date: row.reservation_date,
+          pax_adult: parseInt(row.pax_adult),
+          pax_child: parseInt(row.pax_child),
+          total_pax: parseInt(row.pax_adult) + parseInt(row.pax_child),
+          total_price: parseFloat(row.total_price),
+          currency: row.currency,
+          status: row.status,
+          special_requests: row.special_requests,
+          created_at: row.created_at
+        }));
+        
+        return res.json({ success: true, data: reservations });
+      }
+    } catch (queryError) {
+      console.error('Error querying restaurant_reservations:', queryError);
+      console.error('Error stack:', queryError.stack);
+      // Re-throw to be caught by outer catch block
+      throw queryError;
+    }
+    
+    // Map results (handle null restaurant_name from LEFT JOIN)
     const reservations = result.rows.map(row => {
       let photos = [];
       if (row.restaurant_photos) {
@@ -6490,7 +6698,7 @@ app.get('/reservations', async (req, res) => {
         id: row.id,
         restaurant: {
           id: row.restaurant_id,
-          name: row.restaurant_name,
+          name: row.restaurant_name || 'Restoran',
           photos
         },
         reservation_date: row.reservation_date,
@@ -6508,7 +6716,12 @@ app.get('/reservations', async (req, res) => {
     res.json({ success: true, data: reservations });
   } catch (error) {
     console.error('Error fetching reservations:', error);
-    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Database error: ' + error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
