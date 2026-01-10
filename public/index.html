@@ -9005,10 +9005,8 @@
                 window.spaSelectedTherapistId = null;
                 if (therapistSelectorWrapper) therapistSelectorWrapper.style.display = 'none';
                 
-                // Hide time slots until service and therapist are selected
-                if (slotsContainer) {
-                    slotsContainer.style.display = 'none';
-                }
+                // Show all available slots for all services on this date
+                await filterAndShowSlots(selectedDate, null);
                 
             } catch (error) {
                 console.error('Error loading date availability:', error);
@@ -9059,29 +9057,16 @@
                 window.spaSelectedTherapistId = null;
             }
             
-            // Hide time slots until therapist is selected
-            const slotsContainer = document.getElementById('spa-time-slots-container');
-            if (slotsContainer) {
-                slotsContainer.style.display = 'none';
-            }
-            
-            // Don't show slots yet - wait for therapist selection
+            // Show slots for this service (without therapist filter)
+            await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
         }
         
         // Called when a therapist is selected (from grid)
         async function onSpaTherapistSelected(selectedTherapistId) {
             if (!window.spaSelectedDate || !window.spaSelectedServiceId) return;
             
-            // Only show slots if both service and therapist are selected
-            if (selectedTherapistId) {
-                await filterAndShowSlots(window.spaSelectedDate, window.spaSelectedServiceId);
-            } else {
-                // If therapist is deselected, hide slots
-                const slotsContainer = document.getElementById('spa-time-slots-container');
-                if (slotsContainer) {
-                    slotsContainer.style.display = 'none';
-                }
-            }
+            // Show slots with therapist filter if selected, otherwise show service slots
+            await filterAndShowSlots(window.spaSelectedDate, window.spaSelectedServiceId);
         }
         
         // Filter and show slots based on selected service and therapist
@@ -9091,12 +9076,6 @@
             
             if (!slotsContainer || !date) return;
             
-            // Only show slots if both service AND therapist are selected
-            if (!selectedServiceId || !selectedTherapistId) {
-                slotsContainer.style.display = 'none';
-                return;
-            }
-            
             let slotsToShow = [];
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -9104,26 +9083,50 @@
             dateObj.setHours(0, 0, 0, 0);
             const isToday = dateObj.getTime() === today.getTime();
             
-            // Get slots for the selected service
-            const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
-            serviceSlots.forEach(slot => {
-                if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
-                    // Only include slots where the selected therapist is available
-                    const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
-                    if (!hasTherapist) return;
-                    
-                    // Filter out past slots for today
-                    if (isToday) {
-                        const slotStart = new Date(slot.start);
-                        if (slotStart <= new Date()) return;
+            if (selectedServiceId) {
+                // Filter by service
+                const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
+                serviceSlots.forEach(slot => {
+                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                        // Filter by therapist if selected
+                        if (selectedTherapistId) {
+                            const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
+                            if (!hasTherapist) return;
+                        }
+                        
+                        // Filter out past slots for today
+                        if (isToday) {
+                            const slotStart = new Date(slot.start);
+                            if (slotStart <= new Date()) return;
+                        }
+                        
+                        slotsToShow.push({
+                            slot: slot,
+                            serviceId: selectedServiceId
+                        });
                     }
-                    
-                    slotsToShow.push({
-                        slot: slot,
-                        serviceId: selectedServiceId
+                });
+            } else {
+                // Show all slots from all available services (no service selected)
+                if (window.spaDateSlotsByService) {
+                    window.spaDateSlotsByService.forEach((slots, serviceId) => {
+                        slots.forEach(slot => {
+                            if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                                // Filter out past slots for today
+                                if (isToday) {
+                                    const slotStart = new Date(slot.start);
+                                    if (slotStart <= new Date()) return;
+                                }
+                                
+                                slotsToShow.push({
+                                    slot: slot,
+                                    serviceId: serviceId
+                                });
+                            }
+                        });
                     });
                 }
-            });
+            }
             
             // Sort by time
             slotsToShow.sort((a, b) => {
