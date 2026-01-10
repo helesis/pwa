@@ -1066,6 +1066,10 @@
             margin-top: 2px;
         }
 
+        .nav-item.hidden {
+            display: none !important;
+        }
+
         /* Content sections */
         .content-section {
             display: none !important; /* Force hide when not active */
@@ -3254,6 +3258,7 @@
                 
                 if (response.ok && data.success) {
                     // Login successful
+                    IS_AUTHENTICATED = true;
                     GUEST_NAME = data.guest_name || name || 'Misafir';
                     GUEST_SURNAME = data.guest_surname || surname;
                     CHECKIN_DATE = data.checkin_date || checkinDate;
@@ -3282,6 +3287,9 @@
                     localStorage.setItem('checkout_date', CHECKOUT_DATE);
                     if (ROOM_NUMBER) localStorage.setItem('room_number', ROOM_NUMBER);
                     if (TEAM_ID) localStorage.setItem('team_id', TEAM_ID);
+                    
+                    // Update navigation visibility
+                    updateNavigationVisibility();
                     
                     // Hide login, show app
                     document.getElementById('guestLoginContainer').style.display = 'none';
@@ -5040,6 +5048,8 @@
             }
             
             // Clear all guest data
+            IS_AUTHENTICATED = false;
+            const oldGuestUniqueId = GUEST_UNIQUE_ID; // Store for cleanup
             GUEST_UNIQUE_ID = null;
             GUEST_NAME = null;
             GUEST_SURNAME = null;
@@ -5058,11 +5068,14 @@
             localStorage.removeItem('room_number');
             localStorage.removeItem('team_id');
             // Remove guest-specific profile photo from localStorage
-            if (GUEST_UNIQUE_ID) {
-                localStorage.removeItem(`guestProfilePhoto_${GUEST_UNIQUE_ID}`);
+            if (oldGuestUniqueId) {
+                localStorage.removeItem(`guestProfilePhoto_${oldGuestUniqueId}`);
             }
             // Also remove old global key for backward compatibility
             localStorage.removeItem('guestProfilePhoto');
+            
+            // Update navigation visibility
+            updateNavigationVisibility();
             
             // Disconnect socket if connected
             if (socket) {
@@ -5107,6 +5120,10 @@
                         if (loginScreen) loginScreen.style.display = 'none';
                         if (settingsContent) settingsContent.style.display = 'block';
                         if (logoutBtn) logoutBtn.style.display = 'flex';
+                        
+                        // Update navigation visibility
+                        updateNavigationVisibility();
+                        
                         return true;
                     }
                 }
@@ -5118,6 +5135,10 @@
             if (loginScreen) loginScreen.style.display = 'block';
             if (settingsContent) settingsContent.style.display = 'none';
             if (logoutBtn) logoutBtn.style.display = 'none';
+            
+            // Update navigation visibility
+            updateNavigationVisibility();
+            
             return false;
         }
 
@@ -5223,6 +5244,7 @@
 
             // Clear session vars
             IS_AUTHENTICATED = false;
+            const oldGuestUniqueId = GUEST_UNIQUE_ID; // Store for cleanup
             GUEST_UNIQUE_ID = null;
             GUEST_NAME = 'Misafir';
             GUEST_SURNAME = null;
@@ -5240,6 +5262,48 @@
             localStorage.removeItem('room_number');
             localStorage.removeItem('team_id');
 
+            // Clear guest-specific profile photo from localStorage
+            if (oldGuestUniqueId) {
+                localStorage.removeItem(`guestProfilePhoto_${oldGuestUniqueId}`);
+            }
+            // Also remove old global key for backward compatibility
+            localStorage.removeItem('guestProfilePhoto');
+
+            // Clear avatar
+            guestProfilePhoto = null;
+            teamAvatar = null;
+            updateProfilePhotoDisplay();
+
+            // Clear restaurant reservations
+            const restaurantReservationsContainer = document.getElementById('restaurantReservations');
+            if (restaurantReservationsContainer) {
+                restaurantReservationsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
+                        Henüz restoran rezervasyonunuz bulunmamaktadır.
+                    </div>
+                `;
+            }
+
+            // Clear SPA reservations if exists
+            const spaReservationsContainer = document.getElementById('spaReservations');
+            if (spaReservationsContainer) {
+                spaReservationsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #667781;">
+                        Henüz SPA rezervasyonunuz bulunmamaktadır.
+                    </div>
+                `;
+            }
+
+            // Clear chat messages
+            const chatContainer = document.getElementById('chatContainer');
+            if (chatContainer) {
+                chatContainer.innerHTML = '';
+            }
+
+            // Clear messages array and related state
+            messages = [];
+            oldestMessageTimestamp = null;
+
             // Disconnect socket if connected
             if (socket) {
                 socket.disconnect();
@@ -5247,6 +5311,11 @@
             }
 
             await checkAuthStatus();
+            
+            // Update navigation visibility after logout
+            updateNavigationVisibility();
+            
+            // Switch to info section (which is always available)
             switchSection('info');
         }
 
@@ -5302,8 +5371,36 @@
 
         // Initialize on load
         // Check authentication on page load
+        // Update navigation visibility based on login status
+        function updateNavigationVisibility() {
+            const isAuthenticated = IS_AUTHENTICATED && GUEST_UNIQUE_ID;
+            
+            // Sections that require authentication
+            const authRequiredSections = ['reservations', 'chat', 'map'];
+            
+            authRequiredSections.forEach(section => {
+                const navItem = document.querySelector(`[data-section="${section}"]`);
+                if (navItem) {
+                    if (isAuthenticated) {
+                        navItem.classList.remove('hidden');
+                    } else {
+                        navItem.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
         // Navigation functions
         function switchSection(section) {
+            // Check if section requires authentication
+            const authRequiredSections = ['reservations', 'chat', 'map'];
+            if (authRequiredSections.includes(section) && (!IS_AUTHENTICATED || !GUEST_UNIQUE_ID)) {
+                // Redirect to settings for login
+                alert('Bu bölümü kullanmak için giriş yapmanız gerekiyor. (Ayarlar > Giriş Yap)');
+                switchSection('settings');
+                return;
+            }
+
             // Check for service worker updates (Safari-like refresh mechanism)
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({ type: 'CHECK_UPDATE' });
@@ -10946,6 +11043,10 @@
         window.addEventListener('DOMContentLoaded', async () => {
             // await checkGuestAuth(); // Geçici olarak devre dışı - tasarım görmek için
             applyTranslations(); // Sayfa yüklendiğinde çevirileri uygula
+            
+            // Initialize navigation visibility based on auth status
+            await checkAuthStatus();
+            updateNavigationVisibility();
             
             // Initialize date picker with today's date
             const datePicker = document.getElementById('activity-date-selector');
