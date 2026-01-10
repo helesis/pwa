@@ -2629,23 +2629,23 @@
                     <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> <span data-i18n="myReservations">Rezervasyonlarım</span></div>
                     <div class="info-card-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 14px;">
                         <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Oda</span>
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="room">Oda</span>
                             <span id="reservationRoomNumber" style="font-weight: 500;">-</span>
                         </div>
                         <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Giriş Tarihi</span>
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="checkinDate">Giriş Tarihi</span>
                             <span id="reservationCheckinDate" style="font-weight: 500;">-</span>
                         </div>
                         <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Çıkış Tarihi</span>
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="checkoutDate">Çıkış Tarihi</span>
                             <span id="reservationCheckoutDate" style="font-weight: 500;">-</span>
                         </div>
                         <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Yetişkin</span>
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="adult">Yetişkin</span>
                             <span id="reservationAdultCount" style="font-weight: 500;">-</span>
                         </div>
                         <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;">Çocuk</span>
+                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="kids">Çocuk</span>
                             <span id="reservationChildCount" style="font-weight: 500;">-</span>
                         </div>
                     </div>
@@ -2661,7 +2661,7 @@
                 </div>
 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span>Spa Rezervasyonlarım</span></div>
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="mySpaReservations">Spa Rezervasyonlarım</span></div>
                     <div class="info-card-content" id="mySpaReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;">
                             Yükleniyor...
@@ -2670,7 +2670,7 @@
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span>Bugün Açık Restoranlar</span></div>
+                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="availableRestaurants">Bugün Açık Restoranlar</span></div>
                     <div class="info-card-content" id="availableRestaurants" style="min-height: 100px;">
                         <div style="text-align: center; padding: 20px; color: #667781;">
                             <div class="loading">Yükleniyor...</div>
@@ -8946,16 +8946,9 @@
         // Called when a date is selected (from grid)
         async function onSpaDateSelected(selectedDate) {
             if (!selectedDate) return;
-            const slotsContainer = document.getElementById('spa-time-slots-container');
             const serviceSelectorWrapper = document.getElementById('spa-service-selector-wrapper');
-            const serviceSelector = document.getElementById('spa-service-selector');
             const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
-            
-            // Show loading
-            if (slotsContainer) {
-                slotsContainer.style.display = 'block';
-                slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
-            }
+            const slotsContainer = document.getElementById('spa-time-slots-container');
             
             try {
                 // Get all services
@@ -9007,12 +9000,15 @@
                 window.spaDateSlotsByService = allSlotsByService;
                 window.spaSelectedDate = selectedDate;
                 
-                // Show all available slots for the selected date (from all services)
-                await showDateSlots(selectedDate, allSlotsByService);
-                
                 // Reset service and therapist selectors
                 window.spaSelectedServiceId = null;
+                window.spaSelectedTherapistId = null;
                 if (therapistSelectorWrapper) therapistSelectorWrapper.style.display = 'none';
+                
+                // Hide time slots until service and therapist are selected
+                if (slotsContainer) {
+                    slotsContainer.style.display = 'none';
+                }
                 
             } catch (error) {
                 console.error('Error loading date availability:', error);
@@ -9063,61 +9059,29 @@
                 window.spaSelectedTherapistId = null;
             }
             
-            // Filter and show slots for this service
-            await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
+            // Hide time slots until therapist is selected
+            const slotsContainer = document.getElementById('spa-time-slots-container');
+            if (slotsContainer) {
+                slotsContainer.style.display = 'none';
+            }
+            
+            // Don't show slots yet - wait for therapist selection
         }
         
         // Called when a therapist is selected (from grid)
         async function onSpaTherapistSelected(selectedTherapistId) {
-            if (!window.spaSelectedDate) return;
+            if (!window.spaSelectedDate || !window.spaSelectedServiceId) return;
             
-            const selectedServiceId = window.spaSelectedServiceId || null;
-            
-            // Filter and show slots
-            await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
-        }
-        
-        // Show all slots for a date (from all services if no service selected)
-        async function showDateSlots(date, slotsByService) {
-            const slotsContainer = document.getElementById('spa-time-slots-container');
-            if (!slotsContainer) return;
-            
-            // Collect all available slots from all services
-            const allSlots = [];
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const dateObj = new Date(date);
-            dateObj.setHours(0, 0, 0, 0);
-            const isToday = dateObj.getTime() === today.getTime();
-            
-            slotsByService.forEach((slots, serviceId) => {
-                slots.forEach(slot => {
-                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
-                        // Filter out past slots for today
-                        if (isToday) {
-                            const slotStart = new Date(slot.start);
-                            if (slotStart <= new Date()) {
-                                return; // Skip past slots
-                            }
-                        }
-                        
-                        allSlots.push({
-                            slot: slot,
-                            serviceId: serviceId
-                        });
-                    }
-                });
-            });
-            
-            // Sort by time
-            allSlots.sort((a, b) => {
-                const timeA = new Date(a.slot.start);
-                const timeB = new Date(b.slot.start);
-                return timeA.getTime() - timeB.getTime();
-            });
-            
-            // Render slots
-            renderTimeSlots(allSlots, slotsContainer, date);
+            // Only show slots if both service and therapist are selected
+            if (selectedTherapistId) {
+                await filterAndShowSlots(window.spaSelectedDate, window.spaSelectedServiceId);
+            } else {
+                // If therapist is deselected, hide slots
+                const slotsContainer = document.getElementById('spa-time-slots-container');
+                if (slotsContainer) {
+                    slotsContainer.style.display = 'none';
+                }
+            }
         }
         
         // Filter and show slots based on selected service and therapist
@@ -9127,6 +9091,12 @@
             
             if (!slotsContainer || !date) return;
             
+            // Only show slots if both service AND therapist are selected
+            if (!selectedServiceId || !selectedTherapistId) {
+                slotsContainer.style.display = 'none';
+                return;
+            }
+            
             let slotsToShow = [];
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -9134,56 +9104,26 @@
             dateObj.setHours(0, 0, 0, 0);
             const isToday = dateObj.getTime() === today.getTime();
             
-            if (selectedServiceId) {
-                // Filter by service
-                const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
-                serviceSlots.forEach(slot => {
-                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
-                        // Filter by therapist if selected
-                        if (selectedTherapistId) {
-                            const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
-                            if (!hasTherapist) return;
-                        }
-                        
-                        // Filter out past slots for today
-                        if (isToday) {
-                            const slotStart = new Date(slot.start);
-                            if (slotStart <= new Date()) return;
-                        }
-                        
-                        slotsToShow.push({
-                            slot: slot,
-                            serviceId: selectedServiceId
-                        });
+            // Get slots for the selected service
+            const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
+            serviceSlots.forEach(slot => {
+                if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                    // Only include slots where the selected therapist is available
+                    const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
+                    if (!hasTherapist) return;
+                    
+                    // Filter out past slots for today
+                    if (isToday) {
+                        const slotStart = new Date(slot.start);
+                        if (slotStart <= new Date()) return;
                     }
-                });
-            } else {
-                // Show all slots from all services
-                if (window.spaDateSlotsByService) {
-                    window.spaDateSlotsByService.forEach((slots, serviceId) => {
-                        slots.forEach(slot => {
-                            if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
-                                // Filter by therapist if selected
-                                if (selectedTherapistId) {
-                                    const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
-                                    if (!hasTherapist) return;
-                                }
-                                
-                                // Filter out past slots for today
-                                if (isToday) {
-                                    const slotStart = new Date(slot.start);
-                                    if (slotStart <= new Date()) return;
-                                }
-                                
-                                slotsToShow.push({
-                                    slot: slot,
-                                    serviceId: serviceId
-                                });
-                            }
-                        });
+                    
+                    slotsToShow.push({
+                        slot: slot,
+                        serviceId: selectedServiceId
                     });
                 }
-            }
+            });
             
             // Sort by time
             slotsToShow.sort((a, b) => {
@@ -9192,7 +9132,8 @@
                 return timeA.getTime() - timeB.getTime();
             });
             
-            // Render slots
+            // Show container and render slots
+            slotsContainer.style.display = 'block';
             renderTimeSlots(slotsToShow, slotsContainer, date);
         }
         
@@ -9588,7 +9529,7 @@
             visibleServices.forEach((service, idx) => {
                 const serviceEl = document.createElement('div');
                 serviceEl.className = 'spa-service-item';
-                serviceEl.style.cssText = 'position: relative; min-width: 150px; flex: 1; display: flex; flex-direction: column; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                serviceEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected service
                 if (service.id === window.spaSelectedServiceId) {
@@ -9599,7 +9540,7 @@
                 }
                 
                 serviceEl.innerHTML = `
-                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
                         ${service.name || 'Hizmet'}
                     </div>
                     <div style="font-size: 12px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#667781'}; margin-bottom: 4px;">
@@ -9620,7 +9561,7 @@
                         const prevService = window.spaAvailableServices?.find(s => s.id === window.spaSelectedServiceId);
                         if (prevService && window.spaSelectedServiceElement) {
                             window.spaSelectedServiceElement.innerHTML = `
-                                <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
+                                <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
                                     ${prevService.name || 'Hizmet'}
                                 </div>
                                 <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">
@@ -9641,7 +9582,7 @@
                     
                     // Update innerHTML with white colors
                     serviceEl.innerHTML = `
-                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: white;">
+                        <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: white;">
                             ${service.name || 'Hizmet'}
                         </div>
                         <div style="font-size: 12px; color: white; margin-bottom: 4px;">
@@ -11318,7 +11259,9 @@
                 
                 // Reservations
                 'myReservations': 'Rezervasyonlarım',
+                'mySpaReservations': 'Spa Rezervasyonlarım',
                 'restaurantReservations': 'A\'la Carte Restoran Rezervasyonları',
+                'availableRestaurants': 'Bugün Açık Restoranlar',
                 'spaReservations': 'Spa Rezervasyonları',
                 'noRestaurantReservations': 'Henüz restoran rezervasyonunuz bulunmamaktadır.',
                 'noSpaReservations': 'Henüz spa rezervasyonunuz bulunmamaktadır.',
@@ -11451,7 +11394,9 @@
                 
                 // Reservations
                 'myReservations': 'My Reservations',
+                'mySpaReservations': 'My SPA Reservations',
                 'restaurantReservations': 'A la Carte Restaurant Reservations',
+                'availableRestaurants': 'Restaurants Open Today',
                 'spaReservations': 'Spa Reservations',
                 'noRestaurantReservations': 'You do not have any restaurant reservations yet.',
                 'noSpaReservations': 'You do not have any spa reservations yet.',
@@ -11584,7 +11529,9 @@
                 
                 // Reservations
                 'myReservations': 'Meine Reservierungen',
+                'mySpaReservations': 'Meine SPA-Reservierungen',
                 'restaurantReservations': 'A la Carte Restaurant Reservierungen',
+                'availableRestaurants': 'Heute geöffnete Restaurants',
                 'spaReservations': 'Spa Reservierungen',
                 'noRestaurantReservations': 'Sie haben noch keine Restaurantreservierungen.',
                 'noSpaReservations': 'Sie haben noch keine Spa-Reservierungen.',
@@ -11717,7 +11664,9 @@
                 
                 // Reservations
                 'myReservations': 'Мои бронирования',
+                'mySpaReservations': 'Мои бронирования SPA',
                 'restaurantReservations': 'Бронирования ресторана A la Carte',
+                'availableRestaurants': 'Рестораны, открытые сегодня',
                 'spaReservations': 'Бронирования SPA',
                 'noRestaurantReservations': 'У вас пока нет бронирований ресторана.',
                 'noSpaReservations': 'У вас пока нет бронирований SPA.',
