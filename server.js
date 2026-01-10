@@ -1438,6 +1438,31 @@ async function addNewTablesIfNeeded() {
       }
     }
 
+    // Check and add hotel_settings table
+    const hotelSettingsCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'hotel_settings'
+      );
+    `);
+    
+    if (!hotelSettingsCheck.rows[0].exists) {
+      try {
+        await pool.query(`
+          CREATE TABLE hotel_settings (
+            setting_key VARCHAR(255) PRIMARY KEY,
+            settings_json JSONB NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        logDebug('Created hotel_settings table');
+      } catch (error) {
+        console.error('❌ Error creating hotel_settings table:', error.message);
+      }
+    }
+
     // Seed initial data if tables are empty
     await seedInitialData();
     
@@ -7152,7 +7177,7 @@ app.post('/api/spa/requests/:requestId/cancel', async (req, res) => {
     
     // Check if request exists and belongs to guest
     const checkResult = await pool.query(`
-      SELECT request_id, status 
+      SELECT request_id, status, start, service_id
       FROM spa_requests 
       WHERE request_id = $1 AND guest_unique_id = $2
     `, [requestId, guestUniqueId]);
@@ -7166,6 +7191,42 @@ app.post('/api/spa/requests/:requestId/cancel', async (req, res) => {
     // Only allow cancellation for PENDING or CONFIRMED requests
     if (request.status !== 'PENDING' && request.status !== 'CONFIRMED') {
       return res.status(400).json({ error: `Cannot cancel request with status: ${request.status}` });
+    }
+    
+    // Check cancellation deadline (get from settings)
+    let cancellationDeadlineMinutes = 240; // default 4 hours
+    try {
+      const settingsResult = await pool.query(`
+        SELECT settings_json FROM hotel_settings WHERE setting_key = 'spa_cancellation_deadline_minutes' LIMIT 1
+      `);
+      if (settingsResult.rows.length > 0 && settingsResult.rows[0].settings_json) {
+        cancellationDeadlineMinutes = settingsResult.rows[0].settings_json.value || 240;
+      }
+    } catch (e) {
+      console.warn('Error fetching SPA cancellation deadline, using default:', e.message);
+    }
+
+    // Also check if setting is stored as simple value in settings_json
+    if (settingsResult.rows.length > 0 && settingsResult.rows[0].settings_json) {
+      const settingsJson = settingsResult.rows[0].settings_json;
+      if (typeof settingsJson === 'object' && settingsJson.value !== undefined) {
+        cancellationDeadlineMinutes = settingsJson.value;
+      } else if (typeof settingsJson === 'number') {
+        cancellationDeadlineMinutes = settingsJson;
+      }
+    }
+
+    const reservationDateTime = new Date(request.start);
+    const now = new Date();
+    const deadline = new Date(reservationDateTime.getTime() - (cancellationDeadlineMinutes * 60 * 1000));
+    
+    if (now > deadline) {
+      return res.status(400).json({ 
+        error: 'Cancellation deadline has passed',
+        code: 'CANCELLATION_DEADLINE_PASSED',
+        deadline: deadline.toISOString(),
+        deadlineMinutes: cancellationDeadlineMinutes
+      });
     }
     
     // Update request status
@@ -7186,6 +7247,58 @@ app.post('/api/spa/requests/:requestId/cancel', async (req, res) => {
   } catch (error) {
     console.error('Error canceling SPA request:', error);
     res.status(500).json({ error: 'Failed to cancel request' });
+  }
+});
+
+// Get SPA cancellation deadline setting
+app.get('/api/settings/spa-cancellation-deadline-minutes', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT settings_json FROM hotel_settings WHERE setting_key = 'spa_cancellation_deadline_minutes' LIMIT 1
+    `);
+    
+    if (result.rows.length > 0 && result.rows[0].settings_json) {
+      const settingsJson = result.rows[0].settings_json;
+      let value = 240; // default
+      if (typeof settingsJson === 'object' && settingsJson.value !== undefined) {
+        value = settingsJson.value;
+      } else if (typeof settingsJson === 'number') {
+        value = settingsJson;
+      }
+      return res.json({ value });
+    }
+    
+    res.json({ value: 240 }); // default 4 hours
+  } catch (error) {
+    console.error('Error fetching SPA cancellation deadline setting:', error);
+    res.json({ value: 240 }); // default on error
+  }
+});
+
+// Update SPA cancellation deadline setting
+app.post('/api/settings/spa-cancellation-deadline-minutes', async (req, res) => {
+  try {
+    const { value } = req.body;
+    const minutes = parseInt(value) || 240;
+    
+    if (minutes < 0) {
+      return res.status(400).json({ error: 'Value must be non-negative' });
+    }
+    
+    // Upsert setting
+    await pool.query(`
+      INSERT INTO hotel_settings (setting_key, settings_json, updated_at)
+      VALUES ('spa_cancellation_deadline_minutes', $1::jsonb, CURRENT_TIMESTAMP)
+      ON CONFLICT (setting_key) 
+      DO UPDATE SET 
+        settings_json = $1::jsonb,
+        updated_at = CURRENT_TIMESTAMP
+    `, [{ value: minutes }]);
+    
+    res.json({ success: true, value: minutes });
+  } catch (error) {
+    console.error('Error updating SPA cancellation deadline setting:', error);
+    res.status(500).json({ error: 'Failed to update setting' });
   }
 });
 

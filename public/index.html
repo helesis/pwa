@@ -10611,6 +10611,20 @@
                     return;
                 }
 
+                // Get cancellation deadline from settings (async call)
+                let cancellationDeadlineMinutes = 240; // default 4 hours
+                try {
+                    const settingsResponse = await fetch('/api/settings/spa-cancellation-deadline-minutes', { credentials: 'include' });
+                    if (settingsResponse.ok) {
+                        const settingsData = await settingsResponse.json();
+                        if (settingsData.value !== undefined) {
+                            cancellationDeadlineMinutes = parseInt(settingsData.value) || 240;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error fetching SPA cancellation deadline, using default:', e);
+                }
+
                 container.innerHTML = myRequests.map(request => {
                     const startDate = new Date(request.start);
                     const endDate = new Date(request.end);
@@ -10633,6 +10647,13 @@
                         weekday: 'long'
                     });
                     const timeStr = `${startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+
+                    // Check if cancellation is allowed
+                    const now = new Date();
+                    const deadline = new Date(startDate.getTime() - (cancellationDeadlineMinutes * 60 * 1000));
+                    const canCancel = now <= deadline && (status === 'PENDING' || status === 'CONFIRMED');
+                    const hoursUntilDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60));
+                    const minutesUntilDeadline = Math.ceil((deadline - now) / (1000 * 60));
 
                     return `
                         <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
@@ -10657,6 +10678,21 @@
                                     ${statusText}
                                 </span>
                             </div>
+                            ${canCancel ? `
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e4e6e9;">
+                                    <button onclick="cancelSpaReservation('${request.requestId}')" 
+                                            style="width: 100%; padding: 10px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
+                                            onmouseover="this.style.background='#c82333'"
+                                            onmouseout="this.style.background='#dc3545'">
+                                        İptal Et
+                                    </button>
+                                    <div style="font-size: 11px; color: #667781; text-align: center; margin-top: 6px;">
+                                        ${minutesUntilDeadline > 60 
+                                            ? `İptal için ${hoursUntilDeadline} saat kaldı`
+                                            : `İptal için ${minutesUntilDeadline} dakika kaldı`}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('');
@@ -10860,6 +10896,24 @@
                 loadSpaReservations();
             } catch (error) {
                 alert(`Hata: ${error.message}`);
+            }
+        }
+
+        async function cancelSpaReservation(requestId) {
+            if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+                return;
+            }
+            
+            try {
+                await spaApi.cancelRequest(requestId);
+                alert('Rezervasyonunuz iptal edildi.');
+                loadMySpaReservations();
+            } catch (error) {
+                if (error.message && error.message.includes('deadline')) {
+                    alert('İptal süresi dolmuş. Bu rezervasyonu iptal edemezsiniz.');
+                } else {
+                    alert(`Hata: ${error.message || 'Rezervasyon iptal edilemedi.'}`);
+                }
             }
         }
 

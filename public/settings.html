@@ -623,6 +623,7 @@
             <button class="tab" onclick="switchTab('activities-calendar')"><i data-lucide="calendar" class="icon icon-md"></i> Aktiviteler Takvimi</button>
             <button class="tab" onclick="switchTab('posts')"><i data-lucide="image" class="icon icon-md"></i> Postlar</button>
             <button class="tab" onclick="switchTab('restaurants')"><i data-lucide="utensils-crossed" class="icon icon-md"></i> A'la Carte Rezervasyonlar</button>
+            <button class="tab" onclick="switchTab('spa')"><i data-lucide="sparkles" class="icon icon-md"></i> SPA Ayarları</button>
         </div>
 
         <!-- Assistants Tab -->
@@ -851,6 +852,26 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPA Settings Tab -->
+    <div id="spa-tab" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">SPA Ayarları</h2>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">SPA Rezervasyon İptal Süresi (Dakika)</label>
+                <p style="font-size: 12px; color: var(--text-light); margin-bottom: 8px;">
+                    Misafirler terapiye ne kadar süre kala rezervasyonlarını iptal edebilir. Varsayılan: 240 dakika (4 saat)
+                </p>
+                <input type="number" id="spa-cancellation-deadline" class="form-input" min="0" step="1" placeholder="240">
+                <button type="button" class="btn btn-primary" onclick="saveSpaCancellationDeadline()" style="margin-top: 12px;">
+                    Kaydet
+                </button>
             </div>
         </div>
     </div>
@@ -1483,13 +1504,19 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
+
             event.target.classList.add('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Load data when switching to specific tabs
+            if (tabName === 'spa') {
+                loadSpaSettings();
+            }
             
             if (tabName === 'assistants') loadAssistants();
             if (tabName === 'teams') loadTeams();
             if (tabName === 'assignments') loadAssignments();
+            if (tabName === 'spa') loadSpaSettings();
             if (tabName === 'unassigned') loadUnassignedRooms();
             if (tabName === 'activities') loadActivities();
             if (tabName === 'activities-calendar') {
@@ -5675,6 +5702,53 @@
             currentSessionTemplateId = templateId;
             // TODO: Implement session template modal
             alert('Seans şablonu modal henüz implement edilmedi');
+        }
+
+        // Load SPA settings
+        async function loadSpaSettings() {
+            try {
+                const response = await fetch('/api/settings/spa-cancellation-deadline-minutes');
+                if (response.ok) {
+                    const data = await response.json();
+                    const input = document.getElementById('spa-cancellation-deadline');
+                    if (input) {
+                        input.value = data.value || 240;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading SPA settings:', error);
+            }
+        }
+
+        // Save SPA cancellation deadline
+        async function saveSpaCancellationDeadline() {
+            const input = document.getElementById('spa-cancellation-deadline');
+            const value = parseInt(input.value);
+            
+            if (isNaN(value) || value < 0) {
+                alert('Lütfen geçerli bir sayı girin (0 veya daha büyük)');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/spa-cancellation-deadline-minutes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ value })
+                });
+
+                if (response.ok) {
+                    alert('SPA iptal süresi başarıyla kaydedildi!');
+                } else {
+                    const error = await response.json();
+                    alert('Hata: ' + (error.error || 'Ayarlar kaydedilemedi'));
+                }
+            } catch (error) {
+                console.error('Error saving SPA cancellation deadline:', error);
+                alert('Ayarlar kaydedilirken hata oluştu: ' + error.message);
+            }
         }
     </script>
 </body>
