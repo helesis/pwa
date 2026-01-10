@@ -5663,6 +5663,9 @@ async function initializeTestData() {
 
 // Initialize database and start server
 // Initialize database and start server
+const serverStartTime = Date.now(); // Track server startup time
+const PORT = process.env.PORT || 3000;
+
 console.log('');
 console.log('🚀 [STARTUP] Starting Voyage Sorgun Chat Server...');
 console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -5678,6 +5681,13 @@ initializeDatabase()
     console.log(`   ⏱️  Database init time: ${dbInitTime}s`);
     console.log('');
     console.log('📊 [STEP 3/3] Starting HTTP server...');
+    
+    // Start HTTP server after database is initialized
+    httpServer.listen(PORT, () => {
+      const totalStartupTime = ((Date.now() - serverStartTime) / 1000).toFixed(2);
+      console.log(`\n✅ Server running on port ${PORT} (${totalStartupTime}s)`);
+      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}\n`);
+    });
   })
   .catch((error) => {
     console.error('');
@@ -7179,14 +7189,8 @@ app.post('/api/spa/requests/:requestId/cancel', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-const serverStartTime = Date.now(); // Track server startup time
-
-httpServer.listen(PORT, () => {
-  const totalStartupTime = ((Date.now() - serverStartTime) / 1000).toFixed(2);
-  console.log(`\n✅ Server running on port ${PORT} (${totalStartupTime}s)`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}\n`);
-});
+// HTTP server is now started in the database initialization promise (see above)
+// This ensures the server only starts after the database is ready
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
