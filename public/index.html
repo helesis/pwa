@@ -8786,77 +8786,415 @@
             if (!container) return;
             
             try {
-                // Get services first
-                const services = await spaApi.getServices();
-                if (!services || services.length === 0) {
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: #667781;">
-                            Henüz SPA hizmeti bulunmamaktadır.
-                        </div>
-                    `;
+                // Calculate date range
+                if (!CHECKIN_DATE || !CHECKOUT_DATE) {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Giriş ve çıkış tarihleri bulunamadı.</div>';
                     return;
                 }
                 
-                // Get existing requests
-                const requests = await spaApi.listMyRequests();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const checkin = new Date(CHECKIN_DATE);
+                checkin.setHours(0, 0, 0, 0);
+                const checkout = new Date(CHECKOUT_DATE);
+                checkout.setHours(0, 0, 0, 0);
+                
+                // Start from today, include checkout date
+                const from = today;
+                const to = new Date(checkout);
                 
                 container.innerHTML = '';
                 
-                // Service selection dropdown
+                // Date selection input (first step)
+                const dateSelect = document.createElement('div');
+                dateSelect.style.cssText = 'margin-bottom: 16px;';
+                dateSelect.innerHTML = `
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Tarih Seçin</label>
+                    <input type="date" id="spa-date-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" 
+                           min="${from.toISOString().split('T')[0]}" 
+                           max="${to.toISOString().split('T')[0]}"
+                           onchange="onSpaDateSelected()">
+                `;
+                container.appendChild(dateSelect);
+                
+                // Service selection dropdown (populated after date selection)
                 const serviceSelect = document.createElement('div');
-                serviceSelect.style.cssText = 'margin-bottom: 16px;';
+                serviceSelect.id = 'spa-service-selector-wrapper';
+                serviceSelect.style.cssText = 'margin-bottom: 16px; display: none;';
                 serviceSelect.innerHTML = `
                     <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Hizmet Seçin</label>
-                    <select id="spa-service-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="loadSpaCalendar()">
+                    <select id="spa-service-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="onSpaServiceSelected()">
                         <option value="">Hizmet seçin...</option>
-                        ${services.map(s => `<option value="${s.id}">${s.name} (${s.durationMin} dk - ${s.price} ${s.currency})</option>`).join('')}
                     </select>
                 `;
                 container.appendChild(serviceSelect);
                 
-                // Therapist selection dropdown (hidden initially)
+                // Therapist selection dropdown (populated after service selection)
                 const therapistSelect = document.createElement('div');
                 therapistSelect.id = 'spa-therapist-selector-wrapper';
                 therapistSelect.style.cssText = 'margin-bottom: 16px; display: none;';
                 therapistSelect.innerHTML = `
                     <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Terapist Seçin (Opsiyonel)</label>
-                    <select id="spa-therapist-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="loadSpaCalendar()">
+                    <select id="spa-therapist-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="onSpaTherapistSelected()">
                         <option value="">Tüm terapistler</option>
                     </select>
                 `;
                 container.appendChild(therapistSelect);
                 
-                // Calendar container
-                const calendarContainer = document.createElement('div');
-                calendarContainer.id = 'spa-calendar-container';
-                calendarContainer.style.cssText = 'margin-bottom: 24px;';
-                container.appendChild(calendarContainer);
+                // Time slots container (shown after date selection)
+                const slotsContainer = document.createElement('div');
+                slotsContainer.id = 'spa-time-slots-container';
+                slotsContainer.style.cssText = 'margin-top: 16px; display: none;';
+                container.appendChild(slotsContainer);
                 
-                // Last update info
-                const lastUpdateInfo = document.createElement('div');
-                lastUpdateInfo.id = 'spa-calendar-last-update';
-                lastUpdateInfo.style.cssText = 'font-size: 12px; color: #667781; text-align: center; margin-bottom: 8px;';
-                container.appendChild(lastUpdateInfo);
-                
-                // Warning banner
-                const warningBanner = document.createElement('div');
-                warningBanner.id = 'spa-calendar-warning';
-                warningBanner.style.cssText = 'display: none; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 16px; text-align: center;';
-                container.appendChild(warningBanner);
-                
-                // Requests are now shown in "Spa Rezervasyonlarım" section in reservations tab
-                // Removed duplicate requests list from here
-                
-                // Auto-select first service and load calendar
-                if (services.length > 0) {
-                    document.getElementById('spa-service-selector').value = services[0].id;
-                    await loadSpaCalendar();
-                }
+                // Store date range for later use
+                window.spaDateRange = { from, to };
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (error) {
                 container.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
             }
+        }
+        
+        // Called when a date is selected
+        async function onSpaDateSelected() {
+            const dateSelector = document.getElementById('spa-date-selector');
+            if (!dateSelector || !dateSelector.value) return;
+            
+            const selectedDate = dateSelector.value;
+            const slotsContainer = document.getElementById('spa-time-slots-container');
+            const serviceSelectorWrapper = document.getElementById('spa-service-selector-wrapper');
+            const serviceSelector = document.getElementById('spa-service-selector');
+            const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
+            
+            // Show loading
+            if (slotsContainer) {
+                slotsContainer.style.display = 'block';
+                slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
+            }
+            
+            try {
+                // Get all services
+                const allServices = await spaApi.getServices();
+                if (!allServices || allServices.length === 0) {
+                    if (slotsContainer) {
+                        slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Henüz SPA hizmeti bulunmamaktadır.</div>';
+                    }
+                    return;
+                }
+                
+                // Get availability for all services on selected date
+                const availableServices = [];
+                const allSlotsByService = new Map(); // serviceId -> slots
+                
+                for (const service of allServices) {
+                    try {
+                        const availability = await spaApi.getAvailability(service.id, selectedDate, selectedDate);
+                        if (availability.days && availability.days.length > 0) {
+                            const day = availability.days[0];
+                            if (day.slots && day.slots.some(s => s.availability === 'AVAILABLE' && s.therapists && s.therapists.length > 0)) {
+                                availableServices.push(service);
+                                allSlotsByService.set(service.id, day.slots || []);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error checking availability for service ${service.id}:`, error);
+                    }
+                }
+                
+                // Populate service selector
+                if (serviceSelector) {
+                    serviceSelector.innerHTML = '<option value="">Hizmet seçin...</option>';
+                    availableServices.forEach(service => {
+                        const option = document.createElement('option');
+                        option.value = service.id;
+                        option.textContent = `${service.name} (${service.durationMin} dk - ${service.price} ${service.currency})`;
+                        serviceSelector.appendChild(option);
+                    });
+                    
+                    if (availableServices.length > 0 && serviceSelectorWrapper) {
+                        serviceSelectorWrapper.style.display = 'block';
+                    }
+                }
+                
+                // Store all slots for later filtering
+                window.spaDateSlotsByService = allSlotsByService;
+                window.spaSelectedDate = selectedDate;
+                window.spaAvailableServices = availableServices;
+                
+                // Show all available slots for the selected date (from all services)
+                await showDateSlots(selectedDate, allSlotsByService);
+                
+                // Reset service and therapist selectors
+                if (serviceSelector) serviceSelector.value = '';
+                if (therapistSelectorWrapper) therapistSelectorWrapper.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error loading date availability:', error);
+                if (slotsContainer) {
+                    slotsContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
+                }
+            }
+        }
+        
+        // Called when a service is selected
+        async function onSpaServiceSelected() {
+            const serviceSelector = document.getElementById('spa-service-selector');
+            const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
+            const therapistSelector = document.getElementById('spa-therapist-selector');
+            const dateSelector = document.getElementById('spa-date-selector');
+            
+            if (!serviceSelector || !serviceSelector.value || !dateSelector || !dateSelector.value) return;
+            
+            const selectedServiceId = serviceSelector.value;
+            const selectedDate = dateSelector.value;
+            
+            // Get slots for this service
+            const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
+            
+            // Collect all therapists who can do this service on this date
+            const therapists = new Map();
+            serviceSlots.forEach(slot => {
+                if (slot.availability === 'AVAILABLE' && slot.therapists) {
+                    slot.therapists.forEach(therapist => {
+                        if (!therapists.has(therapist.id)) {
+                            therapists.set(therapist.id, therapist);
+                        }
+                    });
+                }
+            });
+            
+            // Populate therapist selector
+            if (therapistSelector) {
+                therapistSelector.innerHTML = '<option value="">Tüm terapistler</option>';
+                Array.from(therapists.values()).forEach(therapist => {
+                    const option = document.createElement('option');
+                    option.value = therapist.id;
+                    option.textContent = therapist.displayName || `Terapist ${therapist.id}`;
+                    therapistSelector.appendChild(option);
+                });
+                
+                if (therapists.size > 0 && therapistSelectorWrapper) {
+                    therapistSelectorWrapper.style.display = 'block';
+                } else if (therapistSelectorWrapper) {
+                    therapistSelectorWrapper.style.display = 'none';
+                }
+            }
+            
+            // Filter and show slots for this service
+            await filterAndShowSlots(selectedDate, selectedServiceId);
+        }
+        
+        // Called when a therapist is selected
+        async function onSpaTherapistSelected() {
+            const dateSelector = document.getElementById('spa-date-selector');
+            const serviceSelector = document.getElementById('spa-service-selector');
+            
+            if (!dateSelector || !dateSelector.value) return;
+            
+            const selectedDate = dateSelector.value;
+            const selectedServiceId = serviceSelector?.value || null;
+            
+            // Filter and show slots
+            await filterAndShowSlots(selectedDate, selectedServiceId);
+        }
+        
+        // Show all slots for a date (from all services if no service selected)
+        async function showDateSlots(date, slotsByService) {
+            const slotsContainer = document.getElementById('spa-time-slots-container');
+            if (!slotsContainer) return;
+            
+            // Collect all available slots from all services
+            const allSlots = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dateObj = new Date(date);
+            dateObj.setHours(0, 0, 0, 0);
+            const isToday = dateObj.getTime() === today.getTime();
+            
+            slotsByService.forEach((slots, serviceId) => {
+                slots.forEach(slot => {
+                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                        // Filter out past slots for today
+                        if (isToday) {
+                            const slotStart = new Date(slot.start);
+                            if (slotStart <= new Date()) {
+                                return; // Skip past slots
+                            }
+                        }
+                        
+                        allSlots.push({
+                            slot: slot,
+                            serviceId: serviceId
+                        });
+                    }
+                });
+            });
+            
+            // Sort by time
+            allSlots.sort((a, b) => {
+                const timeA = new Date(a.slot.start);
+                const timeB = new Date(b.slot.start);
+                return timeA.getTime() - timeB.getTime();
+            });
+            
+            // Render slots
+            renderTimeSlots(allSlots, slotsContainer, date);
+        }
+        
+        // Filter and show slots based on selected service and therapist
+        async function filterAndShowSlots(date, selectedServiceId) {
+            const slotsContainer = document.getElementById('spa-time-slots-container');
+            const therapistSelector = document.getElementById('spa-therapist-selector');
+            const selectedTherapistId = therapistSelector?.value || null;
+            
+            if (!slotsContainer || !date) return;
+            
+            let slotsToShow = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dateObj = new Date(date);
+            dateObj.setHours(0, 0, 0, 0);
+            const isToday = dateObj.getTime() === today.getTime();
+            
+            if (selectedServiceId) {
+                // Filter by service
+                const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
+                serviceSlots.forEach(slot => {
+                    if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                        // Filter by therapist if selected
+                        if (selectedTherapistId) {
+                            const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
+                            if (!hasTherapist) return;
+                        }
+                        
+                        // Filter out past slots for today
+                        if (isToday) {
+                            const slotStart = new Date(slot.start);
+                            if (slotStart <= new Date()) return;
+                        }
+                        
+                        slotsToShow.push({
+                            slot: slot,
+                            serviceId: selectedServiceId
+                        });
+                    }
+                });
+            } else {
+                // Show all slots from all services
+                if (window.spaDateSlotsByService) {
+                    window.spaDateSlotsByService.forEach((slots, serviceId) => {
+                        slots.forEach(slot => {
+                            if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                                // Filter by therapist if selected
+                                if (selectedTherapistId) {
+                                    const hasTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
+                                    if (!hasTherapist) return;
+                                }
+                                
+                                // Filter out past slots for today
+                                if (isToday) {
+                                    const slotStart = new Date(slot.start);
+                                    if (slotStart <= new Date()) return;
+                                }
+                                
+                                slotsToShow.push({
+                                    slot: slot,
+                                    serviceId: serviceId
+                                });
+                            }
+                        });
+                    });
+                }
+            }
+            
+            // Sort by time
+            slotsToShow.sort((a, b) => {
+                const timeA = new Date(a.slot.start);
+                const timeB = new Date(b.slot.start);
+                return timeA.getTime() - timeB.getTime();
+            });
+            
+            // Render slots
+            renderTimeSlots(slotsToShow, slotsContainer, date);
+        }
+        
+        // Render time slots list
+        function renderTimeSlots(slots, container, date) {
+            if (!container) return;
+            
+            if (slots.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarihte uygun seans bulunmamaktadır.</div>';
+                return;
+            }
+            
+            const dateStr = new Date(date).toLocaleDateString('tr-TR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                weekday: 'long'
+            });
+            
+            container.innerHTML = '';
+            
+            const title = document.createElement('div');
+            title.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+            title.textContent = `${dateStr} - Uygun Seanslar`;
+            container.appendChild(title);
+            
+            const slotsList = document.createElement('div');
+            slotsList.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+            
+            slots.forEach(({ slot, serviceId }) => {
+                const slotEl = document.createElement('div');
+                slotEl.className = 'spa-time-slot';
+                slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+                slotEl.onclick = () => startBookingFromSlot(date, slot, serviceId);
+                
+                const start = new Date(slot.start);
+                const end = new Date(slot.end);
+                const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                const therapistSelector = document.getElementById('spa-therapist-selector');
+                const selectedTherapistId = therapistSelector?.value || null;
+                
+                // Get therapist info text
+                let therapistText = 'Terapist yok';
+                if (slot.therapists && slot.therapists.length > 0) {
+                    if (selectedTherapistId) {
+                        const selectedTherapist = slot.therapists.find(t => t.id === selectedTherapistId);
+                        therapistText = selectedTherapist ? selectedTherapist.displayName || 'Terapist' : 'Terapist müsait';
+                    } else {
+                        therapistText = slot.therapists.length + ' terapist müsait';
+                    }
+                }
+                
+                // Get service name if we know which service this slot belongs to
+                let serviceInfo = '';
+                if (serviceId && window.spaAvailableServices) {
+                    const service = window.spaAvailableServices.find(s => s.id === serviceId);
+                    if (service) {
+                        serviceInfo = `<div style="font-size: 11px; color: #008069; margin-top: 4px;">${service.name}</div>`;
+                    }
+                }
+                
+                slotEl.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${timeStr}</div>
+                        <div style="font-size: 12px; color: #667781;">
+                            ${therapistText}
+                        </div>
+                        ${serviceInfo}
+                    </div>
+                    <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                `;
+                
+                slotsList.appendChild(slotEl);
+            });
+            
+            container.appendChild(slotsList);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
         
         // Load SPA calendar for selected service
@@ -9187,7 +9525,10 @@
                 const slotEl = document.createElement('div');
                 slotEl.className = 'spa-time-slot';
                 slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
-                slotEl.onclick = () => startBookingFromSlot(date, slot);
+                // Try to get serviceId from selector if available
+                const serviceSelector = document.getElementById('spa-service-selector');
+                const serviceId = serviceSelector?.value || null;
+                slotEl.onclick = () => startBookingFromSlot(date, slot, serviceId);
                 
                 const dateObj = new Date(date);
                 const start = new Date(slot.start);
@@ -9304,7 +9645,10 @@
                 const slotEl = document.createElement('div');
                 slotEl.className = 'spa-time-slot';
                 slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
-                slotEl.onclick = () => startBookingFromSlot(date, slot);
+                // Try to get serviceId from selector if available
+                const serviceSelector = document.getElementById('spa-service-selector');
+                const serviceId = serviceSelector?.value || null;
+                slotEl.onclick = () => startBookingFromSlot(date, slot, serviceId);
                 
                 const start = new Date(slot.start);
                 const end = new Date(slot.end);
@@ -9377,7 +9721,10 @@
                 
                 slotEl.className = `spa-time-slot ${isFull ? 'disabled' : ''}`;
                 if (!isFull && slot.therapists && slot.therapists.length > 0) {
-                    slotEl.onclick = () => startBookingFromSlot(date, slot);
+                    // Try to get serviceId from selector if available
+                const serviceSelector = document.getElementById('spa-service-selector');
+                const serviceId = serviceSelector?.value || null;
+                slotEl.onclick = () => startBookingFromSlot(date, slot, serviceId);
                 }
                 
                 const start = new Date(slot.start);
@@ -9415,22 +9762,32 @@
         }
         
         // Start booking from selected slot
-        async function startBookingFromSlot(date, slot) {
-            const serviceSelector = document.getElementById('spa-service-selector');
-            if (!serviceSelector || !serviceSelector.value) {
+        async function startBookingFromSlot(date, slot, serviceId) {
+            let selectedService = null;
+            
+            // If serviceId provided, use it; otherwise try to get from selector
+            if (serviceId) {
+                if (window.spaAvailableServices) {
+                    selectedService = window.spaAvailableServices.find(s => s.id === serviceId);
+                }
+                if (!selectedService) {
+                    const serviceList = await spaApi.getServices();
+                    selectedService = serviceList.find(s => s.id === serviceId);
+                }
+            } else {
+                const serviceSelector = document.getElementById('spa-service-selector');
+                if (serviceSelector && serviceSelector.value) {
+                    const serviceList = await spaApi.getServices();
+                    selectedService = serviceList.find(s => s.id === serviceSelector.value);
+                }
+            }
+            
+            if (!selectedService) {
                 alert('Lütfen bir hizmet seçin.');
                 return;
             }
             
             try {
-                // Get service info
-                const serviceList = await spaApi.getServices();
-                const selectedService = serviceList.find(s => s.id === serviceSelector.value);
-                if (!selectedService) {
-                    alert('Hizmet bulunamadı.');
-                    return;
-                }
-                
                 // Set booking state
                 spaBookingState = {
                     selectedService: selectedService,
