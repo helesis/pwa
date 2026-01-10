@@ -8858,28 +8858,74 @@
                 // Render initial date grid
                 renderSpaDateGrid(calendarGrid, window.spaAllDates, 0);
                 
-                // Service selection dropdown (populated after date selection)
+                // Service selection grid (populated after date selection)
                 const serviceSelect = document.createElement('div');
                 serviceSelect.id = 'spa-service-selector-wrapper';
-                serviceSelect.style.cssText = 'margin-bottom: 16px; display: none;';
-                serviceSelect.innerHTML = `
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Hizmet Seçin</label>
-                    <select id="spa-service-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="onSpaServiceSelected()">
-                        <option value="">Hizmet seçin...</option>
-                    </select>
-                `;
+                serviceSelect.style.cssText = 'margin-bottom: 24px; display: none;';
+                
+                const serviceSelectTitle = document.createElement('div');
+                serviceSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+                serviceSelectTitle.textContent = 'Hizmet Seçin';
+                serviceSelect.appendChild(serviceSelectTitle);
+                
+                // Service navigation controls
+                const serviceNavContainer = document.createElement('div');
+                serviceNavContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+                
+                const servicePrevBtn = document.createElement('button');
+                servicePrevBtn.innerHTML = '<i data-lucide="chevron-left" class="icon icon-md"></i>';
+                servicePrevBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                servicePrevBtn.onclick = () => navigateSpaServiceGrid('prev');
+                
+                const serviceNextBtn = document.createElement('button');
+                serviceNextBtn.innerHTML = '<i data-lucide="chevron-right" class="icon icon-md"></i>';
+                serviceNextBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                serviceNextBtn.onclick = () => navigateSpaServiceGrid('next');
+                
+                serviceNavContainer.appendChild(servicePrevBtn);
+                
+                const serviceGrid = document.createElement('div');
+                serviceGrid.id = 'spa-service-grid';
+                serviceGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
+                
+                serviceNavContainer.appendChild(serviceGrid);
+                serviceNavContainer.appendChild(serviceNextBtn);
+                serviceSelect.appendChild(serviceNavContainer);
                 container.appendChild(serviceSelect);
                 
-                // Therapist selection dropdown (populated after service selection)
+                // Therapist selection grid (populated after service selection)
                 const therapistSelect = document.createElement('div');
                 therapistSelect.id = 'spa-therapist-selector-wrapper';
-                therapistSelect.style.cssText = 'margin-bottom: 16px; display: none;';
-                therapistSelect.innerHTML = `
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Terapist Seçin (Opsiyonel)</label>
-                    <select id="spa-therapist-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="onSpaTherapistSelected()">
-                        <option value="">Tüm terapistler</option>
-                    </select>
-                `;
+                therapistSelect.style.cssText = 'margin-bottom: 24px; display: none;';
+                
+                const therapistSelectTitle = document.createElement('div');
+                therapistSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+                therapistSelectTitle.textContent = 'Terapist Seçin (Opsiyonel)';
+                therapistSelect.appendChild(therapistSelectTitle);
+                
+                // Therapist navigation controls
+                const therapistNavContainer = document.createElement('div');
+                therapistNavContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+                
+                const therapistPrevBtn = document.createElement('button');
+                therapistPrevBtn.innerHTML = '<i data-lucide="chevron-left" class="icon icon-md"></i>';
+                therapistPrevBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                therapistPrevBtn.onclick = () => navigateSpaTherapistGrid('prev');
+                
+                const therapistNextBtn = document.createElement('button');
+                therapistNextBtn.innerHTML = '<i data-lucide="chevron-right" class="icon icon-md"></i>';
+                therapistNextBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                therapistNextBtn.onclick = () => navigateSpaTherapistGrid('next');
+                
+                therapistNavContainer.appendChild(therapistPrevBtn);
+                
+                const therapistGrid = document.createElement('div');
+                therapistGrid.id = 'spa-therapist-grid';
+                therapistGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
+                
+                therapistNavContainer.appendChild(therapistGrid);
+                therapistNavContainer.appendChild(therapistNextBtn);
+                therapistSelect.appendChild(therapistNavContainer);
                 container.appendChild(therapistSelect);
                 
                 // Time slots container (shown after date selection)
@@ -8940,31 +8986,32 @@
                     }
                 }
                 
-                // Populate service selector
-                if (serviceSelector) {
-                    serviceSelector.innerHTML = '<option value="">Hizmet seçin...</option>';
-                    availableServices.forEach(service => {
-                        const option = document.createElement('option');
-                        option.value = service.id;
-                        option.textContent = `${service.name} (${service.durationMin} dk - ${service.price} ${service.currency})`;
-                        serviceSelector.appendChild(option);
-                    });
+                // Populate service grid
+                if (availableServices.length > 0 && serviceSelectorWrapper) {
+                    serviceSelectorWrapper.style.display = 'block';
                     
-                    if (availableServices.length > 0 && serviceSelectorWrapper) {
-                        serviceSelectorWrapper.style.display = 'block';
+                    // Store services for navigation
+                    window.spaAvailableServices = availableServices;
+                    window.spaCurrentServiceIndex = 0;
+                    window.spaSelectedServiceElement = null;
+                    window.spaSelectedServiceId = null;
+                    
+                    // Render service grid
+                    const serviceGrid = document.getElementById('spa-service-grid');
+                    if (serviceGrid) {
+                        renderSpaServiceGrid(serviceGrid, availableServices, 0);
                     }
                 }
                 
                 // Store all slots for later filtering
                 window.spaDateSlotsByService = allSlotsByService;
                 window.spaSelectedDate = selectedDate;
-                window.spaAvailableServices = availableServices;
                 
                 // Show all available slots for the selected date (from all services)
                 await showDateSlots(selectedDate, allSlotsByService);
                 
                 // Reset service and therapist selectors
-                if (serviceSelector) serviceSelector.value = '';
+                window.spaSelectedServiceId = null;
                 if (therapistSelectorWrapper) therapistSelectorWrapper.style.display = 'none';
                 
             } catch (error) {
@@ -8975,16 +9022,11 @@
             }
         }
         
-        // Called when a service is selected
-        async function onSpaServiceSelected() {
-            const serviceSelector = document.getElementById('spa-service-selector');
+        // Called when a service is selected (from grid)
+        async function onSpaServiceSelected(selectedServiceId) {
+            if (!selectedServiceId || !window.spaSelectedDate) return;
+            
             const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
-            const therapistSelector = document.getElementById('spa-therapist-selector');
-            
-            if (!serviceSelector || !serviceSelector.value || !window.spaSelectedDate) return;
-            
-            const selectedServiceId = serviceSelector.value;
-            const selectedDate = window.spaSelectedDate;
             
             // Get slots for this service
             const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
@@ -9001,39 +9043,38 @@
                 }
             });
             
-            // Populate therapist selector
-            if (therapistSelector) {
-                therapistSelector.innerHTML = '<option value="">Tüm terapistler</option>';
-                Array.from(therapists.values()).forEach(therapist => {
-                    const option = document.createElement('option');
-                    option.value = therapist.id;
-                    option.textContent = therapist.displayName || `Terapist ${therapist.id}`;
-                    therapistSelector.appendChild(option);
-                });
+            // Populate therapist grid
+            if (therapists.size > 0 && therapistSelectorWrapper) {
+                therapistSelectorWrapper.style.display = 'block';
                 
-                if (therapists.size > 0 && therapistSelectorWrapper) {
-                    therapistSelectorWrapper.style.display = 'block';
-                } else if (therapistSelectorWrapper) {
-                    therapistSelectorWrapper.style.display = 'none';
+                // Store therapists for navigation
+                window.spaAvailableTherapists = Array.from(therapists.values());
+                window.spaCurrentTherapistIndex = 0;
+                window.spaSelectedTherapistElement = null;
+                window.spaSelectedTherapistId = null;
+                
+                // Render therapist grid
+                const therapistGrid = document.getElementById('spa-therapist-grid');
+                if (therapistGrid) {
+                    renderSpaTherapistGrid(therapistGrid, window.spaAvailableTherapists, 0);
                 }
+            } else if (therapistSelectorWrapper) {
+                therapistSelectorWrapper.style.display = 'none';
+                window.spaSelectedTherapistId = null;
             }
             
             // Filter and show slots for this service
-            await filterAndShowSlots(selectedDate, selectedServiceId);
+            await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
         }
         
-        // Called when a therapist is selected
-        async function onSpaTherapistSelected() {
-            const dateSelector = document.getElementById('spa-date-selector');
-            const serviceSelector = document.getElementById('spa-service-selector');
+        // Called when a therapist is selected (from grid)
+        async function onSpaTherapistSelected(selectedTherapistId) {
+            if (!window.spaSelectedDate) return;
             
-            if (!dateSelector || !dateSelector.value) return;
-            
-            const selectedDate = dateSelector.value;
-            const selectedServiceId = serviceSelector?.value || null;
+            const selectedServiceId = window.spaSelectedServiceId || null;
             
             // Filter and show slots
-            await filterAndShowSlots(selectedDate, selectedServiceId);
+            await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
         }
         
         // Show all slots for a date (from all services if no service selected)
@@ -9082,8 +9123,7 @@
         // Filter and show slots based on selected service and therapist
         async function filterAndShowSlots(date, selectedServiceId) {
             const slotsContainer = document.getElementById('spa-time-slots-container');
-            const therapistSelector = document.getElementById('spa-therapist-selector');
-            const selectedTherapistId = therapistSelector?.value || null;
+            const selectedTherapistId = window.spaSelectedTherapistId || null;
             
             if (!slotsContainer || !date) return;
             
@@ -9192,8 +9232,7 @@
                 const end = new Date(slot.end);
                 const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
                 
-                const therapistSelector = document.getElementById('spa-therapist-selector');
-                const selectedTherapistId = therapistSelector?.value || null;
+                const selectedTherapistId = window.spaSelectedTherapistId || null;
                 
                 // Get therapist info text
                 let therapistText = 'Terapist yok';
@@ -9457,7 +9496,7 @@
         // Render date grid for SPA reservations (new flow)
         function renderSpaDateGrid(container, dates, startIndex) {
             container.innerHTML = '';
-            const daysPerPage = 7;
+            const daysPerPage = 3;
             const endIndex = Math.min(startIndex + daysPerPage, dates.length);
             const visibleDates = dates.slice(startIndex, endIndex);
             
@@ -9539,11 +9578,230 @@
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
         
+        // Render service grid for SPA reservations
+        function renderSpaServiceGrid(container, services, startIndex) {
+            container.innerHTML = '';
+            const itemsPerPage = 3;
+            const endIndex = Math.min(startIndex + itemsPerPage, services.length);
+            const visibleServices = services.slice(startIndex, endIndex);
+            
+            visibleServices.forEach((service, idx) => {
+                const serviceEl = document.createElement('div');
+                serviceEl.className = 'spa-service-item';
+                serviceEl.style.cssText = 'position: relative; min-width: 200px; flex: 1; display: flex; flex-direction: column; padding: 16px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                
+                // Highlight selected service
+                if (service.id === window.spaSelectedServiceId) {
+                    serviceEl.style.background = '#008069';
+                    serviceEl.style.borderColor = '#008069';
+                    serviceEl.style.color = 'white';
+                    window.spaSelectedServiceElement = serviceEl;
+                }
+                
+                serviceEl.innerHTML = `
+                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
+                        ${service.name || 'Hizmet'}
+                    </div>
+                    <div style="font-size: 13px; color: ${service.id === window.spaSelectedServiceId ? 'rgba(255,255,255,0.9)' : '#667781'}; margin-bottom: 4px;">
+                        ${service.durationMin || 0} dakika
+                    </div>
+                    <div style="font-size: 14px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
+                        ${service.price || 0} ${service.currency || 'TL'}
+                    </div>
+                `;
+                
+                serviceEl.onclick = () => {
+                    // Remove previous selection highlight
+                    if (window.spaSelectedServiceElement) {
+                        window.spaSelectedServiceElement.style.background = 'white';
+                        window.spaSelectedServiceElement.style.borderColor = '#e4e6e9';
+                        window.spaSelectedServiceElement.style.color = '';
+                    }
+                    
+                    // Highlight new selection
+                    serviceEl.style.background = '#008069';
+                    serviceEl.style.borderColor = '#008069';
+                    serviceEl.style.color = 'white';
+                    window.spaSelectedServiceElement = serviceEl;
+                    
+                    // Update selected service
+                    window.spaSelectedServiceId = service.id;
+                    
+                    // Trigger service selection
+                    onSpaServiceSelected(service.id);
+                };
+                
+                serviceEl.onmouseenter = () => {
+                    if (service.id !== window.spaSelectedServiceId) {
+                        serviceEl.style.background = '#f0f2f5';
+                        serviceEl.style.borderColor = '#c1c7cd';
+                    }
+                };
+                
+                serviceEl.onmouseleave = () => {
+                    if (service.id !== window.spaSelectedServiceId) {
+                        serviceEl.style.background = 'white';
+                        serviceEl.style.borderColor = '#e4e6e9';
+                    }
+                };
+                
+                container.appendChild(serviceEl);
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Navigate service grid
+        function navigateSpaServiceGrid(direction) {
+            if (!window.spaAvailableServices || window.spaAvailableServices.length === 0) return;
+            
+            const itemsPerPage = 3;
+            let currentIndex = window.spaCurrentServiceIndex || 0;
+            
+            if (direction === 'prev') {
+                currentIndex = Math.max(0, currentIndex - itemsPerPage);
+            } else if (direction === 'next') {
+                currentIndex = Math.min(
+                    window.spaAvailableServices.length - itemsPerPage,
+                    currentIndex + itemsPerPage
+                );
+            }
+            
+            window.spaCurrentServiceIndex = currentIndex;
+            
+            const serviceGrid = document.getElementById('spa-service-grid');
+            if (serviceGrid) {
+                renderSpaServiceGrid(serviceGrid, window.spaAvailableServices, currentIndex);
+            }
+        }
+        
+        // Render therapist grid for SPA reservations
+        function renderSpaTherapistGrid(container, therapists, startIndex) {
+            container.innerHTML = '';
+            const itemsPerPage = 3;
+            const endIndex = Math.min(startIndex + itemsPerPage, therapists.length);
+            const visibleTherapists = therapists.slice(startIndex, endIndex);
+            
+            visibleTherapists.forEach((therapist, idx) => {
+                const therapistEl = document.createElement('div');
+                therapistEl.className = 'spa-therapist-item';
+                therapistEl.style.cssText = 'position: relative; min-width: 150px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 16px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                
+                // Highlight selected therapist
+                if (therapist.id === window.spaSelectedTherapistId) {
+                    therapistEl.style.background = '#008069';
+                    therapistEl.style.borderColor = '#008069';
+                    therapistEl.style.color = 'white';
+                    window.spaSelectedTherapistElement = therapistEl;
+                }
+                
+                // Therapist photo or placeholder
+                const photoUrl = therapist.photoUrl || therapist.avatar || therapist.photo || null;
+                const photoHTML = photoUrl 
+                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; margin-bottom: 12px;">`
+                    : `<div style="width: 80px; height: 80px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 32px;">👤</div>`;
+                
+                therapistEl.innerHTML = `
+                    ${photoHTML}
+                    <div style="font-size: 14px; font-weight: 600; text-align: center; color: ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#111b21'};">
+                        ${therapist.displayName || `Terapist ${therapist.id}`}
+                    </div>
+                `;
+                
+                therapistEl.onclick = () => {
+                    // Remove previous selection highlight
+                    if (window.spaSelectedTherapistElement) {
+                        window.spaSelectedTherapistElement.style.background = 'white';
+                        window.spaSelectedTherapistElement.style.borderColor = '#e4e6e9';
+                        window.spaSelectedTherapistElement.style.color = '';
+                        // Reset photo border
+                        const prevPhoto = window.spaSelectedTherapistElement.querySelector('img, div');
+                        if (prevPhoto) {
+                            prevPhoto.style.borderColor = '#e4e6e9';
+                        }
+                    }
+                    
+                    // Highlight new selection
+                    therapistEl.style.background = '#008069';
+                    therapistEl.style.borderColor = '#008069';
+                    therapistEl.style.color = 'white';
+                    window.spaSelectedTherapistElement = therapistEl;
+                    
+                    // Update photo border
+                    const photo = therapistEl.querySelector('img, div');
+                    if (photo) {
+                        photo.style.borderColor = 'white';
+                    }
+                    
+                    // Update selected therapist (allow deselect if clicking same)
+                    if (window.spaSelectedTherapistId === therapist.id) {
+                        window.spaSelectedTherapistId = null;
+                        therapistEl.style.background = 'white';
+                        therapistEl.style.borderColor = '#e4e6e9';
+                        therapistEl.style.color = '';
+                        if (photo) photo.style.borderColor = '#e4e6e9';
+                        window.spaSelectedTherapistElement = null;
+                    } else {
+                        window.spaSelectedTherapistId = therapist.id;
+                    }
+                    
+                    // Trigger therapist selection (or deselection)
+                    onSpaTherapistSelected(window.spaSelectedTherapistId);
+                };
+                
+                therapistEl.onmouseenter = () => {
+                    if (therapist.id !== window.spaSelectedTherapistId) {
+                        therapistEl.style.background = '#f0f2f5';
+                        therapistEl.style.borderColor = '#c1c7cd';
+                        const photo = therapistEl.querySelector('img, div');
+                        if (photo) photo.style.borderColor = '#c1c7cd';
+                    }
+                };
+                
+                therapistEl.onmouseleave = () => {
+                    if (therapist.id !== window.spaSelectedTherapistId) {
+                        therapistEl.style.background = 'white';
+                        therapistEl.style.borderColor = '#e4e6e9';
+                        const photo = therapistEl.querySelector('img, div');
+                        if (photo) photo.style.borderColor = '#e4e6e9';
+                    }
+                };
+                
+                container.appendChild(therapistEl);
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Navigate therapist grid
+        function navigateSpaTherapistGrid(direction) {
+            if (!window.spaAvailableTherapists || window.spaAvailableTherapists.length === 0) return;
+            
+            const itemsPerPage = 3;
+            let currentIndex = window.spaCurrentTherapistIndex || 0;
+            
+            if (direction === 'prev') {
+                currentIndex = Math.max(0, currentIndex - itemsPerPage);
+            } else if (direction === 'next') {
+                currentIndex = Math.min(
+                    window.spaAvailableTherapists.length - itemsPerPage,
+                    currentIndex + itemsPerPage
+                );
+            }
+            
+            window.spaCurrentTherapistIndex = currentIndex;
+            
+            const therapistGrid = document.getElementById('spa-therapist-grid');
+            if (therapistGrid) {
+                renderSpaTherapistGrid(therapistGrid, window.spaAvailableTherapists, currentIndex);
+            }
+        }
+        
         // Navigate date grid
         function navigateSpaDateGrid(direction) {
             if (!window.spaAllDates || window.spaAllDates.length === 0) return;
             
-            const daysPerPage = 7;
+            const daysPerPage = 3;
             let currentIndex = window.spaCurrentDateIndex || 0;
             
             if (direction === 'prev') {
@@ -9590,8 +9848,7 @@
         // Show available slots sorted by time (for all days)
         function showAvailableSlotsSorted(days, container) {
             // Get selected therapist filter
-            const therapistSelector = document.getElementById('spa-therapist-selector');
-            const selectedTherapistId = therapistSelector ? therapistSelector.value : null;
+            const selectedTherapistId = window.spaSelectedTherapistId || null;
             
             // Collect all available slots from all days, sorted by time
             const allSlots = [];
@@ -9730,8 +9987,7 @@
             }
             
             // Get selected therapist filter
-            const therapistSelector = document.getElementById('spa-therapist-selector');
-            const selectedTherapistId = therapistSelector ? therapistSelector.value : null;
+            const selectedTherapistId = window.spaSelectedTherapistId || null;
             
             // Filter out past slots for today
             const today = new Date();
