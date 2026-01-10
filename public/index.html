@@ -8805,17 +8805,58 @@
                 
                 container.innerHTML = '';
                 
-                // Date selection input (first step)
-                const dateSelect = document.createElement('div');
-                dateSelect.style.cssText = 'margin-bottom: 16px;';
-                dateSelect.innerHTML = `
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Tarih Seçin</label>
-                    <input type="date" id="spa-date-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" 
-                           min="${from.toISOString().split('T')[0]}" 
-                           max="${to.toISOString().split('T')[0]}"
-                           onchange="onSpaDateSelected()">
-                `;
-                container.appendChild(dateSelect);
+                // Date selection grid (first step) - scrollable calendar
+                const dateSelectSection = document.createElement('div');
+                dateSelectSection.style.cssText = 'margin-bottom: 24px;';
+
+                const dateSelectTitle = document.createElement('div');
+                dateSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+                dateSelectTitle.textContent = 'Tarih Seçin';
+                dateSelectSection.appendChild(dateSelectTitle);
+
+                // Generate all dates from today to checkout (including checkout date)
+                const allDates = [];
+                let currentDate = new Date(from);
+                while (currentDate <= to) {
+                    allDates.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                // Store dates for navigation
+                window.spaAllDates = allDates.map(d => ({
+                    date: d.toISOString().split('T')[0],
+                    dateObj: new Date(d)
+                }));
+                window.spaCurrentDateIndex = 0;
+                window.spaSelectedDateElement = null; // Track selected date element
+
+                // Date navigation controls
+                const navContainer = document.createElement('div');
+                navContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+
+                const prevBtn = document.createElement('button');
+                prevBtn.innerHTML = '<i data-lucide="chevron-left" class="icon icon-md"></i>';
+                prevBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                prevBtn.onclick = () => navigateSpaDateGrid('prev');
+
+                const nextBtn = document.createElement('button');
+                nextBtn.innerHTML = '<i data-lucide="chevron-right" class="icon icon-md"></i>';
+                nextBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                nextBtn.onclick = () => navigateSpaDateGrid('next');
+
+                navContainer.appendChild(prevBtn);
+
+                const calendarGrid = document.createElement('div');
+                calendarGrid.id = 'spa-date-calendar-grid';
+                calendarGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; flex: 1; margin: 0 8px;';
+
+                navContainer.appendChild(calendarGrid);
+                navContainer.appendChild(nextBtn);
+                dateSelectSection.appendChild(navContainer);
+                container.appendChild(dateSelectSection);
+
+                // Render initial date grid
+                renderSpaDateGrid(calendarGrid, window.spaAllDates, 0);
                 
                 // Service selection dropdown (populated after date selection)
                 const serviceSelect = document.createElement('div');
@@ -8856,12 +8897,9 @@
             }
         }
         
-        // Called when a date is selected
-        async function onSpaDateSelected() {
-            const dateSelector = document.getElementById('spa-date-selector');
-            if (!dateSelector || !dateSelector.value) return;
-            
-            const selectedDate = dateSelector.value;
+        // Called when a date is selected (from grid)
+        async function onSpaDateSelected(selectedDate) {
+            if (!selectedDate) return;
             const slotsContainer = document.getElementById('spa-time-slots-container');
             const serviceSelectorWrapper = document.getElementById('spa-service-selector-wrapper');
             const serviceSelector = document.getElementById('spa-service-selector');
@@ -8942,12 +8980,11 @@
             const serviceSelector = document.getElementById('spa-service-selector');
             const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
             const therapistSelector = document.getElementById('spa-therapist-selector');
-            const dateSelector = document.getElementById('spa-date-selector');
             
-            if (!serviceSelector || !serviceSelector.value || !dateSelector || !dateSelector.value) return;
+            if (!serviceSelector || !serviceSelector.value || !window.spaSelectedDate) return;
             
             const selectedServiceId = serviceSelector.value;
-            const selectedDate = dateSelector.value;
+            const selectedDate = window.spaSelectedDate;
             
             // Get slots for this service
             const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
@@ -9415,6 +9452,115 @@
             });
             
             if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Render date grid for SPA reservations (new flow)
+        function renderSpaDateGrid(container, dates, startIndex) {
+            container.innerHTML = '';
+            const daysPerPage = 7;
+            const endIndex = Math.min(startIndex + daysPerPage, dates.length);
+            const visibleDates = dates.slice(startIndex, endIndex);
+            
+            visibleDates.forEach((dateItem, idx) => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'spa-calendar-day';
+                dayEl.style.cssText = 'position: relative; min-width: 70px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; border: 1px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                
+                const date = dateItem.dateObj;
+                const dateStr = dateItem.date;
+                const isToday = date.toDateString() === new Date().toDateString();
+                
+                // Highlight today
+                if (isToday) {
+                    dayEl.style.borderColor = '#008069';
+                    dayEl.style.borderWidth = '2px';
+                }
+                
+                // Highlight selected date
+                if (dateStr === window.spaSelectedDate) {
+                    dayEl.style.background = '#008069';
+                    dayEl.style.color = 'white';
+                    window.spaSelectedDateElement = dayEl;
+                }
+                
+                const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+                const dayNumber = date.getDate();
+                const month = date.toLocaleDateString('tr-TR', { month: 'short' });
+                
+                dayEl.innerHTML = `
+                    <div style="font-size: 11px; color: ${dateStr === window.spaSelectedDate ? 'white' : '#667781'}; margin-bottom: 4px;">${dayName}</div>
+                    <div style="font-size: 18px; font-weight: 600; color: ${dateStr === window.spaSelectedDate ? 'white' : '#111b21'};">${dayNumber}</div>
+                    <div style="font-size: 10px; color: ${dateStr === window.spaSelectedDate ? 'white' : '#667781'};">${month}</div>
+                    ${isToday && dateStr !== window.spaSelectedDate ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #008069; border-radius: 50%;"></div>' : ''}
+                `;
+                
+                dayEl.onclick = () => {
+                    // Remove previous selection highlight
+                    if (window.spaSelectedDateElement) {
+                        const prevDate = new Date(window.spaSelectedDate);
+                        const prevIsToday = prevDate.toDateString() === new Date().toDateString();
+                        window.spaSelectedDateElement.style.background = 'white';
+                        window.spaSelectedDateElement.style.color = '';
+                        window.spaSelectedDateElement.style.borderColor = prevIsToday ? '#008069' : '#e4e6e9';
+                        window.spaSelectedDateElement.style.borderWidth = prevIsToday ? '2px' : '1px';
+                    }
+                    
+                    // Highlight new selection
+                    dayEl.style.background = '#008069';
+                    dayEl.style.color = 'white';
+                    dayEl.style.borderColor = '#008069';
+                    dayEl.style.borderWidth = '2px';
+                    window.spaSelectedDateElement = dayEl;
+                    
+                    // Update selected date
+                    window.spaSelectedDate = dateStr;
+                    
+                    // Trigger date selection
+                    onSpaDateSelected(dateStr);
+                };
+                
+                dayEl.onmouseenter = () => {
+                    if (dateStr !== window.spaSelectedDate) {
+                        dayEl.style.background = '#f0f2f5';
+                        dayEl.style.borderColor = '#c1c7cd';
+                    }
+                };
+                
+                dayEl.onmouseleave = () => {
+                    if (dateStr !== window.spaSelectedDate) {
+                        dayEl.style.background = isToday ? 'white' : 'white';
+                        dayEl.style.borderColor = isToday ? '#008069' : '#e4e6e9';
+                    }
+                };
+                
+                container.appendChild(dayEl);
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Navigate date grid
+        function navigateSpaDateGrid(direction) {
+            if (!window.spaAllDates || window.spaAllDates.length === 0) return;
+            
+            const daysPerPage = 7;
+            let currentIndex = window.spaCurrentDateIndex || 0;
+            
+            if (direction === 'prev') {
+                currentIndex = Math.max(0, currentIndex - daysPerPage);
+            } else if (direction === 'next') {
+                currentIndex = Math.min(
+                    window.spaAllDates.length - daysPerPage,
+                    currentIndex + daysPerPage
+                );
+            }
+            
+            window.spaCurrentDateIndex = currentIndex;
+            
+            const calendarGrid = document.getElementById('spa-date-calendar-grid');
+            if (calendarGrid) {
+                renderSpaDateGrid(calendarGrid, window.spaAllDates, currentIndex);
+            }
         }
         
         // Navigate calendar dates
