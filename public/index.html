@@ -2657,6 +2657,15 @@
                 </div>
                 
                 <div class="info-card">
+                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span>Bugün Açık Restoranlar</span></div>
+                    <div class="info-card-content" id="availableRestaurants" style="min-height: 100px;">
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            <div class="loading">Yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card">
                     <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Spa Rezervasyonları</span></div>
                     <div class="info-card-content" id="spaReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
@@ -5356,6 +5365,8 @@
             if (section === 'reservations') {
                 updateReservationsInfo();
                 loadSpaReservationsForMyReservations();
+                loadAvailableRestaurants();
+                loadRestaurantReservations();
             }
             
             // Load activity stories when switching to info section
@@ -8146,8 +8157,9 @@
                 reservationChildCountEl.textContent = '0'; // Default, will be updated from backend
             }
 
-            // Load SPA reservations
+            // Load SPA reservations and restaurant reservations
             loadSpaReservations();
+            loadRestaurantReservations();
         }
 
         // ============================================
@@ -9056,6 +9068,269 @@
             alert('Uygun slot bulunamadı.');
         }
 
+        // ============================================
+        // RESTAURANT RESERVATIONS FUNCTIONS
+        // ============================================
+        
+        // Load available restaurants for today
+        async function loadAvailableRestaurants() {
+            const container = document.getElementById('availableRestaurants');
+            if (!container) return;
+            
+            try {
+                container.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading">Yükleniyor...</div></div>';
+                
+                const response = await fetch('/restaurants');
+                if (!response.ok) {
+                    throw new Error('Restoranlar yüklenemedi');
+                }
+                
+                const result = await response.json();
+                const restaurants = result.success && result.data ? result.data : [];
+                
+                if (restaurants.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Bugün açık restoran bulunmamaktadır.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = restaurants.map(restaurant => {
+                    const photos = restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : null;
+                    const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
+                    
+                    return `
+                        <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
+                            ${photoUrl ? `<img src="${photoUrl}" alt="${restaurant.name}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">` : ''}
+                            <h3 style="font-size: 18px; font-weight: 600; color: #111b21; margin-bottom: 8px;">${restaurant.name || 'Restoran'}</h3>
+                            ${restaurant.description ? `<p style="font-size: 14px; color: #667781; margin-bottom: 12px; line-height: 1.4;">${restaurant.description}</p>` : ''}
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <span style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
+                                    ${restaurant.price_per_person || 0} ${restaurant.currency || 'TRY'} / kişi
+                                </span>
+                            </div>
+                            <button onclick="openRestaurantReservationModal(${restaurant.id}, '${(restaurant.name || '').replace(/'/g, "\\'")}')" 
+                                    style="width: 100%; padding: 12px; background: #1a4d6d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
+                                Rezervasyon Yap
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading restaurants:', error);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #dc3545;">
+                        <p>Restoranlar yüklenirken hata oluştu: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load restaurant reservations for guest
+        async function loadRestaurantReservations() {
+            const container = document.getElementById('restaurantReservations');
+            if (!container || !GUEST_UNIQUE_ID) return;
+            
+            try {
+                const response = await fetch(`/reservations?guest_unique_id=${encodeURIComponent(GUEST_UNIQUE_ID)}`);
+                if (!response.ok) {
+                    throw new Error('Rezervasyonlar yüklenemedi');
+                }
+                
+                const result = await response.json();
+                const reservations = result.success && result.data ? result.data : [];
+                
+                if (reservations.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
+                            Henüz restoran rezervasyonunuz bulunmamaktadır.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = reservations.map(reservation => {
+                    const resDate = new Date(reservation.reservation_date);
+                    const formattedDate = resDate.toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                    
+                    const photos = reservation.restaurant?.photos && reservation.restaurant.photos.length > 0 
+                        ? reservation.restaurant.photos[0] 
+                        : null;
+                    const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
+                    
+                    return `
+                        <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
+                            <div style="display: flex; gap: 12px;">
+                                ${photoUrl ? `<img src="${photoUrl}" alt="${reservation.restaurant?.name || 'Restoran'}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; flex-shrink: 0;">` : ''}
+                                <div style="flex: 1; min-width: 0;">
+                                    <h3 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 4px;">
+                                        ${reservation.restaurant?.name || 'Restoran'}
+                                    </h3>
+                                    <p style="font-size: 14px; color: #667781; margin-bottom: 8px;">
+                                        📅 ${formattedDate}
+                                    </p>
+                                    <p style="font-size: 14px; color: #667781; margin-bottom: 8px;">
+                                        👥 ${reservation.pax_adult || 0} Yetişkin, ${reservation.pax_child || 0} Çocuk
+                                    </p>
+                                    <p style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
+                                        💰 ${reservation.total_price || 0} ${reservation.currency || 'TRY'}
+                                    </p>
+                                    ${reservation.special_requests ? `<p style="font-size: 12px; color: #667781; margin-top: 8px; font-style: italic;">"${reservation.special_requests}"</p>` : ''}
+                                    ${reservation.status === 'confirmed' ? `
+                                        <button onclick="cancelRestaurantReservation(${reservation.id})" 
+                                                style="margin-top: 12px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                                            İptal Et
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading restaurant reservations:', error);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #dc3545;">
+                        <p>Rezervasyonlar yüklenirken hata oluştu: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Open restaurant reservation modal
+        let currentRestaurantForReservation = null;
+        function openRestaurantReservationModal(restaurantId, restaurantName) {
+            currentRestaurantForReservation = { id: restaurantId, name: restaurantName };
+            const modal = document.getElementById('restaurantReservationModal');
+            const form = document.getElementById('restaurantReservationForm');
+            
+            if (modal) {
+                document.getElementById('restaurantReservationModalTitle').textContent = 
+                    `${restaurantName} - Rezervasyon`;
+                document.getElementById('reservation-restaurant-id').value = restaurantId;
+                
+                // Set default values from guest info
+                const adultInput = document.getElementById('reservation-pax-adult');
+                const childInput = document.getElementById('reservation-pax-child');
+                if (adultInput) {
+                    // Try to get from guest info or default to 1
+                    adultInput.value = 1;
+                }
+                if (childInput) {
+                    childInput.value = 0;
+                }
+                
+                modal.style.display = 'flex';
+            }
+        }
+        
+        // Close restaurant reservation modal
+        function closeRestaurantReservationModal() {
+            const modal = document.getElementById('restaurantReservationModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            currentRestaurantForReservation = null;
+        }
+        
+        // Submit restaurant reservation
+        async function submitRestaurantReservation(event) {
+            event.preventDefault();
+            
+            if (!GUEST_UNIQUE_ID) {
+                alert('Oturum bilgisi bulunamadı. Lütfen sayfayı yenileyin.');
+                return;
+            }
+            
+            const restaurantId = document.getElementById('reservation-restaurant-id').value;
+            const paxAdult = parseInt(document.getElementById('reservation-pax-adult').value) || 1;
+            const paxChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
+            const specialRequests = document.getElementById('reservation-special-requests').value.trim();
+            
+            if (!restaurantId) {
+                alert('Restoran seçilmedi.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/reservations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        restaurant_id: parseInt(restaurantId),
+                        guest_unique_id: GUEST_UNIQUE_ID,
+                        reservation_date: new Date().toISOString().split('T')[0], // Today
+                        pax_adult: paxAdult,
+                        pax_child: paxChild,
+                        special_requests: specialRequests || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Rezervasyon yapılamadı');
+                }
+                
+                if (result.success) {
+                    alert('Rezervasyonunuz başarıyla oluşturuldu!');
+                    closeRestaurantReservationModal();
+                    loadRestaurantReservations();
+                    loadAvailableRestaurants(); // Refresh list
+                } else {
+                    throw new Error(result.error || 'Rezervasyon yapılamadı');
+                }
+            } catch (error) {
+                console.error('Error creating reservation:', error);
+                alert(`Rezervasyon yapılırken hata oluştu: ${error.message}`);
+            }
+        }
+        
+        // Cancel restaurant reservation
+        async function cancelRestaurantReservation(reservationId) {
+            if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+                return;
+            }
+            
+            if (!GUEST_UNIQUE_ID) {
+                alert('Oturum bilgisi bulunamadı.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/reservations/${reservationId}?guest_unique_id=${encodeURIComponent(GUEST_UNIQUE_ID)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Rezervasyon iptal edilemedi');
+                }
+                
+                if (result.success) {
+                    alert('Rezervasyonunuz iptal edildi.');
+                    loadRestaurantReservations();
+                    loadAvailableRestaurants(); // Refresh list
+                } else {
+                    throw new Error(result.error || 'Rezervasyon iptal edilemedi');
+                }
+            } catch (error) {
+                console.error('Error cancelling reservation:', error);
+                alert(`Rezervasyon iptal edilirken hata oluştu: ${error.message}`);
+            }
+        }
+        
         async function loadSpaReservationsForMyReservations() {
             const container = document.getElementById('spaRequestsList');
             const section = document.getElementById('spaRequestsInMyReservations');
@@ -10633,80 +10908,7 @@
         // RESTAURANT RESERVATION FUNCTIONS
         // ============================================
 
-        // Open restaurant reservation modal
-        async function openRestaurantReservationModal(restaurantId, sessionInstanceId, restaurantData = null) {
-            const modal = document.getElementById('restaurantReservationModal');
-            const form = document.getElementById('restaurantReservationForm');
-            
-            // Set restaurant and session IDs
-            document.getElementById('reservation-restaurant-id').value = restaurantId;
-            document.getElementById('reservation-session-instance-id').value = sessionInstanceId;
-            
-            // Reset form
-            form.reset();
-            document.getElementById('reservation-pax-adult').value = 1;
-            document.getElementById('reservation-pax-child').value = 0;
-            document.getElementById('reservation-special-requests').value = '';
-            document.getElementById('reservation-additional-rooms-list').innerHTML = '';
-            
-            // Add event listeners for pax calculation
-            document.getElementById('reservation-pax-adult').addEventListener('input', calculateTotalPax);
-            document.getElementById('reservation-pax-child').addEventListener('input', calculateTotalPax);
-            
-            // Load restaurant data if not provided
-            let restaurant = restaurantData;
-            if (!restaurant) {
-                try {
-                    const response = await fetch(`/restaurants/${restaurantId}`);
-                    const result = await response.json();
-                    if (result.success && result.data) {
-                        restaurant = result.data;
-                    }
-                } catch (error) {
-                    console.error('Error loading restaurant:', error);
-                }
-            }
-            
-            // Check if restaurant allows multiple rooms
-            const additionalRoomsSection = document.getElementById('reservation-additional-rooms-section');
-            if (restaurant && restaurant.rules_json && restaurant.rules_json.allow_multiple_rooms) {
-                additionalRoomsSection.style.display = 'block';
-                document.getElementById('reservation-additional-rooms-list').innerHTML = '';
-                calculateTotalPax();
-            } else {
-                additionalRoomsSection.style.display = 'none';
-            }
-            
-            // Check if restaurant asks for table preference
-            const tablePreferenceSection = document.getElementById('reservation-table-preference-section');
-            if (restaurant && restaurant.rules_json && restaurant.rules_json.ask_table_preference) {
-                tablePreferenceSection.style.display = 'block';
-                // Reset radio buttons
-                document.getElementById('reservation-preference-smoking').checked = false;
-                document.getElementById('reservation-preference-non-smoking').checked = false;
-                // Reset visual styles
-                const smokingLabel = document.getElementById('reservation-preference-smoking-label');
-                const nonSmokingLabel = document.getElementById('reservation-preference-non-smoking-label');
-                smokingLabel.style.border = '2px solid #dee2e6';
-                smokingLabel.style.background = 'white';
-                nonSmokingLabel.style.border = '2px solid #dee2e6';
-                nonSmokingLabel.style.background = 'white';
-            } else {
-                tablePreferenceSection.style.display = 'none';
-            }
-            
-            // Store restaurant data for validation
-            window.currentRestaurantData = restaurant;
-            
-            // Set modal title
-            const titleEl = document.getElementById('restaurantReservationModalTitle');
-            if (restaurant) {
-                titleEl.textContent = `${restaurant.name} - Rezervasyon`;
-            }
-            
-            // Show modal
-            modal.style.display = 'flex';
-        }
+        // Legacy openRestaurantReservationModalComplex function removed - using simple version above
 
         // Add additional room
         function addAdditionalRoom() {
@@ -10813,90 +11015,63 @@
             modal.style.display = 'none';
         }
 
-        // Submit restaurant reservation
+        // Submit restaurant reservation (updated simplified version)
         async function submitRestaurantReservation(event) {
             event.preventDefault();
             
-            const restaurantId = document.getElementById('reservation-restaurant-id').value;
-            const sessionInstanceId = document.getElementById('reservation-session-instance-id').value;
-            const paxAdult = parseInt(document.getElementById('reservation-pax-adult').value);
-            const paxChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
-            const specialRequests = document.getElementById('reservation-special-requests').value.trim();
-            
-            // Get table preference if available
-            const tablePreference = document.querySelector('input[name="table-preference"]:checked');
-            const tablePreferenceValue = tablePreference ? tablePreference.value : null;
-            
-            // Get additional rooms if allowed
-            const additionalRooms = [];
-            document.querySelectorAll('.additional-room-number').forEach((roomInput, index) => {
-                const roomNumber = roomInput.value.trim();
-                const adultInputs = document.querySelectorAll('.additional-room-adult');
-                const childInputs = document.querySelectorAll('.additional-room-child');
-                const adult = parseInt(adultInputs[index].value) || 0;
-                const child = parseInt(childInputs[index].value) || 0;
-                
-                if (roomNumber && (adult > 0 || child > 0)) {
-                    additionalRooms.push({
-                        room_no: roomNumber,
-                        pax_adult: adult,
-                        pax_child: child
-                    });
-                }
-            });
-            
-            // Calculate total pax
-            let totalPax = paxAdult + paxChild;
-            additionalRooms.forEach(room => {
-                totalPax += room.pax_adult + room.pax_child;
-            });
-            
-            // Check max total pax limit
-            if (window.currentRestaurantData && window.currentRestaurantData.rules_json && window.currentRestaurantData.rules_json.max_total_pax) {
-                const maxPax = window.currentRestaurantData.rules_json.max_total_pax;
-                if (totalPax > maxPax) {
-                    alert(`Toplam kişi sayısı (${totalPax}) maksimum limiti (${maxPax}) aşıyor. Lütfen kişi sayısını azaltın.`);
-                    return;
-                }
-            }
-            
-            if (!restaurantId || !sessionInstanceId || !paxAdult || paxAdult < 1) {
-                alert('Lütfen tüm gerekli alanları doldurun');
+            if (!GUEST_UNIQUE_ID) {
+                alert('Oturum bilgisi bulunamadı. Lütfen sayfayı yenileyin.');
                 return;
             }
             
-            const reservationData = {
-                restaurant_id: parseInt(restaurantId),
-                session_instance_id: parseInt(sessionInstanceId),
-                pax_adult: paxAdult,
-                pax_child: paxChild,
-                special_requests: specialRequests || null,
-                table_preference: tablePreferenceValue,
-                additional_rooms: additionalRooms.length > 0 ? additionalRooms : null // Add additional rooms to reservation data
-            };
+            const restaurantId = document.getElementById('reservation-restaurant-id').value;
+            const paxAdult = parseInt(document.getElementById('reservation-pax-adult').value) || 1;
+            const paxChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
+            const specialRequests = document.getElementById('reservation-special-requests').value.trim();
+            
+            if (!restaurantId) {
+                alert('Restoran seçilmedi.');
+                return;
+            }
+            
+            if (paxAdult < 1) {
+                alert('En az 1 yetişkin gereklidir.');
+                return;
+            }
             
             try {
                 const response = await fetch('/reservations', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(reservationData)
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        restaurant_id: parseInt(restaurantId),
+                        guest_unique_id: GUEST_UNIQUE_ID,
+                        reservation_date: new Date().toISOString().split('T')[0], // Today
+                        pax_adult: paxAdult,
+                        pax_child: paxChild,
+                        special_requests: specialRequests || null
+                    })
                 });
                 
                 const result = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(result.error || 'Rezervasyon yapılamadı');
+                }
+                
                 if (result.success) {
                     alert('Rezervasyonunuz başarıyla oluşturuldu!');
                     closeRestaurantReservationModal();
-                    // Reload reservations if function exists
-                    if (typeof loadRestaurantReservations === 'function') {
-                        loadRestaurantReservations();
-                    }
+                    loadRestaurantReservations();
+                    loadAvailableRestaurants(); // Refresh list
                 } else {
-                    alert(result.error || 'Rezervasyon oluşturulamadı');
+                    throw new Error(result.error || 'Rezervasyon yapılamadı');
                 }
             } catch (error) {
                 console.error('Error creating reservation:', error);
-                alert('Rezervasyon oluşturulurken hata oluştu');
+                alert(`Rezervasyon yapılırken hata oluştu: ${error.message}`);
             }
         }
 
@@ -10909,7 +11084,7 @@
             </div>
             <form id="restaurantReservationForm" onsubmit="submitRestaurantReservation(event)">
                 <input type="hidden" id="reservation-restaurant-id">
-                <input type="hidden" id="reservation-session-instance-id">
+                <input type="hidden" id="reservation-session-instance-id" value="" style="display: none;">
                 
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Yetişkin Sayısı *</label>

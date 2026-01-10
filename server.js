@@ -448,6 +448,30 @@ async function initializeDatabase() {
 
       CREATE INDEX idx_restaurants_active ON restaurants(active) WHERE deleted_at IS NULL;
       CREATE INDEX idx_restaurants_deleted ON restaurants(deleted_at) WHERE deleted_at IS NOT NULL;
+
+      -- Restaurant Reservations table (simplified - for same-day reservations)
+      CREATE TABLE IF NOT EXISTS restaurant_reservations (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE RESTRICT,
+        guest_unique_id VARCHAR(255) NOT NULL REFERENCES rooms(guest_unique_id) ON DELETE CASCADE,
+        reservation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        pax_adult INTEGER NOT NULL DEFAULT 0,
+        pax_child INTEGER NOT NULL DEFAULT 0,
+        total_price DECIMAL(10, 2) NOT NULL,
+        currency VARCHAR(3) NOT NULL DEFAULT 'TRY',
+        status VARCHAR(20) DEFAULT 'confirmed',
+        special_requests TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        cancelled_at TIMESTAMP WITH TIME ZONE NULL,
+        CONSTRAINT positive_pax CHECK (pax_adult >= 0 AND pax_child >= 0 AND (pax_adult + pax_child) > 0),
+        CONSTRAINT positive_price CHECK (total_price >= 0)
+      );
+
+      CREATE INDEX idx_restaurant_reservations_guest ON restaurant_reservations(guest_unique_id, reservation_date);
+      CREATE INDEX idx_restaurant_reservations_restaurant ON restaurant_reservations(restaurant_id, reservation_date);
+      CREATE INDEX idx_restaurant_reservations_status ON restaurant_reservations(status) WHERE status != 'cancelled';
+      CREATE INDEX idx_restaurant_reservations_date ON restaurant_reservations(reservation_date) WHERE status != 'cancelled';
     `);
     logDebug(`Database tables created (${((Date.now() - createStartTime) / 1000).toFixed(2)}s)`);
   } catch (error) {
@@ -6174,6 +6198,398 @@ app.delete('/admin/restaurants/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting restaurant:', error);
     res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+// ============================================================================
+// RESTAURANT RESERVATIONS API ENDPOINTS (GUEST)
+// ============================================================================
+
+// Get available restaurants for today (guest)
+app.get('/restaurants', async (req, res) => {
+  try {
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7; // Convert Sunday (0) to 7 for Monday=1 format
+    
+    const result = await pool.query(`
+      SELECT 
+        r.id, r.name, r.description, r.photos, r.active,
+        r.price_per_person, r.currency, r.rules_json
+      FROM restaurants r
+      WHERE r.deleted_at IS NULL
+        AND r.active = true
+        AND (
+          r.rules_json->>'working_weekdays' IS NULL
+          OR (
+            r.rules_json->>'working_weekdays' IS NOT NULL
+            AND ($1::int = ANY(
+              SELECT jsonb_array_elements_text(r.rules_json->'working_weekdays')::int
+            ))
+          )
+        )
+      ORDER BY r.name ASC
+    `, [dayOfWeek]);
+    
+    const restaurants = result.rows.map(row => {
+      let photos = [];
+      if (row.photos) {
+        if (Array.isArray(row.photos)) {
+          photos = row.photos;
+        } else if (typeof row.photos === 'string') {
+          try {
+            photos = JSON.parse(row.photos);
+          } catch (e) {
+            photos = [];
+          }
+        }
+      }
+      
+      let rules_json = {};
+      if (row.rules_json) {
+        if (typeof row.rules_json === 'object') {
+          rules_json = row.rules_json;
+        } else if (typeof row.rules_json === 'string') {
+          try {
+            rules_json = JSON.parse(row.rules_json);
+          } catch (e) {
+            rules_json = {};
+          }
+        }
+      }
+      
+      return {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        photos,
+        price_per_person: parseFloat(row.price_per_person),
+        currency: row.currency,
+        rules_json
+      };
+    });
+    
+    res.json({ success: true, data: restaurants });
+  } catch (error) {
+    console.error('Error fetching restaurants:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+// Create restaurant reservation (guest)
+app.post('/reservations', async (req, res) => {
+  try {
+    const { restaurant_id, guest_unique_id, reservation_date, pax_adult, pax_child, special_requests } = req.body;
+    
+    if (!restaurant_id || !guest_unique_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'restaurant_id and guest_unique_id are required' 
+      });
+    }
+    
+    // Get guest info to determine adult/child count if not provided
+    let adultCount = pax_adult;
+    let childCount = pax_child || 0;
+    
+    if (!adultCount || !childCount) {
+      const guestResult = await pool.query(`
+        SELECT adult_count, child_count
+        FROM rooms
+        WHERE guest_unique_id = $1
+      `, [guest_unique_id]);
+      
+      if (guestResult.rows.length > 0) {
+        adultCount = adultCount || guestResult.rows[0].adult_count || 1;
+        childCount = childCount || guestResult.rows[0].child_count || 0;
+      } else {
+        adultCount = adultCount || 1;
+        childCount = childCount || 0;
+      }
+    }
+    
+    // Get restaurant info
+    const restaurantResult = await pool.query(`
+      SELECT id, name, price_per_person, currency, rules_json
+      FROM restaurants
+      WHERE id = $1 AND deleted_at IS NULL AND active = true
+    `, [restaurant_id]);
+    
+    if (restaurantResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Restaurant not found or not available' });
+    }
+    
+    const restaurant = restaurantResult.rows[0];
+    let rules_json = {};
+    if (restaurant.rules_json) {
+      if (typeof restaurant.rules_json === 'object') {
+        rules_json = restaurant.rules_json;
+      } else if (typeof restaurant.rules_json === 'string') {
+        try {
+          rules_json = JSON.parse(restaurant.rules_json);
+        } catch (e) {
+          rules_json = {};
+        }
+      }
+    }
+    
+    // Calculate price based on child pricing policy
+    const pricePerPerson = parseFloat(restaurant.price_per_person);
+    let totalPrice = pricePerPerson * adultCount;
+    
+    const childPolicy = rules_json.child_pricing_policy || 'free_under_12';
+    if (childPolicy === 'free_under_12') {
+      // Children are free
+      totalPrice = pricePerPerson * adultCount;
+    } else if (childPolicy === 'half_price') {
+      totalPrice = (pricePerPerson * adultCount) + (pricePerPerson * 0.5 * childCount);
+    } else {
+      // full_price
+      totalPrice = pricePerPerson * (adultCount + childCount);
+    }
+    
+    // Use today's date if not provided
+    const resDate = reservation_date || new Date().toISOString().split('T')[0];
+    
+    // Check for duplicate reservation (same restaurant, same guest, same date)
+    const existingCheck = await pool.query(`
+      SELECT id
+      FROM restaurant_reservations
+      WHERE restaurant_id = $1 
+        AND guest_unique_id = $2 
+        AND reservation_date = $3
+        AND status != 'cancelled'
+    `, [restaurant_id, guest_unique_id, resDate]);
+    
+    if (existingCheck.rows.length > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'You already have a reservation at this restaurant for this date',
+        code: 'DUPLICATE_RESERVATION'
+      });
+    }
+    
+    // Check max reservations per room per day
+    const maxPerDay = rules_json.max_reservation_per_room_per_day;
+    if (maxPerDay) {
+      const todayReservations = await pool.query(`
+        SELECT COUNT(*) as count
+        FROM restaurant_reservations
+        WHERE guest_unique_id = $1
+          AND reservation_date = $2
+          AND status != 'cancelled'
+      `, [guest_unique_id, resDate]);
+      
+      if (parseInt(todayReservations.rows[0].count) >= maxPerDay) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Maximum ${maxPerDay} reservation(s) per day allowed`,
+          code: 'LIMIT_EXCEEDED'
+        });
+      }
+    }
+    
+    // Create reservation
+    const result = await pool.query(`
+      INSERT INTO restaurant_reservations (
+        restaurant_id, guest_unique_id, reservation_date,
+        pax_adult, pax_child, total_price, currency, status, special_requests
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8)
+      RETURNING 
+        id, restaurant_id, guest_unique_id, reservation_date,
+        pax_adult, pax_child, total_price, currency, status,
+        special_requests, created_at
+    `, [
+      restaurant_id,
+      guest_unique_id,
+      resDate,
+      adultCount,
+      childCount,
+      totalPrice,
+      restaurant.currency,
+      special_requests || null
+    ]);
+    
+    const reservation = result.rows[0];
+    
+    // Get restaurant name for response
+    res.json({
+      success: true,
+      data: {
+        id: reservation.id,
+        restaurant: {
+          id: restaurant.id,
+          name: restaurant.name
+        },
+        reservation_date: reservation.reservation_date,
+        pax_adult: parseInt(reservation.pax_adult),
+        pax_child: parseInt(reservation.pax_child),
+        total_pax: parseInt(reservation.pax_adult) + parseInt(reservation.pax_child),
+        total_price: parseFloat(reservation.total_price),
+        currency: reservation.currency,
+        status: reservation.status,
+        special_requests: reservation.special_requests,
+        created_at: reservation.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Error creating reservation:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+// Get guest reservations
+app.get('/reservations', async (req, res) => {
+  try {
+    const { guest_unique_id } = req.query;
+    
+    if (!guest_unique_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'guest_unique_id query parameter is required' 
+      });
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        rr.id,
+        rr.restaurant_id,
+        rr.reservation_date,
+        rr.pax_adult,
+        rr.pax_child,
+        rr.total_price,
+        rr.currency,
+        rr.status,
+        rr.special_requests,
+        rr.created_at,
+        r.name as restaurant_name,
+        r.photos as restaurant_photos
+      FROM restaurant_reservations rr
+      INNER JOIN restaurants r ON r.id = rr.restaurant_id
+      WHERE rr.guest_unique_id = $1
+        AND rr.status != 'cancelled'
+      ORDER BY rr.reservation_date DESC, rr.created_at DESC
+    `, [guest_unique_id]);
+    
+    const reservations = result.rows.map(row => {
+      let photos = [];
+      if (row.restaurant_photos) {
+        if (Array.isArray(row.restaurant_photos)) {
+          photos = row.restaurant_photos;
+        } else if (typeof row.restaurant_photos === 'string') {
+          try {
+            photos = JSON.parse(row.restaurant_photos);
+          } catch (e) {
+            photos = [];
+          }
+        }
+      }
+      
+      return {
+        id: row.id,
+        restaurant: {
+          id: row.restaurant_id,
+          name: row.restaurant_name,
+          photos
+        },
+        reservation_date: row.reservation_date,
+        pax_adult: parseInt(row.pax_adult),
+        pax_child: parseInt(row.pax_child),
+        total_pax: parseInt(row.pax_adult) + parseInt(row.pax_child),
+        total_price: parseFloat(row.total_price),
+        currency: row.currency,
+        status: row.status,
+        special_requests: row.special_requests,
+        created_at: row.created_at
+      };
+    });
+    
+    res.json({ success: true, data: reservations });
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
+// Cancel reservation (guest)
+app.delete('/reservations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { guest_unique_id } = req.query;
+    
+    if (!guest_unique_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'guest_unique_id query parameter is required' 
+      });
+    }
+    
+    // Check if reservation exists and belongs to guest
+    const checkResult = await pool.query(`
+      SELECT rr.id, rr.reservation_date, r.rules_json
+      FROM restaurant_reservations rr
+      INNER JOIN restaurants r ON r.id = rr.restaurant_id
+      WHERE rr.id = $1 AND rr.guest_unique_id = $2 AND rr.status != 'cancelled'
+    `, [id, guest_unique_id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Reservation not found or already cancelled' 
+      });
+    }
+    
+    const reservation = checkResult.rows[0];
+    let rules_json = {};
+    if (reservation.rules_json) {
+      if (typeof reservation.rules_json === 'object') {
+        rules_json = reservation.rules_json;
+      } else if (typeof reservation.rules_json === 'string') {
+        try {
+          rules_json = JSON.parse(reservation.rules_json);
+        } catch (e) {
+          rules_json = {};
+        }
+      }
+    }
+    
+    // Check cancellation deadline
+    const cancellationDeadline = rules_json.cancellation_deadline_minutes || 240; // default 4 hours
+    const reservationDateTime = new Date(reservation.reservation_date);
+    const now = new Date();
+    const deadline = new Date(reservationDateTime.getTime() - (cancellationDeadline * 60 * 1000));
+    
+    if (now > deadline) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Cancellation deadline has passed',
+        code: 'CANCELLATION_DEADLINE_PASSED',
+        deadline: deadline.toISOString()
+      });
+    }
+    
+    // Cancel reservation
+    const result = await pool.query(`
+      UPDATE restaurant_reservations
+      SET status = 'cancelled', 
+          cancelled_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, status, cancelled_at
+    `, [id]);
+    
+    res.json({ 
+      success: true, 
+      data: {
+        id: result.rows[0].id,
+        status: result.rows[0].status,
+        cancelled_at: result.rows[0].cancelled_at
+      }
+    });
+  } catch (error) {
+    console.error('Error cancelling reservation:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
   }
 });
 
