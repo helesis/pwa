@@ -9246,11 +9246,24 @@
                 });
                 const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
                 
+                // Get therapist info text
+                let therapistText = 'Terapist yok';
+                if (slot.therapists && slot.therapists.length > 0) {
+                    if (selectedTherapistId) {
+                        // If therapist is selected, show therapist name
+                        const selectedTherapist = slot.therapists.find(t => t.id === selectedTherapistId);
+                        therapistText = selectedTherapist ? selectedTherapist.displayName || 'Terapist' : 'Terapist müsait';
+                    } else {
+                        // If no therapist selected, show count
+                        therapistText = slot.therapists.length + ' terapist müsait';
+                    }
+                }
+                
                 slotEl.innerHTML = `
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${dateStr} • ${timeStr}</div>
                         <div style="font-size: 12px; color: #667781;">
-                            ${slot.therapists ? slot.therapists.length + ' terapist müsait' : 'Terapist yok'}
+                            ${therapistText}
                         </div>
                     </div>
                     <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
@@ -9343,11 +9356,24 @@
                 const end = new Date(slot.end);
                 const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
                 
+                // Get therapist info text
+                let therapistText = 'Terapist yok';
+                if (slot.therapists && slot.therapists.length > 0) {
+                    if (selectedTherapistId) {
+                        // If therapist is selected, show therapist name
+                        const selectedTherapist = slot.therapists.find(t => t.id === selectedTherapistId);
+                        therapistText = selectedTherapist ? selectedTherapist.displayName || 'Terapist' : 'Terapist müsait';
+                    } else {
+                        // If no therapist selected, show count
+                        therapistText = slot.therapists.length + ' terapist müsait';
+                    }
+                }
+                
                 slotEl.innerHTML = `
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${timeStr}</div>
                         <div style="font-size: 12px; color: #667781;">
-                            ${slot.therapists ? slot.therapists.length + ' terapist müsait' : 'Terapist yok'}
+                            ${therapistText}
                         </div>
                     </div>
                     <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
