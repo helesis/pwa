@@ -8797,6 +8797,18 @@
                 `;
                 container.appendChild(serviceSelect);
                 
+                // Therapist selection dropdown (hidden initially)
+                const therapistSelect = document.createElement('div');
+                therapistSelect.id = 'spa-therapist-selector-wrapper';
+                therapistSelect.style.cssText = 'margin-bottom: 16px; display: none;';
+                therapistSelect.innerHTML = `
+                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Terapist Seçin (Opsiyonel)</label>
+                    <select id="spa-therapist-selector" style="width: 100%; padding: 12px; border: 1px solid #e4e6e9; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;" onchange="loadSpaCalendar()">
+                        <option value="">Tüm terapistler</option>
+                    </select>
+                `;
+                container.appendChild(therapistSelect);
+                
                 // Calendar container
                 const calendarContainer = document.createElement('div');
                 calendarContainer.id = 'spa-calendar-container';
@@ -8952,6 +8964,42 @@
                     }
                 }
                 
+                // Collect all therapists for the selected service
+                const allTherapists = new Map();
+                if (availability.days) {
+                    availability.days.forEach(day => {
+                        if (day.slots) {
+                            day.slots.forEach(slot => {
+                                if (slot.therapists) {
+                                    slot.therapists.forEach(therapist => {
+                                        if (!allTherapists.has(therapist.id)) {
+                                            allTherapists.set(therapist.id, therapist);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                // Update therapist selector
+                const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
+                const therapistSelector = document.getElementById('spa-therapist-selector');
+                if (therapistSelector && therapistSelectorWrapper) {
+                    if (allTherapists.size > 0) {
+                        therapistSelectorWrapper.style.display = 'block';
+                        therapistSelector.innerHTML = '<option value="">Tüm terapistler</option>';
+                        Array.from(allTherapists.values()).forEach(therapist => {
+                            const option = document.createElement('option');
+                            option.value = therapist.id;
+                            option.textContent = therapist.displayName || `Terapist ${therapist.id}`;
+                            therapistSelector.appendChild(option);
+                        });
+                    } else {
+                        therapistSelectorWrapper.style.display = 'none';
+                    }
+                }
+                
                 // Render calendar
                 renderSpaCalendarInline(availability, calendarContainer);
                 
@@ -8969,18 +9017,83 @@
             
             container.innerHTML = '';
             
-            // Add "En erken uygun" button
-            const earliestBtn = document.createElement('button');
-            earliestBtn.className = 'spa-earliest-btn';
-            earliestBtn.onclick = () => selectEarliestAvailableSlotInline(availability);
-            earliestBtn.innerHTML = '<i data-lucide="clock" class="icon icon-sm"></i> En erken uygun';
-            container.appendChild(earliestBtn);
+            // Filter out past dates
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const filteredDays = availability.days.filter(day => {
+                const dayDate = new Date(day.date);
+                dayDate.setHours(0, 0, 0, 0);
+                return dayDate >= today;
+            });
             
-            // Render calendar days
+            if (filteredDays.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Gelecek tarihlerde müsaitlik bulunmamaktadır.</div>';
+                return;
+            }
+            
+            // Show available slots sorted by time (earliest first) for all days
+            showAvailableSlotsSorted(filteredDays, container);
+            
+            // Render calendar days with navigation
+            const calendarSection = document.createElement('div');
+            calendarSection.style.cssText = 'margin-top: 24px;';
+            
+            const calendarTitle = document.createElement('div');
+            calendarTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+            calendarTitle.textContent = 'Tarih Seçin';
+            calendarSection.appendChild(calendarTitle);
+            
+            // Date navigation controls
+            const navContainer = document.createElement('div');
+            navContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+            
+            const prevBtn = document.createElement('button');
+            prevBtn.innerHTML = '<i data-lucide="chevron-left" class="icon icon-md"></i>';
+            prevBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+            prevBtn.onclick = () => navigateSpaCalendar('prev', availability);
+            
+            const nextBtn = document.createElement('button');
+            nextBtn.innerHTML = '<i data-lucide="chevron-right" class="icon icon-md"></i>';
+            nextBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+            nextBtn.onclick = () => navigateSpaCalendar('next', availability);
+            
+            navContainer.appendChild(prevBtn);
+            
             const calendarGrid = document.createElement('div');
-            calendarGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px;';
+            calendarGrid.id = 'spa-calendar-grid';
+            calendarGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; flex: 1; margin: 0 8px;';
             
-            availability.days.forEach(day => {
+            // Store original days for navigation
+            window.spaAvailabilityDays = filteredDays;
+            window.spaCurrentDateIndex = 0;
+            
+            renderSpaCalendarGrid(calendarGrid, filteredDays, availability, 0);
+            
+            navContainer.appendChild(calendarGrid);
+            navContainer.appendChild(nextBtn);
+            calendarSection.appendChild(navContainer);
+            container.appendChild(calendarSection);
+            
+            // Store availability for navigation
+            window.spaCurrentAvailability = availability;
+            
+            // Time slots container (initially hidden)
+            const slotsContainer = document.createElement('div');
+            slotsContainer.id = 'spa-day-slots-container';
+            slotsContainer.style.cssText = 'display: none; margin-top: 16px;';
+            container.appendChild(slotsContainer);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Render calendar grid with pagination (show 7 days at a time)
+        function renderSpaCalendarGrid(container, days, availability, startIndex) {
+            container.innerHTML = '';
+            const daysPerPage = 7;
+            const endIndex = Math.min(startIndex + daysPerPage, days.length);
+            const visibleDays = days.slice(startIndex, endIndex);
+            
+            visibleDays.forEach(day => {
                 const dayEl = document.createElement('div');
                 dayEl.className = 'spa-calendar-day';
                 
@@ -8993,7 +9106,7 @@
                 else if (day.heat === 'RED') heatClass = 'heat-red';
                 
                 dayEl.className = `spa-calendar-day ${heatClass}`;
-                dayEl.onclick = () => showDaySlots(day.date, availability);
+                dayEl.onclick = () => showDaySlotsWithTherapistFilter(day.date, availability);
                 
                 const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
                 const dayNumber = date.getDate();
@@ -9006,18 +9119,248 @@
                     ${isToday ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #008069; border-radius: 50%;"></div>' : ''}
                 `;
                 
-                calendarGrid.appendChild(dayEl);
+                container.appendChild(dayEl);
             });
             
-            container.appendChild(calendarGrid);
-            
-            // Time slots container (initially hidden)
-            const slotsContainer = document.createElement('div');
-            slotsContainer.id = 'spa-day-slots-container';
-            slotsContainer.style.cssText = 'display: none; margin-top: 16px;';
-            container.appendChild(slotsContainer);
-            
             if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Navigate calendar dates
+        function navigateSpaCalendar(direction, availability) {
+            if (!window.spaAvailabilityDays) return;
+            
+            const daysPerPage = 7;
+            let currentIndex = window.spaCurrentDateIndex || 0;
+            
+            if (direction === 'prev') {
+                currentIndex = Math.max(0, currentIndex - daysPerPage);
+            } else if (direction === 'next') {
+                currentIndex = Math.min(
+                    window.spaAvailabilityDays.length - daysPerPage,
+                    currentIndex + daysPerPage
+                );
+            }
+            
+            window.spaCurrentDateIndex = currentIndex;
+            
+            const calendarGrid = document.getElementById('spa-calendar-grid');
+            if (calendarGrid) {
+                renderSpaCalendarGrid(calendarGrid, window.spaAvailabilityDays, availability, currentIndex);
+            }
+        }
+        
+        // Show available slots sorted by time (for all days)
+        function showAvailableSlotsSorted(days, container) {
+            // Get selected therapist filter
+            const therapistSelector = document.getElementById('spa-therapist-selector');
+            const selectedTherapistId = therapistSelector ? therapistSelector.value : null;
+            
+            // Collect all available slots from all days, sorted by time
+            const allSlots = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            days.forEach(day => {
+                if (day.slots && day.slots.length > 0) {
+                    const dayDate = new Date(day.date);
+                    dayDate.setHours(0, 0, 0, 0);
+                    const isToday = dayDate.getTime() === today.getTime();
+                    
+                    day.slots.forEach(slot => {
+                        if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
+                            // Filter by selected therapist if any
+                            if (selectedTherapistId) {
+                                const hasSelectedTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
+                                if (!hasSelectedTherapist) {
+                                    return; // Skip if selected therapist is not available
+                                }
+                            }
+                            
+                            // Filter out past slots for today
+                            if (isToday) {
+                                const slotStart = new Date(slot.start);
+                                if (slotStart <= new Date()) {
+                                    return; // Skip past slots
+                                }
+                            }
+                            
+                            allSlots.push({
+                                date: day.date,
+                                slot: slot,
+                                day: day,
+                                // Include only selected therapist or all therapists
+                                therapists: selectedTherapistId 
+                                    ? slot.therapists.filter(t => t.id === selectedTherapistId)
+                                    : slot.therapists
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Sort by date and time (earliest first)
+            allSlots.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateA.getTime() - dateB.getTime();
+                }
+                const timeA = new Date(a.slot.start);
+                const timeB = new Date(b.slot.start);
+                return timeA.getTime() - timeB.getTime();
+            });
+            
+            if (allSlots.length === 0) {
+                const noSlotsMsg = document.createElement('div');
+                noSlotsMsg.style.cssText = 'text-align: center; padding: 20px; color: #667781; margin-bottom: 16px;';
+                noSlotsMsg.textContent = 'Uygun seans bulunmamaktadır.';
+                container.appendChild(noSlotsMsg);
+                return;
+            }
+            
+            const slotsSection = document.createElement('div');
+            slotsSection.style.cssText = 'margin-bottom: 24px;';
+            
+            const slotsTitle = document.createElement('div');
+            slotsTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+            slotsTitle.textContent = 'Uygun Seanslar';
+            slotsSection.appendChild(slotsTitle);
+            
+            const slotsList = document.createElement('div');
+            slotsList.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+            
+            allSlots.forEach(({ date, slot, day }) => {
+                const slotEl = document.createElement('div');
+                slotEl.className = 'spa-time-slot';
+                slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+                slotEl.onclick = () => startBookingFromSlot(date, slot);
+                
+                const dateObj = new Date(date);
+                const start = new Date(slot.start);
+                const end = new Date(slot.end);
+                
+                const dateStr = dateObj.toLocaleDateString('tr-TR', { 
+                    day: 'numeric', 
+                    month: 'short',
+                    weekday: 'short'
+                });
+                const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                slotEl.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${dateStr} • ${timeStr}</div>
+                        <div style="font-size: 12px; color: #667781;">
+                            ${slot.therapists ? slot.therapists.length + ' terapist müsait' : 'Terapist yok'}
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                `;
+                
+                slotsList.appendChild(slotEl);
+            });
+            
+            slotsSection.appendChild(slotsList);
+            container.appendChild(slotsSection);
+        }
+        
+        // Show day slots with therapist filter option
+        function showDaySlotsWithTherapistFilter(date, availability) {
+            const slotsContainer = document.getElementById('spa-day-slots-container');
+            if (!slotsContainer) return;
+            
+            const selectedDay = availability.days.find(d => d.date === date);
+            if (!selectedDay || !selectedDay.slots || selectedDay.slots.length === 0) {
+                slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarihte müsaitlik bulunmamaktadır.</div>';
+                slotsContainer.style.display = 'block';
+                return;
+            }
+            
+            // Get selected therapist filter
+            const therapistSelector = document.getElementById('spa-therapist-selector');
+            const selectedTherapistId = therapistSelector ? therapistSelector.value : null;
+            
+            // Filter out past slots for today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dayDate = new Date(date);
+            dayDate.setHours(0, 0, 0, 0);
+            const isToday = dayDate.getTime() === today.getTime();
+            
+            let availableSlots = selectedDay.slots.filter(slot => {
+                if (slot.availability !== 'AVAILABLE' || !slot.therapists || slot.therapists.length === 0) {
+                    return false;
+                }
+                
+                // Filter by selected therapist if any
+                if (selectedTherapistId) {
+                    const hasSelectedTherapist = slot.therapists.some(t => t.id === selectedTherapistId);
+                    if (!hasSelectedTherapist) {
+                        return false; // Skip if selected therapist is not available
+                    }
+                }
+                
+                if (isToday) {
+                    const slotStart = new Date(slot.start);
+                    return slotStart > new Date(); // Only future slots for today
+                }
+                return true;
+            });
+            
+            // Sort slots by time
+            availableSlots.sort((a, b) => {
+                const timeA = new Date(a.start);
+                const timeB = new Date(b.start);
+                return timeA.getTime() - timeB.getTime();
+            });
+            
+            if (availableSlots.length === 0) {
+                slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarihte uygun seans bulunmamaktadır.</div>';
+                slotsContainer.style.display = 'block';
+                return;
+            }
+            
+            slotsContainer.innerHTML = '';
+            
+            const dateStr = new Date(date).toLocaleDateString('tr-TR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                weekday: 'long'
+            });
+            
+            const title = document.createElement('div');
+            title.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+            title.textContent = dateStr;
+            slotsContainer.appendChild(title);
+            
+            availableSlots.forEach(slot => {
+                const slotEl = document.createElement('div');
+                slotEl.className = 'spa-time-slot';
+                slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
+                slotEl.onclick = () => startBookingFromSlot(date, slot);
+                
+                const start = new Date(slot.start);
+                const end = new Date(slot.end);
+                const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                slotEl.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${timeStr}</div>
+                        <div style="font-size: 12px; color: #667781;">
+                            ${slot.therapists ? slot.therapists.length + ' terapist müsait' : 'Terapist yok'}
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
+                `;
+                
+                slotsContainer.appendChild(slotEl);
+            });
+            
+            slotsContainer.style.display = 'block';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // Scroll to slots
+            slotsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
         // Show time slots for selected day
