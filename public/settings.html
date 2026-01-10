@@ -4731,51 +4731,84 @@
         // Load restaurants list
         async function loadRestaurants() {
             try {
-                const response = await fetch('/admin/restaurants');
+                console.log('Loading restaurants...');
+                // Add cache-busting parameter to ensure fresh data
+                const cacheBuster = new Date().getTime();
+                const response = await fetch(`/admin/restaurants?_t=${cacheBuster}`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                console.log('Response status:', response.status, response.statusText);
                 
                 // Check if response is ok
                 if (!response.ok) {
+                    const listEl = document.getElementById('restaurants-list');
                     if (response.status === 404) {
                         // API endpoint not implemented yet
-                        document.getElementById('restaurants-list').innerHTML = `
-                            <div class="empty-state">
-                                <div class="empty-state-icon">🍽️</div>
-                                <p>API endpoint henüz implement edilmedi</p>
-                                <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">
-                                    Backend'de /admin/restaurants endpoint'i eklenmeli
-                                </p>
-                            </div>
-                        `;
+                        if (listEl) {
+                            listEl.innerHTML = `
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🍽️</div>
+                                    <p>API endpoint henüz implement edilmedi</p>
+                                    <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">
+                                        Backend'de /admin/restaurants endpoint'i eklenmeli
+                                    </p>
+                                </div>
+                            `;
+                        }
                         return;
                     }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                // Try to parse JSON
+                // Parse JSON response
                 let result;
                 try {
-                    const text = await response.text();
-                    if (!text) {
-                        throw new Error('Empty response');
-                    }
-                    result = JSON.parse(text);
+                    result = await response.json();
+                    console.log('Parsed result:', result);
                 } catch (parseError) {
                     console.error('JSON parse error:', parseError);
                     throw new Error('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.');
                 }
                 
-                // Handle both {success: true, data: [...]} and direct array responses
+                // Extract restaurants from response
                 let restaurants = [];
-                if (result.success && result.data) {
-                    restaurants = result.data;
+                if (result && result.success) {
+                    if (Array.isArray(result.data)) {
+                        restaurants = result.data;
+                        console.log('Restaurants from result.data:', restaurants.length, 'items');
+                    } else if (Array.isArray(result)) {
+                        // Handle direct array response (fallback)
+                        restaurants = result;
+                        console.log('Restaurants from direct array:', restaurants.length, 'items');
+                    } else if (result.data && typeof result.data === 'object') {
+                        // Handle single restaurant object (shouldn't happen in list endpoint, but handle it)
+                        restaurants = [result.data];
+                        console.log('Single restaurant in response, converting to array');
+                    } else {
+                        console.warn('Unexpected result format:', result);
+                        restaurants = [];
+                    }
                 } else if (Array.isArray(result)) {
+                    // Handle direct array response (backward compatibility)
                     restaurants = result;
-                } else if (!result.success) {
-                    throw new Error(result.error || 'Restoranlar yüklenemedi');
+                    console.log('Direct array response:', restaurants.length, 'items');
+                } else {
+                    throw new Error(result?.error || 'Restoranlar yüklenemedi');
                 }
+                
+                console.log('Final restaurants array:', restaurants.length, 'restaurants');
                 const listEl = document.getElementById('restaurants-list');
                 
-                if (restaurants.length === 0) {
+                if (!listEl) {
+                    console.error('restaurants-list element not found!');
+                    return;
+                }
+                
+                if (!restaurants || restaurants.length === 0) {
+                    console.log('No restaurants found, showing empty state');
                     listEl.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-state-icon">🍽️</div>
@@ -4784,49 +4817,99 @@
                     `;
                     return;
                 }
+                
+                console.log('Rendering', restaurants.length, 'restaurants');
 
-                listEl.innerHTML = `
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Ad</th>
-                                <th>Açıklama</th>
-                                <th>Fiyat</th>
-                                <th>Durum</th>
-                                <th>İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${restaurants.map(restaurant => `
+                try {
+                    // Filter out any invalid restaurants (must have id and name)
+                    const validRestaurants = restaurants.filter(r => r && r.id && r.name);
+                    if (validRestaurants.length !== restaurants.length) {
+                        console.warn(`${restaurants.length - validRestaurants.length} invalid restaurant(s) filtered out`);
+                    }
+                    
+                    if (validRestaurants.length === 0) {
+                        listEl.innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🍽️</div>
+                                <p>Henüz restoran eklenmemiş</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    const tableHTML = `
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td>${restaurant.name}</td>
-                                    <td>${restaurant.description ? (restaurant.description.substring(0, 50) + '...') : '-'}</td>
-                                    <td>${restaurant.price_per_person} ${restaurant.currency}</td>
-                                    <td>
-                                        <span class="badge ${restaurant.active ? 'badge-success' : 'badge-danger'}">
-                                            ${restaurant.active ? 'Aktif' : 'Pasif'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" onclick="editRestaurant(${restaurant.id})">Düzenle</button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurant.id})">Sil</button>
-                                    </td>
+                                    <th>Ad</th>
+                                    <th>Açıklama</th>
+                                    <th>Fiyat</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
+                            </thead>
+                            <tbody>
+                                ${validRestaurants.map(restaurant => {
+                                    try {
+                                        console.log('Rendering restaurant:', restaurant);
+                                        const restaurantId = restaurant.id || 0;
+                                        const restaurantName = (restaurant.name || '').replace(/`/g, '&grave;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                                        const description = restaurant.description ? 
+                                            (restaurant.description.substring(0, 50) + (restaurant.description.length > 50 ? '...' : '')) : 
+                                            '-';
+                                        const price = restaurant.price_per_person || 0;
+                                        const currency = restaurant.currency || 'TRY';
+                                        const active = restaurant.active !== undefined ? restaurant.active : true;
+                                        
+                                        return `
+                                    <tr>
+                                        <td>${restaurantName}</td>
+                                        <td>${description}</td>
+                                        <td>${price} ${currency}</td>
+                                        <td>
+                                            <span class="badge ${active ? 'badge-success' : 'badge-danger'}">
+                                                ${active ? 'Aktif' : 'Pasif'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" onclick="editRestaurant(${restaurantId})">Düzenle</button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurantId})">Sil</button>
+                                        </td>
+                                    </tr>
+                                `;
+                                    } catch (mapError) {
+                                        console.error('Error rendering restaurant row:', mapError, restaurant);
+                                        return ''; // Skip this restaurant row
+                                    }
+                                }).filter(html => html.trim().length > 0).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    listEl.innerHTML = tableHTML;
+                    console.log('Restaurants table rendered successfully with', validRestaurants.length, 'restaurants');
+                } catch (renderError) {
+                    console.error('Error rendering restaurants table:', renderError);
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⚠️</div>
+                            <p style="color: var(--danger);">Tablo oluşturulurken hata oluştu: ${renderError.message}</p>
+                        </div>
+                    `;
+                }
             } catch (error) {
                 console.error('Error loading restaurants:', error);
-                document.getElementById('restaurants-list').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <p style="color: var(--danger);">Hata: ${error.message}</p>
-                        <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">
-                            API endpoint kontrol edilmeli: /admin/restaurants
-                        </p>
-                    </div>
-                `;
+                const listEl = document.getElementById('restaurants-list');
+                if (listEl) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⚠️</div>
+                            <p style="color: var(--danger);">Hata: ${error.message}</p>
+                            <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">
+                                API endpoint kontrol edilmeli: /admin/restaurants
+                            </p>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -5260,11 +5343,37 @@
                     : '/admin/restaurants';
                 const method = currentRestaurantId ? 'PUT' : 'POST';
                 
+                console.log('Saving restaurant:', { endpoint, method, restaurantData });
+                
                 response = await fetch(endpoint, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(restaurantData)
                 });
+                
+                console.log('Response status:', response.status, response.statusText);
+                
+                // Try to parse JSON first (even for error responses)
+                let result;
+                let responseText;
+                try {
+                    responseText = await response.text();
+                    console.log('Response text:', responseText);
+                    if (!responseText) {
+                        throw new Error('Empty response');
+                    }
+                    result = JSON.parse(responseText);
+                    console.log('Parsed result:', result);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError, 'Response text:', responseText);
+                    // If response is not ok, show status error
+                    if (!response.ok) {
+                        showAlert(`HTTP ${response.status}: ${response.statusText}`, 'error');
+                    } else {
+                        showAlert('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.', 'error');
+                    }
+                    return;
+                }
                 
                 // Check if response is ok
                 if (!response.ok) {
@@ -5276,33 +5385,38 @@
                         showAlert('Gönderilen veri çok büyük. Lütfen fotoğrafları küçültün veya daha az fotoğraf ekleyin.', 'error');
                         return;
                     }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                // Try to parse JSON
-                let result;
-                try {
-                    const text = await response.text();
-                    if (!text) {
-                        throw new Error('Empty response');
-                    }
-                    result = JSON.parse(text);
-                } catch (parseError) {
-                    console.error('JSON parse error:', parseError);
-                    showAlert('Geçersiz yanıt formatı. API endpoint kontrol edilmeli.', 'error');
+                    showAlert(result.error || `HTTP ${response.status}: ${response.statusText}`, 'error');
                     return;
                 }
                 
-                if (result.success) {
+                // Response is ok, check result.success
+                if (result && result.success) {
+                    console.log('Restaurant saved successfully');
                     showAlert(currentRestaurantId ? 'Restoran güncellendi' : 'Restoran oluşturuldu', 'success');
                     closeRestaurantModal();
-                    loadRestaurants();
+                    // Wait a bit for modal animation to complete, then reload restaurants
+                    setTimeout(async () => {
+                        // Ensure restaurants-list sub-tab is active
+                        switchRestaurantSubTab('restaurants-list');
+                        // Wait a bit more and then reload the restaurants list
+                        setTimeout(async () => {
+                            try {
+                                await loadRestaurants();
+                                console.log('Restaurants reloaded after save');
+                            } catch (reloadError) {
+                                console.error('Error reloading restaurants after save:', reloadError);
+                            }
+                        }, 100);
+                    }, 300);
                 } else {
-                    showAlert(result.error || 'Restoran kaydedilemedi', 'error');
+                    console.error('Result success is false:', result);
+                    showAlert(result?.error || 'Restoran kaydedilemedi', 'error');
                 }
             } catch (error) {
                 console.error('Error saving restaurant:', error);
+                console.error('Error stack:', error.stack);
                 showAlert('Restoran kaydedilirken hata oluştu: ' + error.message, 'error');
+                // Don't close modal on error - let user see the error and try again
             }
         }
 
