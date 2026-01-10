@@ -2686,14 +2686,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- SPA Requests in My Reservations -->
-                <div class="info-card" id="spaRequestsInMyReservations" style="display: none;">
-                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaRequests">SPA Taleplerim</span></div>
-                    <div class="info-card-content" id="spaRequestsList">
-                        <!-- Will be populated by loadSpaReservationsForMyReservations -->
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -5481,7 +5473,6 @@
             if (section === 'reservations') {
                 updateReservationsInfo();
                 loadMySpaReservations();
-                loadSpaReservationsForMyReservations();
                 loadAvailableRestaurants();
                 loadRestaurantReservations();
             }
@@ -8853,71 +8844,8 @@
                 warningBanner.style.cssText = 'display: none; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 16px; text-align: center;';
                 container.appendChild(warningBanner);
                 
-                // If there are existing requests, show them below calendar
-                if (requests && requests.length > 0) {
-                    const requestsSection = document.createElement('div');
-                    requestsSection.style.cssText = 'margin-top: 24px; padding-top: 24px; border-top: 1px solid #e4e6e9;';
-                    
-                    const requestsTitle = document.createElement('div');
-                    requestsTitle.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
-                    requestsTitle.textContent = 'SPA Taleplerim';
-                    requestsSection.appendChild(requestsTitle);
-                    
-                    requests.forEach(request => {
-                        const item = document.createElement('div');
-                        item.className = 'spa-request-item';
-                        item.onclick = () => showSpaRequestDetails(request);
-                        
-                        const status = request.status || 'PENDING';
-                        let statusClass = 'status-pending';
-                        let statusText = 'Beklemede';
-                        let statusColor = '#ffc107';
-                        
-                        if (status === 'CONFIRMED') {
-                            statusClass = 'status-confirmed';
-                            statusText = 'Onaylandı';
-                            statusColor = '#28a745';
-                        } else if (status === 'REJECTED') {
-                            statusClass = 'status-rejected';
-                            statusText = 'Reddedildi';
-                            statusColor = '#dc3545';
-                        } else if (status === 'CANCELLED') {
-                            statusClass = 'status-cancelled';
-                            statusText = 'İptal Edildi';
-                            statusColor = '#6c757d';
-                        } else if (status === 'EXPIRED') {
-                            statusClass = 'status-expired';
-                            statusText = 'Süresi Doldu';
-                            statusColor = '#6c757d';
-                        }
-                        
-                        const start = new Date(request.start);
-                        const end = new Date(request.end);
-                        const dateStr = start.toLocaleDateString('tr-TR', { 
-                            day: 'numeric', 
-                            month: 'long', 
-                            year: 'numeric'
-                        });
-                        const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
-                        
-                        item.innerHTML = `
-                            <div style="flex: 1;">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                    <div style="font-weight: 600; color: #111b21;">${request.serviceName || 'SPA Hizmeti'}</div>
-                                    <span class="spa-status-badge ${statusClass}" style="background: ${statusColor}; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 500;">${statusText}</span>
-                                </div>
-                                <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${dateStr}</div>
-                                <div style="font-size: 13px; color: #667781; margin-bottom: 2px;">${timeStr}</div>
-                                ${request.therapistDisplayName ? `<div style="font-size: 12px; color: #667781;">Terapist: ${request.therapistDisplayName}</div>` : ''}
-                            </div>
-                            <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
-                        `;
-                        
-                        requestsSection.appendChild(item);
-                    });
-                    
-                    container.appendChild(requestsSection);
-                }
+                // Requests are now shown in "Spa Rezervasyonlarım" section in reservations tab
+                // Removed duplicate requests list from here
                 
                 // Auto-select first service and load calendar
                 if (services.length > 0) {
