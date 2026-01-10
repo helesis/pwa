@@ -7189,6 +7189,103 @@ app.post('/api/spa/requests/:requestId/cancel', async (req, res) => {
   }
 });
 
+// Update SPA request status (for admin/staff - no auth for now)
+app.patch('/api/spa/requests/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { status } = req.body;
+    
+    if (!status || !['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be PENDING, CONFIRMED, REJECTED, or CANCELLED' });
+    }
+    
+    // Check if request exists
+    const checkResult = await pool.query(`
+      SELECT request_id, status 
+      FROM spa_requests 
+      WHERE request_id = $1
+    `, [requestId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    
+    // Update request status
+    const result = await pool.query(`
+      UPDATE spa_requests
+      SET status = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE request_id = $2
+      RETURNING request_id, status
+    `, [status, requestId]);
+    
+    res.json({ success: true, requestId: result.rows[0].request_id, status: result.rows[0].status });
+  } catch (error) {
+    console.error('Error updating SPA request:', error);
+    res.status(500).json({ error: 'Failed to update request' });
+  }
+});
+
+// Get all SPA requests (for admin/staff - no auth for now)
+app.get('/api/spa/requests/all', async (req, res) => {
+  try {
+    const { status } = req.query;
+    
+    let query = `
+      SELECT 
+        sr.request_id,
+        sr.service_id,
+        ss.name as service_name,
+        sr.guest_unique_id,
+        r.guest_name,
+        r.guest_surname,
+        r.room_number,
+        sr.start_time,
+        sr.end_time,
+        sr.therapist_display_name,
+        sr.status,
+        sr.note,
+        sr.created_at,
+        sr.updated_at
+      FROM spa_requests sr
+      INNER JOIN spa_services ss ON sr.service_id = ss.id
+      LEFT JOIN rooms r ON sr.guest_unique_id = r.guest_unique_id
+    `;
+    
+    const params = [];
+    if (status) {
+      query += ` WHERE sr.status = $1`;
+      params.push(status);
+    }
+    
+    query += ` ORDER BY sr.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    
+    const requests = result.rows.map(row => ({
+      requestId: row.request_id,
+      serviceId: row.service_id,
+      serviceName: row.service_name,
+      guestUniqueId: row.guest_unique_id,
+      guestName: row.guest_name || 'Bilinmiyor',
+      guestSurname: row.guest_surname || '',
+      roomNumber: row.room_number || '-',
+      start: row.start_time.toISOString(),
+      end: row.end_time.toISOString(),
+      therapistDisplayName: row.therapist_display_name,
+      status: row.status,
+      note: row.note,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString()
+    }));
+    
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Error fetching all SPA requests:', error);
+    res.status(500).json({ error: 'Failed to fetch requests' });
+  }
+});
+
 // HTTP server is now started in the database initialization promise (see above)
 // This ensures the server only starts after the database is ready
 

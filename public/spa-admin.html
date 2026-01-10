@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>SPA Rezervasyon Yönetimi - Voyage</title>
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --voyage-navy: #1A4D6D;
+            --voyage-blue: #2C6E8F;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --border: #dee2e6;
+            --bg-light: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: #111b21;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: var(--voyage-navy);
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 20px;
+        }
+
+        /* Filter bar */
+        .filter-bar {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: var(--bg-light);
+        }
+
+        .filter-btn.active {
+            background: var(--voyage-navy);
+            color: white;
+            border-color: var(--voyage-navy);
+        }
+
+        .refresh-btn {
+            margin-left: auto;
+            padding: 8px 16px;
+            background: var(--voyage-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            background: var(--voyage-navy);
+        }
+
+        /* Requests list */
+        .requests-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .request-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: box-shadow 0.2s;
+        }
+
+        .request-card:hover {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .request-info {
+            flex: 1;
+        }
+
+        .request-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111b21;
+            margin-bottom: 8px;
+        }
+
+        .request-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 14px;
+            color: #667781;
+        }
+
+        .request-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-cancelled {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-confirm {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #218838;
+        }
+
+        .btn-reject {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-reject:hover {
+            background: #c82333;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #667781;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667781;
+        }
+
+        .icon {
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .request-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .request-actions {
+                width: 100%;
+            }
+
+            .action-btn {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                <i data-lucide="sparkles" class="icon" style="width: 28px; height: 28px;"></i>
+                SPA Rezervasyon Yönetimi
+            </h1>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterRequests('all')">Tümü</button>
+            <button class="filter-btn" onclick="filterRequests('PENDING')">Bekleyen</button>
+            <button class="filter-btn" onclick="filterRequests('CONFIRMED')">Onaylanan</button>
+            <button class="filter-btn" onclick="filterRequests('REJECTED')">Reddedilen</button>
+            <button class="filter-btn" onclick="filterRequests('CANCELLED')">İptal Edilen</button>
+            <button class="refresh-btn" onclick="loadRequests()">
+                <i data-lucide="refresh-cw" class="icon"></i>
+                Yenile
+            </button>
+        </div>
+
+        <div id="requestsList" class="requests-list">
+            <div class="loading">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <script>
+        let allRequests = [];
+        let currentFilter = 'all';
+
+        // Initialize icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        // Load all requests
+        async function loadRequests() {
+            const container = document.getElementById('requestsList');
+            container.innerHTML = '<div class="loading">Yükleniyor...</div>';
+
+            try {
+                const response = await fetch('/api/spa/requests/all');
+                if (!response.ok) {
+                    throw new Error('İstekler yüklenemedi');
+                }
+
+                const data = await response.json();
+                allRequests = data.requests || [];
+                filterRequests(currentFilter);
+            } catch (error) {
+                console.error('Error loading requests:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div>İstekler yüklenirken hata oluştu: ${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Filter requests by status
+        function filterRequests(status) {
+            currentFilter = status;
+            
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event?.target?.classList.add('active');
+            
+            // Filter requests
+            const filtered = status === 'all' 
+                ? allRequests 
+                : allRequests.filter(r => r.status === status);
+
+            renderRequests(filtered);
+        }
+
+        // Render requests
+        function renderRequests(requests) {
+            const container = document.getElementById('requestsList');
+
+            if (requests.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div>Gösterilecek istek bulunmuyor</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = requests.map(request => {
+                const startDate = new Date(request.start);
+                const endDate = new Date(request.end);
+                const createdDate = new Date(request.createdAt);
+
+                const statusText = {
+                    'PENDING': 'Beklemede',
+                    'CONFIRMED': 'Onaylandı',
+                    'REJECTED': 'Reddedildi',
+                    'CANCELLED': 'İptal Edildi'
+                };
+
+                const statusClass = `status-${request.status.toLowerCase()}`;
+
+                let actionButtons = '';
+                if (request.status === 'PENDING') {
+                    actionButtons = `
+                        <button class="action-btn btn-confirm" onclick="updateRequestStatus('${request.requestId}', 'CONFIRMED')">
+                            <i data-lucide="check" class="icon"></i>
+                            Onayla
+                        </button>
+                        <button class="action-btn btn-reject" onclick="updateRequestStatus('${request.requestId}', 'REJECTED')">
+                            <i data-lucide="x" class="icon"></i>
+                            Reddet
+                        </button>
+                    `;
+                } else if (request.status === 'CONFIRMED') {
+                    actionButtons = `
+                        <button class="action-btn btn-cancel" onclick="updateRequestStatus('${request.requestId}', 'CANCELLED')">
+                            <i data-lucide="x-circle" class="icon"></i>
+                            İptal Et
+                        </button>
+                    `;
+                }
+
+                return `
+                    <div class="request-card">
+                        <div class="request-header">
+                            <div class="request-info">
+                                <div class="request-title">${request.serviceName}</div>
+                                <div class="request-details">
+                                    <div class="request-detail-item">
+                                        <i data-lucide="user" class="icon" style="width: 16px; height: 16px;"></i>
+                                        <span>${request.guestName} ${request.guestSurname}</span>
+                                    </div>
+                                    <div class="request-detail-item">
+                                        <i data-lucide="door-open" class="icon" style="width: 16px; height: 16px;"></i>
+                                        <span>Oda: ${request.roomNumber}</span>
+                                    </div>
+                                    <div class="request-detail-item">
+                                        <i data-lucide="calendar" class="icon" style="width: 16px; height: 16px;"></i>
+                                        <span>${startDate.toLocaleDateString('tr-TR', { 
+                                            day: 'numeric', 
+                                            month: 'long', 
+                                            year: 'numeric',
+                                            weekday: 'long'
+                                        })}</span>
+                                    </div>
+                                    <div class="request-detail-item">
+                                        <i data-lucide="clock" class="icon" style="width: 16px; height: 16px;"></i>
+                                        <span>${startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    ${request.therapistDisplayName ? `
+                                        <div class="request-detail-item">
+                                            <i data-lucide="user-circle" class="icon" style="width: 16px; height: 16px;"></i>
+                                            <span>Terapist: ${request.therapistDisplayName}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${request.note ? `
+                                        <div class="request-detail-item">
+                                            <i data-lucide="message-square" class="icon" style="width: 16px; height: 16px;"></i>
+                                            <span>Not: ${request.note}</span>
+                                        </div>
+                                    ` : ''}
+                                    <div class="request-detail-item">
+                                        <i data-lucide="calendar-plus" class="icon" style="width: 16px; height: 16px;"></i>
+                                        <span>Oluşturulma: ${createdDate.toLocaleDateString('tr-TR')} ${createdDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-end;">
+                                <span class="status-badge ${statusClass}">${statusText[request.status] || request.status}</span>
+                                ${actionButtons ? `<div class="request-actions">${actionButtons}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Reinitialize icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        // Update request status
+        async function updateRequestStatus(requestId, newStatus) {
+            if (!confirm(`Bu isteğin durumunu "${newStatus === 'CONFIRMED' ? 'Onaylandı' : newStatus === 'REJECTED' ? 'Reddedildi' : 'İptal Edildi'}" olarak değiştirmek istediğinize emin misiniz?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/spa/requests/${requestId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Durum güncellenemedi');
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    // Reload requests
+                    await loadRequests();
+                }
+            } catch (error) {
+                console.error('Error updating request:', error);
+                alert(`Hata: ${error.message}`);
+            }
+        }
+
+        // Load requests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadRequests();
+            // Auto-refresh every 30 seconds
+            setInterval(loadRequests, 30000);
+        });
+    </script>
+</body>
+</html>
