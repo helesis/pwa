@@ -6609,7 +6609,7 @@ app.get('/reservations', async (req, res) => {
       const restaurantsTableExists = restaurantsTableCheck.rows[0].exists;
       
       if (restaurantsTableExists) {
-        // Use LEFT JOIN if restaurants table exists
+        // Use LEFT JOIN if restaurants table exists (exclude soft-deleted restaurants)
         result = await pool.query(`
           SELECT 
             rr.id,
@@ -6625,11 +6625,13 @@ app.get('/reservations', async (req, res) => {
             r.name as restaurant_name,
             r.photos as restaurant_photos
           FROM restaurant_reservations rr
-          LEFT JOIN restaurants r ON r.id = rr.restaurant_id
+          LEFT JOIN restaurants r ON r.id = rr.restaurant_id AND r.deleted_at IS NULL
           WHERE rr.guest_unique_id = $1
-            AND rr.status != 'cancelled'
+            AND (rr.status IS NULL OR rr.status != 'cancelled')
           ORDER BY rr.reservation_date DESC, rr.created_at DESC
         `, [guest_unique_id]);
+        
+        console.log(`Query returned ${result.rows.length} rows for guest_unique_id: ${guest_unique_id}`);
       } else {
         // Query without JOIN if restaurants table doesn't exist
         console.log('restaurants table does not exist, querying without JOIN');
@@ -6679,8 +6681,17 @@ app.get('/reservations', async (req, res) => {
       throw queryError;
     }
     
+    console.log(`Found ${result.rows.length} reservations for guest_unique_id: ${guest_unique_id}`);
+    
     // Map results (handle null restaurant_name from LEFT JOIN)
     const reservations = result.rows.map(row => {
+      console.log('Processing reservation row:', {
+        id: row.id,
+        restaurant_id: row.restaurant_id,
+        restaurant_name: row.restaurant_name,
+        status: row.status,
+        reservation_date: row.reservation_date
+      });
       let photos = [];
       if (row.restaurant_photos) {
         if (Array.isArray(row.restaurant_photos)) {
