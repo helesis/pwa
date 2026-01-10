@@ -8865,7 +8865,7 @@
                 
                 const serviceSelectTitle = document.createElement('div');
                 serviceSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
-                serviceSelectTitle.textContent = 'Hizmet Seçin';
+                serviceSelectTitle.textContent = 'Terapi Seçin';
                 serviceSelect.appendChild(serviceSelectTitle);
                 
                 // Service navigation controls
@@ -9581,14 +9581,14 @@
         // Render service grid for SPA reservations
         function renderSpaServiceGrid(container, services, startIndex) {
             container.innerHTML = '';
-            const itemsPerPage = 3;
+            const itemsPerPage = 2;
             const endIndex = Math.min(startIndex + itemsPerPage, services.length);
             const visibleServices = services.slice(startIndex, endIndex);
             
             visibleServices.forEach((service, idx) => {
                 const serviceEl = document.createElement('div');
                 serviceEl.className = 'spa-service-item';
-                serviceEl.style.cssText = 'position: relative; min-width: 200px; flex: 1; display: flex; flex-direction: column; padding: 16px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                serviceEl.style.cssText = 'position: relative; min-width: 150px; flex: 1; display: flex; flex-direction: column; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected service
                 if (service.id === window.spaSelectedServiceId) {
@@ -9599,13 +9599,13 @@
                 }
                 
                 serviceEl.innerHTML = `
-                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
                         ${service.name || 'Hizmet'}
                     </div>
-                    <div style="font-size: 13px; color: ${service.id === window.spaSelectedServiceId ? 'rgba(255,255,255,0.9)' : '#667781'}; margin-bottom: 4px;">
+                    <div style="font-size: 12px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#667781'}; margin-bottom: 4px;">
                         ${service.durationMin || 0} dakika
                     </div>
-                    <div style="font-size: 14px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
+                    <div style="font-size: 13px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
                         ${service.price || 0} ${service.currency || 'TL'}
                     </div>
                 `;
@@ -9616,6 +9616,21 @@
                         window.spaSelectedServiceElement.style.background = 'white';
                         window.spaSelectedServiceElement.style.borderColor = '#e4e6e9';
                         window.spaSelectedServiceElement.style.color = '';
+                        // Update previous element's innerHTML with unselected colors
+                        const prevService = window.spaAvailableServices?.find(s => s.id === window.spaSelectedServiceId);
+                        if (prevService && window.spaSelectedServiceElement) {
+                            window.spaSelectedServiceElement.innerHTML = `
+                                <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
+                                    ${prevService.name || 'Hizmet'}
+                                </div>
+                                <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">
+                                    ${prevService.durationMin || 0} dakika
+                                </div>
+                                <div style="font-size: 13px; font-weight: 600; color: #008069; margin-top: auto;">
+                                    ${prevService.price || 0} ${prevService.currency || 'TL'}
+                                </div>
+                            `;
+                        }
                     }
                     
                     // Highlight new selection
@@ -9623,6 +9638,19 @@
                     serviceEl.style.borderColor = '#008069';
                     serviceEl.style.color = 'white';
                     window.spaSelectedServiceElement = serviceEl;
+                    
+                    // Update innerHTML with white colors
+                    serviceEl.innerHTML = `
+                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: white;">
+                            ${service.name || 'Hizmet'}
+                        </div>
+                        <div style="font-size: 12px; color: white; margin-bottom: 4px;">
+                            ${service.durationMin || 0} dakika
+                        </div>
+                        <div style="font-size: 13px; font-weight: 600; color: white; margin-top: auto;">
+                            ${service.price || 0} ${service.currency || 'TL'}
+                        </div>
+                    `;
                     
                     // Update selected service
                     window.spaSelectedServiceId = service.id;
@@ -9655,7 +9683,7 @@
         function navigateSpaServiceGrid(direction) {
             if (!window.spaAvailableServices || window.spaAvailableServices.length === 0) return;
             
-            const itemsPerPage = 3;
+            const itemsPerPage = 2;
             let currentIndex = window.spaCurrentServiceIndex || 0;
             
             if (direction === 'prev') {
@@ -9678,14 +9706,14 @@
         // Render therapist grid for SPA reservations
         function renderSpaTherapistGrid(container, therapists, startIndex) {
             container.innerHTML = '';
-            const itemsPerPage = 3;
+            const itemsPerPage = 2;
             const endIndex = Math.min(startIndex + itemsPerPage, therapists.length);
             const visibleTherapists = therapists.slice(startIndex, endIndex);
             
             visibleTherapists.forEach((therapist, idx) => {
                 const therapistEl = document.createElement('div');
                 therapistEl.className = 'spa-therapist-item';
-                therapistEl.style.cssText = 'position: relative; min-width: 150px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 16px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                therapistEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected therapist
                 if (therapist.id === window.spaSelectedTherapistId) {
@@ -9698,12 +9726,12 @@
                 // Therapist photo or placeholder
                 const photoUrl = therapist.photoUrl || therapist.avatar || therapist.photo || null;
                 const photoHTML = photoUrl 
-                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; margin-bottom: 12px;">`
-                    : `<div style="width: 80px; height: 80px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 32px;">👤</div>`;
+                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; margin-bottom: 8px;">`
+                    : `<div style="width: 60px; height: 60px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 24px;">👤</div>`;
                 
                 therapistEl.innerHTML = `
                     ${photoHTML}
-                    <div style="font-size: 14px; font-weight: 600; text-align: center; color: ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#111b21'};">
+                    <div style="font-size: 13px; font-weight: 600; text-align: center; color: ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#111b21'};">
                         ${therapist.displayName || `Terapist ${therapist.id}`}
                     </div>
                 `;
@@ -9777,7 +9805,7 @@
         function navigateSpaTherapistGrid(direction) {
             if (!window.spaAvailableTherapists || window.spaAvailableTherapists.length === 0) return;
             
-            const itemsPerPage = 3;
+            const itemsPerPage = 2;
             let currentIndex = window.spaCurrentTherapistIndex || 0;
             
             if (direction === 'prev') {
@@ -11297,7 +11325,7 @@
                 'spaRequests': 'SPA Taleplerim',
                 'newSpaRequest': 'Yeni SPA Talebi Oluştur',
                 'spaBookingTitle': 'SPA Rezervasyon Talebi',
-                'selectService': 'Hizmet Seçin',
+                'selectService': 'Terapi Seçin',
                 'selectDate': 'Tarih Seçin',
                 'selectTime': 'Saat Seçin',
                 'selectTherapist': 'Terapist Seçin',
@@ -11364,6 +11392,7 @@
                 'kids': 'Çocuk',
                 'adult': 'Yetişkin',
                 'allAges': 'Tüm Yaşlar',
+                'evening': 'Akşam',
                 'morning': 'Sabah',
                 'noon': 'Öğle',
                 'other': 'Diğer',
@@ -11461,6 +11490,12 @@
                 'online': 'Online',
                 'offline': 'Offline',
                 'reconnecting': 'Reconnecting...',
+                'serverDisconnected': 'Server disconnected',
+                'connectionLost': 'Connection lost',
+                'connectionError': 'Connection error',
+                'connectionFailed': 'Connection failed',
+                'connectionTimeout': 'Connection timeout',
+                'unknownError': 'Unknown error',
                 
                 // Info
                 'swimmingPool': 'Swimming Pool',
@@ -11756,6 +11791,7 @@
                 'kids': 'Дети',
                 'adult': 'Взрослые',
                 'allAges': 'Все возрасты',
+                'evening': 'Вечер',
                 'morning': 'Утро',
                 'noon': 'Полдень',
                 'other': 'Другое',
