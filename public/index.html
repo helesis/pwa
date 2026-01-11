@@ -10414,18 +10414,16 @@
                         const swipeWrapper = document.createElement('div');
                         swipeWrapper.style.cssText = 'position: relative; margin-bottom: 12px; overflow: hidden; border-radius: 8px;';
                         
-                        // Actions background (hidden by default, only show if canCancel)
+                        // Actions background (always create, but content depends on canCancel)
                         const actionsBg = document.createElement('div');
                         actionsBg.className = 'swipe-actions';
                         actionsBg.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;';
                         
-                        if (canCancel) {
-                            // Cancel action (right side - swipe left reveals)
-                            const cancelAction = document.createElement('div');
-                            cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                            cancelAction.textContent = t('cancelReservation');
-                            actionsBg.appendChild(cancelAction);
-                        }
+                        // Cancel action (right side - swipe left reveals)
+                        const cancelAction = document.createElement('div');
+                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
+                        cancelAction.textContent = t('cancelReservation');
+                        actionsBg.appendChild(cancelAction);
                         
                         swipeWrapper.appendChild(actionsBg);
                         
@@ -10468,55 +10466,67 @@
                         
                         cardEl.appendChild(contentEl);
                         
-                        // Swipe gesture handlers (only if canCancel)
-                        if (canCancel) {
-                            let startX = 0;
-                            let currentX = 0;
-                            let isDragging = false;
+                        // Swipe gesture handlers (always enabled)
+                        let startX = 0;
+                        let currentX = 0;
+                        let isDragging = false;
+                        
+                        const handleTouchStart = (e) => {
+                            startX = e.touches[0].clientX;
+                            isDragging = true;
+                            cardEl.style.transition = 'none';
+                        };
+                        
+                        const handleTouchMove = (e) => {
+                            if (!isDragging) return;
+                            currentX = e.touches[0].clientX - startX;
                             
-                            const handleTouchStart = (e) => {
-                                startX = e.touches[0].clientX;
-                                isDragging = true;
-                                cardEl.style.transition = 'none';
-                            };
+                            // Only allow left swipe (negative = left)
+                            if (currentX < 0) {
+                                cardEl.style.transform = `translateX(${currentX}px)`;
+                                actionsBg.style.display = 'flex';
+                            }
+                        };
+                        
+                        const handleTouchEnd = () => {
+                            if (!isDragging) return;
+                            isDragging = false;
+                            cardEl.style.transition = 'transform 0.3s ease';
                             
-                            const handleTouchMove = (e) => {
-                                if (!isDragging) return;
-                                currentX = e.touches[0].clientX - startX;
-                                
-                                // Only allow left swipe (negative = left)
-                                if (currentX < 0) {
-                                    cardEl.style.transform = `translateX(${currentX}px)`;
-                                    actionsBg.style.display = 'flex';
-                                }
-                            };
+                            const threshold = 80; // Minimum swipe distance
                             
-                            const handleTouchEnd = () => {
-                                if (!isDragging) return;
-                                isDragging = false;
-                                cardEl.style.transition = 'transform 0.3s ease';
-                                
-                                const threshold = 80; // Minimum swipe distance
-                                
-                                if (currentX < -threshold) {
-                                    // Swipe left - Cancel
+                            if (currentX < -threshold) {
+                                if (canCancel) {
+                                    // Swipe left - Cancel (allowed)
                                     cardEl.style.transform = 'translateX(-100%)';
                                     setTimeout(() => {
                                         cancelRestaurantReservation(reservation.id);
                                     }, 300);
                                 } else {
-                                    // Reset
+                                    // Swipe left - Cancel not allowed (deadline passed)
+                                    // Get cancellation deadline from restaurant rules
+                                    const rules = reservation.restaurant?.rules_json;
+                                    const cancellationDeadlineMinutes = rules?.cancellation_deadline_minutes || 240;
+                                    
+                                    // Slide back
                                     cardEl.style.transform = 'translateX(0)';
                                     actionsBg.style.display = 'none';
+                                    
+                                    // Show message with cancellation deadline
+                                    alert(`Rezervasyona ${cancellationDeadlineMinutes} dakikadan az kaldığı için iptal edemezsiniz.`);
                                 }
-                                
-                                currentX = 0;
-                            };
+                            } else {
+                                // Reset
+                                cardEl.style.transform = 'translateX(0)';
+                                actionsBg.style.display = 'none';
+                            }
                             
-                            cardEl.addEventListener('touchstart', handleTouchStart);
-                            cardEl.addEventListener('touchmove', handleTouchMove);
-                            cardEl.addEventListener('touchend', handleTouchEnd);
-                        }
+                            currentX = 0;
+                        };
+                        
+                        cardEl.addEventListener('touchstart', handleTouchStart);
+                        cardEl.addEventListener('touchmove', handleTouchMove);
+                        cardEl.addEventListener('touchend', handleTouchEnd);
                         
                         swipeWrapper.appendChild(cardEl);
                         container.appendChild(swipeWrapper);
@@ -11083,18 +11093,16 @@
                     const swipeWrapper = document.createElement('div');
                     swipeWrapper.style.cssText = 'position: relative; margin-bottom: 12px; overflow: hidden; border-radius: 8px;';
                     
-                    // Actions background (hidden by default, only show if canCancel)
+                    // Actions background (always create)
                     const actionsBg = document.createElement('div');
                     actionsBg.className = 'swipe-actions';
                     actionsBg.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;';
                     
-                    if (canCancel) {
-                        // Cancel action (right side - swipe left reveals)
-                        const cancelAction = document.createElement('div');
-                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                        cancelAction.textContent = t('cancelReservation');
-                        actionsBg.appendChild(cancelAction);
-                    }
+                    // Cancel action (right side - swipe left reveals)
+                    const cancelAction = document.createElement('div');
+                    cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
+                    cancelAction.textContent = t('cancelReservation');
+                    actionsBg.appendChild(cancelAction);
                     
                     swipeWrapper.appendChild(actionsBg);
                     
@@ -11131,67 +11139,73 @@
                     infoEl.textContent = `${formattedDate} • ${timeStr}${therapistName ? ` • ${therapistName}` : ''}`;
                     contentEl.appendChild(infoEl);
                     
-                    // Price (3rd line)
-                    const price = request.price || request.servicePrice || request.amount || 0;
-                    const currency = request.currency || request.serviceCurrency || 'TRY';
-                    if (price > 0) {
-                        const priceEl = document.createElement('div');
-                        priceEl.style.cssText = 'font-size: 13px; font-weight: 600; color: #1a4d6d; margin-top: 2px;';
-                        priceEl.textContent = `${price} ${currency}`;
-                        contentEl.appendChild(priceEl);
-                    }
+                    // Price (3rd line) - always show
+                    const price = request.price || request.servicePrice || request.amount || request.service?.price || 0;
+                    const currency = request.currency || request.serviceCurrency || request.service?.currency || 'TRY';
+                    const priceEl = document.createElement('div');
+                    priceEl.style.cssText = 'font-size: 13px; font-weight: 600; color: #1a4d6d; margin-top: 2px;';
+                    priceEl.textContent = `${price} ${currency}`;
+                    contentEl.appendChild(priceEl);
                     
                     cardEl.appendChild(contentEl);
                     
-                    // Swipe gesture handlers (only if canCancel)
-                    if (canCancel) {
-                        let startX = 0;
-                        let currentX = 0;
-                        let isDragging = false;
+                    // Swipe gesture handlers (always enabled)
+                    let startX = 0;
+                    let currentX = 0;
+                    let isDragging = false;
+                    
+                    const handleTouchStart = (e) => {
+                        startX = e.touches[0].clientX;
+                        isDragging = true;
+                        cardEl.style.transition = 'none';
+                    };
+                    
+                    const handleTouchMove = (e) => {
+                        if (!isDragging) return;
+                        currentX = e.touches[0].clientX - startX;
                         
-                        const handleTouchStart = (e) => {
-                            startX = e.touches[0].clientX;
-                            isDragging = true;
-                            cardEl.style.transition = 'none';
-                        };
+                        // Only allow left swipe (negative = left)
+                        if (currentX < 0) {
+                            cardEl.style.transform = `translateX(${currentX}px)`;
+                            actionsBg.style.display = 'flex';
+                        }
+                    };
+                    
+                    const handleTouchEnd = () => {
+                        if (!isDragging) return;
+                        isDragging = false;
+                        cardEl.style.transition = 'transform 0.3s ease';
                         
-                        const handleTouchMove = (e) => {
-                            if (!isDragging) return;
-                            currentX = e.touches[0].clientX - startX;
-                            
-                            // Only allow left swipe (negative = left)
-                            if (currentX < 0) {
-                                cardEl.style.transform = `translateX(${currentX}px)`;
-                                actionsBg.style.display = 'flex';
-                            }
-                        };
+                        const threshold = 80; // Minimum swipe distance
                         
-                        const handleTouchEnd = () => {
-                            if (!isDragging) return;
-                            isDragging = false;
-                            cardEl.style.transition = 'transform 0.3s ease';
-                            
-                            const threshold = 80; // Minimum swipe distance
-                            
-                            if (currentX < -threshold) {
-                                // Swipe left - Cancel
+                        if (currentX < -threshold) {
+                            if (canCancel) {
+                                // Swipe left - Cancel (allowed)
                                 cardEl.style.transform = 'translateX(-100%)';
                                 setTimeout(() => {
                                     cancelSpaReservation(request.requestId);
                                 }, 300);
                             } else {
-                                // Reset
+                                // Swipe left - Cancel not allowed (deadline passed)
+                                // Slide back
                                 cardEl.style.transform = 'translateX(0)';
                                 actionsBg.style.display = 'none';
+                                
+                                // Show message with cancellation deadline
+                                alert(`Terapiye ${cancellationDeadlineMinutes} dakikadan az kaldığı için iptal edemezsiniz.`);
                             }
-                            
-                            currentX = 0;
-                        };
+                        } else {
+                            // Reset
+                            cardEl.style.transform = 'translateX(0)';
+                            actionsBg.style.display = 'none';
+                        }
                         
-                        cardEl.addEventListener('touchstart', handleTouchStart);
-                        cardEl.addEventListener('touchmove', handleTouchMove);
-                        cardEl.addEventListener('touchend', handleTouchEnd);
-                    }
+                        currentX = 0;
+                    };
+                    
+                    cardEl.addEventListener('touchstart', handleTouchStart);
+                    cardEl.addEventListener('touchmove', handleTouchMove);
+                    cardEl.addEventListener('touchend', handleTouchEnd);
                     
                     swipeWrapper.appendChild(cardEl);
                     container.appendChild(swipeWrapper);
