@@ -10288,8 +10288,129 @@
                 return;
             }
             
+            try {
+                // Calculate date range
+                if (!CHECKIN_DATE || !CHECKOUT_DATE) {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Giriş ve çıkış tarihleri bulunamadı.</div>';
+                    return;
+                }
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const checkin = new Date(CHECKIN_DATE);
+                checkin.setHours(0, 0, 0, 0);
+                const checkout = new Date(CHECKOUT_DATE);
+                checkout.setHours(0, 0, 0, 0);
+                
+                // Start from today, up to checkout - 1 day (excluding checkout day)
+                const from = today;
+                const to = new Date(checkout);
+                to.setDate(to.getDate() - 1); // checkout - 1
+                
+                container.innerHTML = '';
+                
+                // Date selection grid (first step) - scrollable calendar
+                const dateSelectSection = document.createElement('div');
+                dateSelectSection.style.cssText = 'margin-bottom: 24px;';
+                
+                const dateSelectTitle = document.createElement('div');
+                dateSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+                dateSelectTitle.textContent = 'Tarih Seçin';
+                dateSelectSection.appendChild(dateSelectTitle);
+                
+                // Generate all dates from today to checkout - 1 (excluding checkout day)
+                const allDates = [];
+                let currentDate = new Date(from);
+                while (currentDate <= to) {
+                    allDates.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                // Store dates for navigation
+                window.restaurantAllDates = allDates.map(d => ({
+                    date: d.toISOString().split('T')[0],
+                    dateObj: new Date(d)
+                }));
+                window.restaurantCurrentDateIndex = 0;
+                window.restaurantSelectedDateElement = null; // Track selected date element
+                window.restaurantSelectedDate = null;
+                
+                // Date navigation controls
+                const navContainer = document.createElement('div');
+                navContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.innerHTML = '<i data-lucide="chevron-left" class="icon icon-md"></i>';
+                prevBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                prevBtn.onclick = () => navigateRestaurantDateGrid('prev');
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.innerHTML = '<i data-lucide="chevron-right" class="icon icon-md"></i>';
+                nextBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                nextBtn.onclick = () => navigateRestaurantDateGrid('next');
+                
+                navContainer.appendChild(prevBtn);
+                
+                const calendarGrid = document.createElement('div');
+                calendarGrid.id = 'restaurant-date-calendar-grid';
+                calendarGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; flex: 1; margin: 0 8px;';
+                
+                navContainer.appendChild(calendarGrid);
+                navContainer.appendChild(nextBtn);
+                dateSelectSection.appendChild(navContainer);
+                container.appendChild(dateSelectSection);
+                
+                // Render initial date grid
+                renderRestaurantDateGrid(calendarGrid, window.restaurantAllDates, 0);
+                
+                // Restaurant selection grid (populated after date selection)
+                const restaurantSelect = document.createElement('div');
+                restaurantSelect.id = 'restaurant-selector-wrapper';
+                restaurantSelect.style.cssText = 'margin-bottom: 24px; display: none;';
+                
+                const restaurantSelectTitle = document.createElement('div');
+                restaurantSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
+                restaurantSelectTitle.textContent = 'Restoran Seçin';
+                restaurantSelect.appendChild(restaurantSelectTitle);
+                
+                const restaurantGrid = document.createElement('div');
+                restaurantGrid.id = 'restaurant-grid';
+                restaurantGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: wrap;';
+                restaurantSelect.appendChild(restaurantGrid);
+                container.appendChild(restaurantSelect);
+                
+                // Existing reservations section
+                const existingReservationsSection = document.createElement('div');
+                existingReservationsSection.id = 'existing-restaurant-reservations';
+                existingReservationsSection.style.cssText = 'margin-top: 32px; padding-top: 24px; border-top: 2px solid #e4e6e9;';
+                
+                const existingReservationsTitle = document.createElement('div');
+                existingReservationsTitle.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;';
+                existingReservationsTitle.textContent = 'Mevcut Rezervasyonlarım';
+                existingReservationsSection.appendChild(existingReservationsTitle);
+                
+                const existingReservationsContainer = document.createElement('div');
+                existingReservationsContainer.id = 'existing-restaurant-reservations-list';
+                existingReservationsSection.appendChild(existingReservationsContainer);
+                container.appendChild(existingReservationsSection);
+                
+                // Load existing reservations
+                await loadExistingRestaurantReservations(existingReservationsContainer);
+                
+                // Store date range for later use
+                window.restaurantDateRange = { from, to };
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } catch (error) {
+                container.innerHTML = `<div style="text-align: center; padding: 20px; color: #dc3545;">Hata: ${error.message}</div>`;
+            }
+        }
+        
+        // Load existing restaurant reservations (for display)
+        async function loadExistingRestaurantReservations(container) {
+            if (!container) return;
+            
             if (!GUEST_UNIQUE_ID) {
-                console.warn('GUEST_UNIQUE_ID not available, cannot load reservations');
                 container.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #667781;">
                         Oturum bilgisi bulunamadı. Lütfen sayfayı yenileyin.
@@ -10299,8 +10420,6 @@
             }
             
             try {
-                console.log('Loading restaurant reservations for guest:', GUEST_UNIQUE_ID);
-                // Add cache-busting parameter
                 const cacheBuster = new Date().getTime();
                 const response = await fetch(`/reservations?guest_unique_id=${encodeURIComponent(GUEST_UNIQUE_ID)}&_t=${cacheBuster}`, {
                     cache: 'no-store',
@@ -10310,25 +10429,13 @@
                 });
                 
                 if (!response.ok) {
-                    let errorMessage = 'Rezervasyonlar yüklenemedi';
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.error || errorMessage;
-                    } catch (e) {
-                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                    }
-                    throw new Error(errorMessage);
+                    throw new Error('Rezervasyonlar yüklenemedi');
                 }
                 
                 const result = await response.json();
-                console.log('Reservations response:', result);
                 const reservations = result.success && result.data ? result.data : [];
                 
-                console.log('Parsed reservations array:', reservations);
-                console.log('Reservations count:', reservations.length);
-                
                 if (!reservations || reservations.length === 0) {
-                    console.log('No reservations found, showing empty state');
                     container.innerHTML = `
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
                             Henüz restoran rezervasyonunuz bulunmamaktadır.
@@ -10337,101 +10444,73 @@
                     return;
                 }
                 
-                console.log('Rendering', reservations.length, 'reservations');
-                
-                try {
-                    const reservationsHTML = reservations.map(reservation => {
-                        try {
-                            console.log('Rendering reservation:', reservation);
-                            
-                            if (!reservation || !reservation.id) {
-                                console.warn('Invalid reservation data:', reservation);
-                                return '';
-                            }
-                            
-                            const resDate = reservation.reservation_date ? new Date(reservation.reservation_date) : new Date();
-                            const formattedDate = resDate.toLocaleDateString('tr-TR', {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric'
-                            });
-                            
-                            const photos = reservation.restaurant?.photos && Array.isArray(reservation.restaurant.photos) && reservation.restaurant.photos.length > 0 
-                                ? reservation.restaurant.photos[0] 
-                                : null;
-                            const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
-                            
-                            const restaurantName = reservation.restaurant?.name || 'Restoran';
-                            const paxAdult = reservation.pax_adult || 0;
-                            const paxChild = reservation.pax_child || 0;
-                            const totalPrice = reservation.total_price || 0;
-                            const currency = reservation.currency || 'TRY';
-                            const status = reservation.status || 'confirmed';
-                            
-                            return `
-                        <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
-                            <div style="display: flex; gap: 12px;">
-                                ${photoUrl ? `<img src="${photoUrl}" alt="${restaurantName.replace(/"/g, '&quot;')}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; flex-shrink: 0;">` : ''}
-                                <div style="flex: 1; min-width: 0;">
-                                    <h3 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 4px;">
-                                        ${restaurantName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-                                    </h3>
-                                    <p style="font-size: 14px; color: #667781; margin-bottom: 8px;">
-                                        📅 ${formattedDate}
-                                    </p>
-                                    <p style="font-size: 14px; color: #667781; margin-bottom: 8px;">
-                                        👥 ${paxAdult} Yetişkin, ${paxChild} Çocuk
-                                    </p>
-                                    <p style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
-                                        💰 ${totalPrice} ${currency}
-                                    </p>
-                                    ${reservation.special_requests ? `<p style="font-size: 12px; color: #667781; margin-top: 8px; font-style: italic;">"${String(reservation.special_requests).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}"</p>` : ''}
-                                    ${status === 'confirmed' ? `
-                                        <button onclick="cancelRestaurantReservation(${reservation.id})" 
-                                                style="margin-top: 12px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                                            İptal Et
-                                        </button>
-                                    ` : ''}
+                const reservationsHTML = reservations.map(reservation => {
+                    try {
+                        if (!reservation || !reservation.id) {
+                            return '';
+                        }
+                        
+                        const resDate = reservation.reservation_date ? new Date(reservation.reservation_date) : new Date();
+                        const formattedDate = resDate.toLocaleDateString('tr-TR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        });
+                        
+                        const photos = reservation.restaurant?.photos && Array.isArray(reservation.restaurant.photos) && reservation.restaurant.photos.length > 0 
+                            ? reservation.restaurant.photos[0] 
+                            : null;
+                        const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
+                        
+                        const restaurantName = reservation.restaurant?.name || 'Restoran';
+                        const paxAdult = reservation.pax_adult || 0;
+                        const paxChild = reservation.pax_child || 0;
+                        const totalPrice = reservation.total_price || 0;
+                        const currency = reservation.currency || 'TRY';
+                        const status = reservation.status || 'confirmed';
+                        
+                        return `
+                            <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
+                                <div style="display: flex; gap: 12px;">
+                                    ${photoUrl ? `<img src="${photoUrl}" alt="${restaurantName.replace(/"/g, '&quot;')}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; flex-shrink: 0;">` : ''}
+                                    <div style="flex: 1; min-width: 0;">
+                                        <h3 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 4px;">
+                                            ${restaurantName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                                        </h3>
+                                        <p style="font-size: 14px; color: #667781; margin-bottom: 8px;">
+                                            📅 ${formattedDate}
+                                        </p>
+                                        <p style="font-size: 14px; color: #667781; margin-bottom: 8px;">
+                                            👥 ${paxAdult} Yetişkin, ${paxChild} Çocuk
+                                        </p>
+                                        <p style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
+                                            💰 ${totalPrice} ${currency}
+                                        </p>
+                                        ${reservation.special_requests ? `<p style="font-size: 12px; color: #667781; margin-top: 8px; font-style: italic;">"${String(reservation.special_requests).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}"</p>` : ''}
+                                        ${status === 'confirmed' ? `
+                                            <button onclick="cancelRestaurantReservation(${reservation.id})" 
+                                                    style="margin-top: 12px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                                                İptal Et
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                        } catch (mapError) {
-                            console.error('Error rendering reservation row:', mapError, reservation);
-                            return ''; // Skip this reservation
-                        }
-                    }).filter(html => html.trim().length > 0).join('');
-                    
-                    if (!reservationsHTML || reservationsHTML.trim().length === 0) {
-                        console.warn('No valid reservations to render after filtering');
-                        container.innerHTML = `
-                            <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
-                                Henüz restoran rezervasyonunuz bulunmamaktadır.
-                            </div>
                         `;
-                        return;
+                    } catch (error) {
+                        console.error('Error rendering reservation:', error);
+                        return '';
                     }
-                    
-                    // Ensure container is visible
-                    container.style.display = 'block';
-                    container.innerHTML = reservationsHTML;
-                    console.log('Successfully rendered', reservations.length, 'reservations to container');
-                    
-                    // Scroll to top of container to show new reservation
-                    container.scrollTop = 0;
-                } catch (renderError) {
-                    console.error('Error rendering reservations HTML:', renderError);
-                    console.error('Render error stack:', renderError.stack);
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: #dc3545;">
-                            <p>Rezervasyonlar gösterilirken hata oluştu: ${renderError.message}</p>
-                        </div>
-                    `;
-                }
+                }).filter(html => html.trim().length > 0).join('');
+                
+                container.innerHTML = reservationsHTML || `
+                    <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
+                        Henüz restoran rezervasyonunuz bulunmamaktadır.
+                    </div>
+                `;
                 
             } catch (error) {
-                console.error('Error loading restaurant reservations:', error);
-                console.error('Error stack:', error.stack);
+                console.error('Error loading existing reservations:', error);
                 container.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #dc3545;">
                         <p>Rezervasyonlar yüklenirken hata oluştu: ${error.message}</p>
@@ -10440,10 +10519,224 @@
             }
         }
         
+        // Render restaurant date grid
+        function renderRestaurantDateGrid(container, dates, startIndex) {
+            container.innerHTML = '';
+            const daysPerPage = 3;
+            const endIndex = Math.min(startIndex + daysPerPage, dates.length);
+            const visibleDates = dates.slice(startIndex, endIndex);
+            
+            visibleDates.forEach((dateItem, idx) => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'restaurant-calendar-day';
+                dayEl.style.cssText = 'position: relative; min-width: 70px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; border: 1px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                
+                const date = dateItem.dateObj;
+                const dateStr = dateItem.date;
+                const isToday = date.toDateString() === new Date().toDateString();
+                
+                // Highlight today
+                if (isToday) {
+                    dayEl.style.borderColor = '#1A4D6D';
+                    dayEl.style.borderWidth = '2px';
+                }
+                
+                // Highlight selected date
+                if (dateStr === window.restaurantSelectedDate) {
+                    dayEl.style.background = '#1A4D6D';
+                    dayEl.style.color = 'white';
+                    window.restaurantSelectedDateElement = dayEl;
+                }
+                
+                const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+                const dayNumber = date.getDate();
+                const month = date.toLocaleDateString('tr-TR', { month: 'short' });
+                
+                dayEl.innerHTML = `
+                    <div style="font-size: 11px; color: ${dateStr === window.restaurantSelectedDate ? 'white' : '#667781'}; margin-bottom: 4px;">${dayName}</div>
+                    <div style="font-size: 18px; font-weight: 600; color: ${dateStr === window.restaurantSelectedDate ? 'white' : '#111b21'};">${dayNumber}</div>
+                    <div style="font-size: 10px; color: ${dateStr === window.restaurantSelectedDate ? 'white' : '#667781'};">${month}</div>
+                    ${isToday && dateStr !== window.restaurantSelectedDate ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #1A4D6D; border-radius: 50%;"></div>' : ''}
+                `;
+                
+                dayEl.onclick = () => {
+                    // Remove previous selection highlight
+                    if (window.restaurantSelectedDateElement) {
+                        const prevDate = new Date(window.restaurantSelectedDate);
+                        const prevIsToday = prevDate.toDateString() === new Date().toDateString();
+                        window.restaurantSelectedDateElement.style.background = 'white';
+                        window.restaurantSelectedDateElement.style.color = '';
+                        window.restaurantSelectedDateElement.style.borderColor = prevIsToday ? '#1A4D6D' : '#e4e6e9';
+                        window.restaurantSelectedDateElement.style.borderWidth = prevIsToday ? '2px' : '1px';
+                    }
+                    
+                    // Highlight new selection
+                    dayEl.style.background = '#1A4D6D';
+                    dayEl.style.color = 'white';
+                    dayEl.style.borderColor = '#1A4D6D';
+                    dayEl.style.borderWidth = '2px';
+                    window.restaurantSelectedDateElement = dayEl;
+                    
+                    // Update selected date
+                    window.restaurantSelectedDate = dateStr;
+                    
+                    // Trigger date selection
+                    onRestaurantDateSelected(dateStr);
+                };
+                
+                dayEl.onmouseenter = () => {
+                    if (dateStr !== window.restaurantSelectedDate) {
+                        dayEl.style.background = '#f0f2f5';
+                        dayEl.style.borderColor = '#c1c7cd';
+                    }
+                };
+                
+                dayEl.onmouseleave = () => {
+                    if (dateStr !== window.restaurantSelectedDate) {
+                        dayEl.style.background = isToday ? 'white' : 'white';
+                        dayEl.style.borderColor = isToday ? '#1A4D6D' : '#e4e6e9';
+                    }
+                };
+                
+                container.appendChild(dayEl);
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Navigate restaurant date grid
+        function navigateRestaurantDateGrid(direction) {
+            if (!window.restaurantAllDates || window.restaurantAllDates.length === 0) return;
+            
+            const daysPerPage = 3;
+            let currentIndex = window.restaurantCurrentDateIndex || 0;
+            
+            if (direction === 'prev') {
+                currentIndex = Math.max(0, currentIndex - daysPerPage);
+            } else if (direction === 'next') {
+                currentIndex = Math.min(
+                    window.restaurantAllDates.length - daysPerPage,
+                    currentIndex + daysPerPage
+                );
+            }
+            
+            window.restaurantCurrentDateIndex = currentIndex;
+            
+            const calendarGrid = document.getElementById('restaurant-date-calendar-grid');
+            if (calendarGrid) {
+                renderRestaurantDateGrid(calendarGrid, window.restaurantAllDates, currentIndex);
+            }
+        }
+        
+        // Called when a date is selected
+        async function onRestaurantDateSelected(selectedDate) {
+            if (!selectedDate) return;
+            
+            const restaurantSelectorWrapper = document.getElementById('restaurant-selector-wrapper');
+            const restaurantGrid = document.getElementById('restaurant-grid');
+            
+            if (!restaurantSelectorWrapper || !restaurantGrid) return;
+            
+            try {
+                restaurantSelectorWrapper.style.display = 'block';
+                restaurantGrid.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781; width: 100%;">Yükleniyor...</div>';
+                
+                // Load all restaurants and check which are available on selected date
+                const response = await fetch('/restaurants');
+                if (!response.ok) {
+                    throw new Error('Restoranlar yüklenemedi');
+                }
+                
+                const result = await response.json();
+                const restaurants = result.success && result.data ? result.data : [];
+                
+                if (restaurants.length === 0) {
+                    restaurantGrid.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #667781; width: 100%;">
+                            Bu tarihte açık restoran bulunmamaktadır.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Filter restaurants that are available on selected date
+                // For now, we'll show all restaurants (backend should handle availability check)
+                // In the future, you might want to add date-based filtering via API
+                const availableRestaurants = restaurants.filter(r => r.active !== false);
+                
+                if (availableRestaurants.length === 0) {
+                    restaurantGrid.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #667781; width: 100%;">
+                            Bu tarihte açık restoran bulunmamaktadır.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render restaurant grid
+                renderRestaurantGrid(restaurantGrid, availableRestaurants, selectedDate);
+                
+            } catch (error) {
+                console.error('Error loading restaurants for date:', error);
+                restaurantGrid.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #dc3545; width: 100%;">
+                        Hata: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Render restaurant grid
+        function renderRestaurantGrid(container, restaurants, selectedDate) {
+            container.innerHTML = '';
+            
+            restaurants.forEach(restaurant => {
+                const photos = restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : null;
+                const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
+                
+                const restaurantEl = document.createElement('div');
+                restaurantEl.style.cssText = 'flex: 1; min-width: 200px; max-width: 300px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9; cursor: pointer; transition: all 0.2s;';
+                
+                restaurantEl.onmouseenter = () => {
+                    restaurantEl.style.background = '#f0f2f5';
+                    restaurantEl.style.borderColor = '#1A4D6D';
+                };
+                
+                restaurantEl.onmouseleave = () => {
+                    restaurantEl.style.background = '#f8f9fa';
+                    restaurantEl.style.borderColor = '#e4e6e9';
+                };
+                
+                restaurantEl.onclick = () => {
+                    openRestaurantReservationModal(restaurant.id, restaurant.name, selectedDate);
+                };
+                
+                restaurantEl.innerHTML = `
+                    ${photoUrl ? `<img src="${photoUrl}" alt="${(restaurant.name || '').replace(/"/g, '&quot;')}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">` : ''}
+                    <h3 style="font-size: 18px; font-weight: 600; color: #111b21; margin-bottom: 8px;">
+                        ${(restaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                    </h3>
+                    ${restaurant.description ? `<p style="font-size: 14px; color: #667781; margin-bottom: 12px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${restaurant.description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
+                            ${restaurant.price_per_person || 0} ${restaurant.currency || 'TRY'} / kişi
+                        </span>
+                    </div>
+                    <button style="width: 100%; padding: 12px; background: #1a4d6d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; pointer-events: none;">
+                        Rezervasyon Yap
+                    </button>
+                `;
+                
+                container.appendChild(restaurantEl);
+            });
+        }
+        
         // Open restaurant reservation modal
         let currentRestaurantForReservation = null;
-        function openRestaurantReservationModal(restaurantId, restaurantName) {
-            currentRestaurantForReservation = { id: restaurantId, name: restaurantName };
+        function openRestaurantReservationModal(restaurantId, restaurantName, selectedDate) {
+            // If no date provided, default to today
+            const reservationDate = selectedDate || new Date().toISOString().split('T')[0];
+            currentRestaurantForReservation = { id: restaurantId, name: restaurantName, date: reservationDate };
             const modal = document.getElementById('restaurantReservationModal');
             const form = document.getElementById('restaurantReservationForm');
             
@@ -10452,11 +10745,15 @@
                     `${restaurantName} - Rezervasyon`;
                 document.getElementById('reservation-restaurant-id').value = restaurantId;
                 
+                const dateInput = document.getElementById('reservation-date');
+                if (dateInput) {
+                    dateInput.value = reservationDate;
+                }
+                
                 // Set default values from guest info
                 const adultInput = document.getElementById('reservation-pax-adult');
                 const childInput = document.getElementById('reservation-pax-child');
                 if (adultInput) {
-                    // Try to get from guest info or default to 1
                     adultInput.value = 1;
                 }
                 if (childInput) {
@@ -10486,12 +10783,19 @@
             }
             
             const restaurantId = document.getElementById('reservation-restaurant-id').value;
+            const reservationDateInput = document.getElementById('reservation-date');
+            const reservationDate = reservationDateInput ? reservationDateInput.value : (currentRestaurantForReservation?.date || new Date().toISOString().split('T')[0]);
             const paxAdult = parseInt(document.getElementById('reservation-pax-adult').value) || 1;
             const paxChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
             const specialRequests = document.getElementById('reservation-special-requests').value.trim();
             
             if (!restaurantId) {
                 alert('Restoran seçilmedi.');
+                return;
+            }
+            
+            if (!reservationDate) {
+                alert('Tarih seçilmedi.');
                 return;
             }
             
@@ -10504,7 +10808,7 @@
                     body: JSON.stringify({
                         restaurant_id: parseInt(restaurantId),
                         guest_unique_id: GUEST_UNIQUE_ID,
-                        reservation_date: new Date().toISOString().split('T')[0], // Today
+                        reservation_date: reservationDate,
                         pax_adult: paxAdult,
                         pax_child: paxChild,
                         special_requests: specialRequests || null
@@ -10569,7 +10873,7 @@
                 
                 if (result.success) {
                     alert('Rezervasyonunuz iptal edildi.');
-                    loadRestaurantReservations();
+                    await loadRestaurantReservations();
                     loadAvailableRestaurants(); // Refresh list
                 } else {
                     throw new Error(result.error || 'Rezervasyon iptal edilemedi');
@@ -12441,6 +12745,7 @@
             </div>
             <form id="restaurantReservationForm" onsubmit="submitRestaurantReservation(event)">
                 <input type="hidden" id="reservation-restaurant-id">
+                <input type="hidden" id="reservation-date">
                 <input type="hidden" id="reservation-session-instance-id" value="" style="display: none;">
                 
                 <div style="margin-bottom: 15px;">
