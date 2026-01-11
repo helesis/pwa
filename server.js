@@ -6057,7 +6057,7 @@ app.get('/admin/restaurants', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         id, name, description, photos, active, 
-        price_per_person, currency, rules_json,
+        opening_hour, closing_hour, price_per_person, currency, rules_json,
         created_at, updated_at
       FROM restaurants
       WHERE deleted_at IS NULL
@@ -6123,7 +6123,7 @@ app.get('/admin/restaurants/:id', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         id, name, description, photos, active, 
-        price_per_person, currency, rules_json,
+        opening_hour, closing_hour, price_per_person, currency, rules_json,
         created_at, updated_at
       FROM restaurants
       WHERE id = $1 AND deleted_at IS NULL
@@ -6148,7 +6148,7 @@ app.get('/admin/restaurants/:id', async (req, res) => {
 app.post('/admin/restaurants', async (req, res) => {
   try {
     console.log('POST /admin/restaurants - Request body:', req.body);
-    const { name, description, photos, active, price_per_person, currency, rules_json } = req.body;
+    const { name, description, photos, active, opening_hour, closing_hour, price_per_person, currency, rules_json } = req.body;
     
     if (!name || !price_per_person) {
       console.log('Validation failed: name or price_per_person missing');
@@ -6208,17 +6208,19 @@ app.post('/admin/restaurants', async (req, res) => {
     }
     
     const result = await pool.query(`
-      INSERT INTO restaurants (name, description, photos, active, price_per_person, currency, rules_json)
-      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7::jsonb)
+      INSERT INTO restaurants (name, description, photos, active, opening_hour, closing_hour, price_per_person, currency, rules_json)
+      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9::jsonb)
       RETURNING 
         id, name, description, photos, active, 
-        price_per_person, currency, rules_json,
+        opening_hour, closing_hour, price_per_person, currency, rules_json,
         created_at, updated_at
     `, [
       name.trim(),
       description || null,
       photosJson,
       active !== undefined ? active : true,
+      opening_hour || null,
+      closing_hour || null,
       parseFloat(price_per_person),
       currency || 'TRY',
       rulesJson
@@ -6243,7 +6245,7 @@ app.post('/admin/restaurants', async (req, res) => {
 app.put('/admin/restaurants/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, photos, active, price_per_person, currency, rules_json } = req.body;
+    const { name, description, photos, active, opening_hour, closing_hour, price_per_person, currency, rules_json } = req.body;
     
     // Check if restaurant exists
     const checkResult = await pool.query(`
@@ -6286,6 +6288,14 @@ app.put('/admin/restaurants/:id', async (req, res) => {
       updates.push(`active = $${paramCount++}`);
       values.push(active);
     }
+    if (opening_hour !== undefined) {
+      updates.push(`opening_hour = $${paramCount++}`);
+      values.push(opening_hour || null);
+    }
+    if (closing_hour !== undefined) {
+      updates.push(`closing_hour = $${paramCount++}`);
+      values.push(closing_hour || null);
+    }
     if (price_per_person !== undefined) {
       updates.push(`price_per_person = $${paramCount++}`);
       values.push(parseFloat(price_per_person));
@@ -6319,7 +6329,7 @@ app.put('/admin/restaurants/:id', async (req, res) => {
       WHERE id = $${paramCount}
       RETURNING 
         id, name, description, photos, active, 
-        price_per_person, currency, rules_json,
+        opening_hour, closing_hour, price_per_person, currency, rules_json,
         created_at, updated_at
     `, values);
     
@@ -6370,7 +6380,7 @@ app.get('/restaurants', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         r.id, r.name, r.description, r.photos, r.active,
-        r.price_per_person, r.currency, r.rules_json
+        r.opening_hour, r.closing_hour, r.price_per_person, r.currency, r.rules_json
       FROM restaurants r
       WHERE r.deleted_at IS NULL
         AND r.active = true
@@ -6418,6 +6428,8 @@ app.get('/restaurants', async (req, res) => {
         name: row.name,
         description: row.description,
         photos,
+        opening_hour: row.opening_hour,
+        closing_hour: row.closing_hour,
         price_per_person: parseFloat(row.price_per_person),
         currency: row.currency,
         rules_json

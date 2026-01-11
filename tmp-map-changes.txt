@@ -1,0 +1,66 @@
+@@ HEAD_INJECTIONS
+@@ add_leaflet_assets_in_head
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
++   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
++   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+@@ add_map_css
+        .info-card-content {
+            font-size: 14px;
+            color: #667781;
+            line-height: 1.5;
+        }
++
++        /* Map Section */
++        .map-section {
++            padding: 16px;
++            display: flex;
++            flex-direction: column;
++            gap: 16px;
++            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px);
++        }
++
++        .map-search {
++            display: flex;
++            flex-direction: column;
++            gap: 8px;
++        }
++
++        .map-search-row {
++            display: flex;
++            gap: 8px;
++        }
++
++        .map-search-row input {
++            flex: 1;
++            padding: 10px 12px;
++            border-radius: 8px;
++            border: 1px solid #e4e6e9;
++            font-size: 14px;
++        }
++
++        .map-container {
++            width: 100%;
++            height: 320px;
++            border-radius: 12px;
++            overflow: hidden;
++            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
++        }
++
++        .map-hint {
++            font-size: 12px;
++            color: #667781;
++        }
+
+@@ add_map_section_html
+        </div>
+
+        <div class="content-section" id="reservationsSection">
+
+@@
+        </div>
+
+        <div class="content-section" id="reservationsSection">
+
+
