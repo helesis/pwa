@@ -2670,15 +2670,6 @@
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="availableRestaurants">Bugün Açık Restoranlar</span></div>
-                    <div class="info-card-content" id="availableRestaurants" style="min-height: 100px;">
-                        <div style="text-align: center; padding: 20px; color: #667781;">
-                            <div class="loading">Yükleniyor...</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="info-card">
                     <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Spa Rezervasyonları</span></div>
                     <div class="info-card-content" id="spaReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
@@ -5473,7 +5464,6 @@
             if (section === 'reservations') {
                 updateReservationsInfo();
                 loadMySpaReservations();
-                loadAvailableRestaurants();
                 loadRestaurantReservations();
             }
             
@@ -10953,7 +10943,6 @@
                     setTimeout(async () => {
                         console.log('Reloading restaurant reservations...');
                         await loadRestaurantReservations();
-                        loadAvailableRestaurants(); // Refresh available restaurants list
                         console.log('Restaurant reservations reloaded');
                     }, 500);
                 } else {
@@ -10990,7 +10979,6 @@
                 if (result.success) {
                     alert('Rezervasyonunuz iptal edildi.');
                     await loadRestaurantReservations();
-                    loadAvailableRestaurants(); // Refresh list
                 } else {
                     throw new Error(result.error || 'Rezervasyon iptal edilemedi');
                 }
