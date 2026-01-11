@@ -10710,30 +10710,29 @@
                         const rules = r.rules_json || {};
                         const cutoffMinutes = rules.cutoff_minutes || 120;
                         
-                        // Get working hours to determine earliest session time
-                        // Working hours format: "HH:MM - HH:MM" (e.g., "19:00 - 23:00")
-                        const workingHours = r.working_hours;
-                        if (workingHours) {
-                            const match = workingHours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
-                            if (match) {
-                                const startHour = parseInt(match[1]);
-                                const startMinute = parseInt(match[2]);
-                                
-                                // Create datetime for today's earliest session
-                                const earliestSessionTime = new Date();
-                                earliestSessionTime.setHours(startHour, startMinute, 0, 0);
-                                
-                                // Calculate cutoff time (earliest session time - cutoff minutes)
-                                const cutoffTime = new Date(earliestSessionTime.getTime() - (cutoffMinutes * 60 * 1000));
-                                
-                                // Get current time
-                                const now = new Date();
-                                
-                                // If current time is past cutoff time, exclude this restaurant
-                                if (now > cutoffTime) {
-                                    return false;
-                                }
+                        // Get opening hour to determine earliest session time
+                        const openingHour = r.opening_hour;
+                        if (openingHour) {
+                            // opening_hour format: "HH:MM" (e.g., "19:00")
+                            const [hour, minute] = openingHour.split(':').map(Number);
+                            
+                            // Create datetime for today's earliest session
+                            const earliestSessionTime = new Date();
+                            earliestSessionTime.setHours(hour, minute, 0, 0);
+                            
+                            // Calculate cutoff time (earliest session time - cutoff minutes)
+                            const cutoffTime = new Date(earliestSessionTime.getTime() - (cutoffMinutes * 60 * 1000));
+                            
+                            // Get current time
+                            const now = new Date();
+                            
+                            // If current time is past cutoff time, exclude this restaurant
+                            if (now > cutoffTime) {
+                                return false;
                             }
+                        } else {
+                            // If no opening hour, exclude restaurant for today
+                            return false;
                         }
                     }
                     
@@ -10792,7 +10791,9 @@
                 }
                 
                 const restaurantName = (restaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const workingHours = restaurant.working_hours || '';
+                const openingHour = restaurant.opening_hour || '';
+                const closingHour = restaurant.closing_hour || '';
+                const workingHoursText = openingHour && closingHour ? `${openingHour} - ${closingHour}` : '';
                 const pricePerPerson = restaurant.price_per_person || 0;
                 const currency = restaurant.currency || 'TRY';
                 const selectedDate = window.restaurantSelectedDate;
@@ -10801,7 +10802,7 @@
                     <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: ${isSelected ? 'white' : '#111b21'};">
                         ${restaurantName}
                     </div>
-                    ${workingHours ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#111b21'}; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                    ${workingHoursText ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#111b21'}; margin-bottom: 4px;">${workingHoursText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
                     <div style="font-size: 13px; font-weight: 600; color: ${isSelected ? 'white' : '#111b21'}; margin-top: auto;">
                         ${pricePerPerson} ${currency} / ${t('perPerson')}
                     </div>
@@ -10820,7 +10821,9 @@
                         // Update previous element's innerHTML with unselected colors
                         if (prevRestaurant && window.restaurantSelectedRestaurantElement) {
                             const prevName = (prevRestaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            const prevWorkingHours = prevRestaurant.working_hours || '';
+                            const prevOpeningHour = prevRestaurant.opening_hour || '';
+                            const prevClosingHour = prevRestaurant.closing_hour || '';
+                            const prevWorkingHoursText = prevOpeningHour && prevClosingHour ? `${prevOpeningHour} - ${prevClosingHour}` : '';
                             const prevPrice = prevRestaurant.price_per_person || 0;
                             const prevCurrency = prevRestaurant.currency || 'TRY';
                             
@@ -10828,7 +10831,7 @@
                                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
                                     ${prevName}
                                 </div>
-                                ${prevWorkingHours ? `<div style="font-size: 12px; color: #111b21; margin-bottom: 4px;">${prevWorkingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                                ${prevWorkingHoursText ? `<div style="font-size: 12px; color: #111b21; margin-bottom: 4px;">${prevWorkingHoursText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
                                 <div style="font-size: 13px; font-weight: 600; color: #111b21; margin-top: auto;">
                                     ${prevPrice} ${prevCurrency} / kişi
                                 </div>
@@ -10847,7 +10850,7 @@
                         <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: white;">
                             ${restaurantName}
                         </div>
-                        ${workingHours ? `<div style="font-size: 12px; color: white; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                        ${workingHoursText ? `<div style="font-size: 12px; color: white; margin-bottom: 4px;">${workingHoursText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
                         <div style="font-size: 13px; font-weight: 600; color: white; margin-top: auto;">
                             ${pricePerPerson} ${currency} / ${t('perPerson')}
                         </div>

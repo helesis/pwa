@@ -5121,7 +5121,8 @@
                         document.getElementById('restaurant-name').value = restaurant.name || '';
                         document.getElementById('restaurant-description').value = restaurant.description || '';
                         document.getElementById('restaurant-active').checked = restaurant.active !== false;
-                        document.getElementById('restaurant-working-hours').value = restaurant.working_hours || '';
+                        document.getElementById('restaurant-opening-hour').value = restaurant.opening_hour || '';
+                        document.getElementById('restaurant-closing-hour').value = restaurant.closing_hour || '';
                         document.getElementById('restaurant-price-per-person').value = restaurant.price_per_person || '';
                         document.getElementById('restaurant-currency').value = restaurant.currency || 'TRY';
                         
@@ -5187,7 +5188,8 @@
             const name = document.getElementById('restaurant-name').value.trim();
             const description = document.getElementById('restaurant-description').value.trim();
             const active = document.getElementById('restaurant-active').checked;
-            const workingHours = document.getElementById('restaurant-working-hours').value.trim();
+            const openingHour = document.getElementById('restaurant-opening-hour').value.trim();
+            const closingHour = document.getElementById('restaurant-closing-hour').value.trim();
             const pricePerPerson = parseFloat(document.getElementById('restaurant-price-per-person').value);
             const currency = document.getElementById('restaurant-currency').value;
             
@@ -5261,7 +5263,8 @@
                 description: description || null,
                 photos,
                 active,
-                working_hours: workingHours || null,
+                opening_hour: openingHour || null,
+                closing_hour: closingHour || null,
                 price_per_person: pricePerPerson,
                 currency,
                 rules_json: rules
