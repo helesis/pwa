@@ -2634,7 +2634,7 @@
                     </div>
                 </div>
 
-                <div class="info-card">
+                <div class="info-card" style="border-top: 2px solid #e4e6e9; padding-top: 24px; margin-top: 32px;">
                     <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Add A New Spa Reservation</span></div>
                     <div class="info-card-content" id="spaReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
@@ -8775,7 +8775,7 @@
 
                 const dateSelectTitle = document.createElement('div');
                 dateSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
-                dateSelectTitle.textContent = 'Tarih Seçin';
+                dateSelectTitle.textContent = t('selectDate');
                 dateSelectSection.appendChild(dateSelectTitle);
 
                 // Generate all dates from today to checkout (including checkout date)
@@ -8864,7 +8864,7 @@
                 
                 const therapistSelectTitle = document.createElement('div');
                 therapistSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
-                therapistSelectTitle.textContent = 'Terapist Seçin (Opsiyonel)';
+                therapistSelectTitle.textContent = t('selectTherapistOptional');
                 therapistSelect.appendChild(therapistSelectTitle);
                 
                 // Therapist navigation controls
@@ -9316,7 +9316,7 @@
             
             const calendarTitle = document.createElement('div');
             calendarTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
-            calendarTitle.textContent = 'Tarih Seçin';
+            calendarTitle.textContent = t('selectDate');
             calendarSection.appendChild(calendarTitle);
             
             // Date navigation controls
@@ -10222,7 +10222,7 @@
                 
                 const dateSelectTitle = document.createElement('div');
                 dateSelectTitle.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; margin-bottom: 12px;';
-                dateSelectTitle.textContent = 'Tarih Seçin';
+                dateSelectTitle.textContent = t('selectDate');
                 dateSelectSection.appendChild(dateSelectTitle);
                 
                 // Generate all dates from today to checkout - 1 (excluding checkout day)
@@ -10308,11 +10308,11 @@
                 // Existing reservations section
                 const existingReservationsSection = document.createElement('div');
                 existingReservationsSection.id = 'existing-restaurant-reservations';
-                existingReservationsSection.style.cssText = 'margin-top: 32px; padding-top: 24px; border-top: 2px solid #e4e6e9;';
+                existingReservationsSection.style.cssText = 'margin-top: 32px; padding-top: 24px;';
                 
                 const existingReservationsTitle = document.createElement('div');
                 existingReservationsTitle.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;';
-                existingReservationsTitle.textContent = 'A\'la Carte Rezervasyonlarım';
+                existingReservationsTitle.textContent = t('myRestaurantReservations');
                 existingReservationsSection.appendChild(existingReservationsTitle);
                 
                 const existingReservationsContainer = document.createElement('div');
@@ -10423,7 +10423,7 @@
                             // Cancel action (right side - swipe left reveals)
                             const cancelAction = document.createElement('div');
                             cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                            cancelAction.textContent = 'İptal Et';
+                            cancelAction.textContent = t('cancelReservation');
                             actionsBg.appendChild(cancelAction);
                         }
                         
@@ -10457,7 +10457,7 @@
                         // Date and pax in one line (compact)
                         const infoEl = document.createElement('div');
                         infoEl.style.cssText = 'font-size: 12px; color: #667781; line-height: 1.3;';
-                        infoEl.textContent = `${formattedDate} • ${paxAdult} Yetişkin${paxChild > 0 ? `, ${paxChild} Çocuk` : ''}`;
+                        infoEl.textContent = `${formattedDate} • ${paxAdult} ${t('adult')}${paxChild > 0 ? `, ${paxChild} ${t('child')}` : ''}`;
                         contentEl.appendChild(infoEl);
                         
                         // Price
@@ -10752,7 +10752,7 @@
                     </div>
                     ${workingHours ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#111b21'}; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
                     <div style="font-size: 13px; font-weight: 600; color: ${isSelected ? 'white' : '#111b21'}; margin-top: auto;">
-                        ${pricePerPerson} ${currency} / kişi
+                        ${pricePerPerson} ${currency} / ${t('perPerson')}
                     </div>
                 `;
                 
@@ -10798,7 +10798,7 @@
                         </div>
                         ${workingHours ? `<div style="font-size: 12px; color: white; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
                         <div style="font-size: 13px; font-weight: 600; color: white; margin-top: auto;">
-                            ${pricePerPerson} ${currency} / kişi
+                            ${pricePerPerson} ${currency} / ${t('perPerson')}
                         </div>
                     `;
                     
@@ -11056,11 +11056,11 @@
                     const endDate = new Date(request.end);
 
                     const status = request.status || 'PENDING';
-                    let statusText = 'Beklemede';
+                    let statusText = t('requestPending');
                     let statusColor = '#ffc107';
 
                     if (status === 'CONFIRMED') {
-                        statusText = 'Onaylandı';
+                        statusText = t('requestConfirmed');
                         statusColor = '#28a745';
                     }
 
@@ -11840,6 +11840,12 @@
                 'note': 'Not',
                 'optional': 'Opsiyonel',
                 'back': 'Geri',
+                'cancelReservation': 'İptal Et',
+                'myRestaurantReservations': 'A\'la Carte Rezervasyonlarım',
+                'selectTherapistOptional': 'Terapist Seçin (Opsiyonel)',
+                'adult': 'Yetişkin',
+                'child': 'Çocuk',
+                'perPerson': 'kişi',
                 
                 // Chat
                 'typeMessage': 'Mesajınızı yazın...',
@@ -11975,6 +11981,12 @@
                 'note': 'Note',
                 'optional': 'Optional',
                 'back': 'Back',
+                'cancelReservation': 'Cancel',
+                'myRestaurantReservations': 'My A\'la Carte Reservations',
+                'selectTherapistOptional': 'Select Therapist (Optional)',
+                'adult': 'Adult',
+                'child': 'Child',
+                'perPerson': 'person',
                 
                 // Chat
                 'typeMessage': 'Type your message...',
@@ -12110,6 +12122,12 @@
                 'note': 'Notiz',
                 'optional': 'Optional',
                 'back': 'Zurück',
+                'cancelReservation': 'Stornieren',
+                'myRestaurantReservations': 'Meine A\'la Carte Reservierungen',
+                'selectTherapistOptional': 'Therapeut auswählen (Optional)',
+                'adult': 'Erwachsene',
+                'child': 'Kind',
+                'perPerson': 'Person',
                 
                 // Chat
                 'typeMessage': 'Geben Sie Ihre Nachricht ein...',
@@ -12245,6 +12263,12 @@
                 'note': 'Примечание',
                 'optional': 'Необязательно',
                 'back': 'Назад',
+                'cancelReservation': 'Отменить',
+                'myRestaurantReservations': 'Мои бронирования A\'la Carte',
+                'selectTherapistOptional': 'Выбрать терапевта (Необязательно)',
+                'adult': 'Взрослый',
+                'child': 'Ребенок',
+                'perPerson': 'чел.',
                 
                 // Chat
                 'typeMessage': 'Введите ваше сообщение...',
