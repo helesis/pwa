@@ -740,27 +740,8 @@
                     <h2 class="card-title">A'la Carte Rezervasyon Yönetimi</h2>
                 </div>
                 
-                <!-- Sub-tabs for restaurant management -->
-                <div class="tabs" style="margin-top: 20px; border-bottom: 2px solid var(--border);">
-                    <button class="tab active" onclick="switchRestaurantSubTab('restaurants-list')" id="restaurants-list-tab-btn">
-                        <i data-lucide="utensils" class="icon icon-md"></i> Restoranlar
-                    </button>
-                    <button class="tab" onclick="switchRestaurantSubTab('sessions')" id="sessions-tab-btn">
-                        <i data-lucide="clock" class="icon icon-md"></i> Seanslar
-                    </button>
-                    <button class="tab" onclick="switchRestaurantSubTab('table-setup')" id="table-setup-tab-btn">
-                        <i data-lucide="table" class="icon icon-md"></i> Masa Kurulumu
-                    </button>
-                    <button class="tab" onclick="switchRestaurantSubTab('calendar')" id="calendar-tab-btn">
-                        <i data-lucide="calendar" class="icon icon-md"></i> Takvim
-                    </button>
-                    <button class="tab" onclick="switchRestaurantSubTab('pricing-rules')" id="pricing-rules-tab-btn">
-                        <i data-lucide="dollar-sign" class="icon icon-md"></i> Fiyat & Kurallar
-                    </button>
-                </div>
-
-                <!-- Restaurants List Sub-tab -->
-                <div id="restaurants-list-subtab" class="restaurant-subtab-content active">
+                <!-- Restaurants List -->
+                <div id="restaurants-list-subtab" class="restaurant-subtab-content active" style="margin-top: 20px;">
                     <div style="margin-top: 20px;">
                         <button class="btn btn-primary" onclick="openRestaurantModal()">+ Yeni Restoran</button>
                     </div>
@@ -769,89 +750,6 @@
                     </div>
                 </div>
 
-                <!-- Sessions Sub-tab -->
-                <div id="sessions-subtab" class="restaurant-subtab-content">
-                    <div style="margin-top: 20px;">
-                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
-                            <label class="form-label">Restoran Seç</label>
-                            <select id="sessions-restaurant-select" class="form-input" onchange="loadSessionTemplates()">
-                                <option value="">-- Restoran Seçin --</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="openSessionTemplateModal()" id="new-session-btn" disabled>+ Yeni Seans Şablonu</button>
-                    </div>
-                    <div id="session-templates-list" style="margin-top: 20px;">
-                        <div class="empty-state">
-                            <p>Önce bir restoran seçin</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Table Setup Sub-tab -->
-                <div id="table-setup-subtab" class="restaurant-subtab-content">
-                    <div style="margin-top: 20px;">
-                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
-                            <label class="form-label">Restoran Seç</label>
-                            <select id="table-setup-restaurant-select" class="form-input" onchange="loadTableSetupSessions()">
-                                <option value="">-- Restoran Seçin --</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
-                            <label class="form-label">Seans Şablonu Seç</label>
-                            <select id="table-setup-session-select" class="form-input" onchange="loadTableDefaults()" disabled>
-                                <option value="">-- Önce restoran seçin --</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="table-setup-form" style="margin-top: 20px;">
-                        <div class="empty-state">
-                            <p>Önce restoran ve seans şablonu seçin</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Calendar Sub-tab -->
-                <div id="calendar-subtab" class="restaurant-subtab-content">
-                    <div style="margin-top: 20px;">
-                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px; display: inline-block; margin-right: 15px;">
-                            <label class="form-label">Restoran Seç</label>
-                            <select id="calendar-restaurant-select" class="form-input" onchange="loadCalendar()">
-                                <option value="">-- Restoran Seçin --</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="max-width: 200px; margin-bottom: 15px; display: inline-block; margin-right: 15px;">
-                            <label class="form-label">Başlangıç Tarihi</label>
-                            <input type="date" id="calendar-from-date" class="form-input" onchange="loadCalendar()">
-                        </div>
-                        <div class="form-group" style="max-width: 200px; margin-bottom: 15px; display: inline-block; margin-right: 15px;">
-                            <label class="form-label">Bitiş Tarihi</label>
-                            <input type="date" id="calendar-to-date" class="form-input" onchange="loadCalendar()">
-                        </div>
-                        <button class="btn btn-primary" onclick="generateSessionInstances()">Seansları Oluştur</button>
-                    </div>
-                    <div id="calendar-instances-list" style="margin-top: 20px;">
-                        <div class="empty-state">
-                            <p>Önce bir restoran seçin ve tarih aralığı belirleyin</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pricing & Rules Sub-tab -->
-                <div id="pricing-rules-subtab" class="restaurant-subtab-content">
-                    <div style="margin-top: 20px;">
-                        <div class="form-group" style="max-width: 300px; margin-bottom: 15px;">
-                            <label class="form-label">Restoran Seç</label>
-                            <select id="pricing-restaurant-select" class="form-input" onchange="loadPricingRules()">
-                                <option value="">-- Restoran Seçin --</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="pricing-rules-form" style="margin-top: 20px;">
-                        <div class="empty-state">
-                            <p>Önce bir restoran seçin</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -1533,7 +1431,6 @@
             if (tabName === 'posts') loadPosts();
             if (tabName === 'restaurants') {
                 loadRestaurants();
-                switchRestaurantSubTab('restaurants-list');
             }
         }
 
@@ -5430,8 +5327,6 @@
                     closeRestaurantModal();
                     // Wait a bit for modal animation to complete, then reload restaurants
                     setTimeout(async () => {
-                        // Ensure restaurants-list sub-tab is active
-                        switchRestaurantSubTab('restaurants-list');
                         // Wait a bit more and then reload the restaurants list
                         setTimeout(async () => {
                             try {

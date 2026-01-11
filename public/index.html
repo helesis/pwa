@@ -10695,9 +10695,50 @@
                 }
                 
                 // Filter restaurants that are available on selected date
-                // For now, we'll show all restaurants (backend should handle availability check)
-                // In the future, you might want to add date-based filtering via API
-                const availableRestaurants = restaurants.filter(r => r.active !== false);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const selectedDateObj = new Date(selectedDate);
+                selectedDateObj.setHours(0, 0, 0, 0);
+                const isToday = selectedDateObj.getTime() === today.getTime();
+                
+                const availableRestaurants = restaurants.filter(r => {
+                    // Filter out inactive restaurants
+                    if (r.active === false) return false;
+                    
+                    // If selected date is today, check cutoff time
+                    if (isToday) {
+                        const rules = r.rules_json || {};
+                        const cutoffMinutes = rules.cutoff_minutes || 120;
+                        
+                        // Get working hours to determine earliest session time
+                        // Working hours format: "HH:MM - HH:MM" (e.g., "19:00 - 23:00")
+                        const workingHours = r.working_hours;
+                        if (workingHours) {
+                            const match = workingHours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+                            if (match) {
+                                const startHour = parseInt(match[1]);
+                                const startMinute = parseInt(match[2]);
+                                
+                                // Create datetime for today's earliest session
+                                const earliestSessionTime = new Date();
+                                earliestSessionTime.setHours(startHour, startMinute, 0, 0);
+                                
+                                // Calculate cutoff time (earliest session time - cutoff minutes)
+                                const cutoffTime = new Date(earliestSessionTime.getTime() - (cutoffMinutes * 60 * 1000));
+                                
+                                // Get current time
+                                const now = new Date();
+                                
+                                // If current time is past cutoff time, exclude this restaurant
+                                if (now > cutoffTime) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    
+                    return true;
+                });
                 
                 if (availableRestaurants.length === 0) {
                     restaurantGrid.innerHTML = `
