@@ -2626,7 +2626,7 @@
             </div>
             <div class="info-section">
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">A'la Carte Restoran Rezervasyonları</span></div>
+                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">Add New A'la Carte Reservation</span></div>
                     <div class="info-card-content" id="restaurantReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
                             Henüz restoran rezervasyonunuz bulunmamaktadır.
@@ -2635,19 +2635,19 @@
                 </div>
 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="mySpaReservations">Spa Rezervasyonlarım</span></div>
-                    <div class="info-card-content" id="mySpaReservations">
-                        <div style="text-align: center; padding: 20px; color: #667781;">
-                            Yükleniyor...
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Add A New Spa Reservation</span></div>
+                    <div class="info-card-content" id="spaReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
+                            Henüz spa rezervasyonunuz bulunmamaktadır.
                         </div>
                     </div>
                 </div>
                 
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Spa Rezervasyonları</span></div>
-                    <div class="info-card-content" id="spaReservations">
-                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
-                            Henüz spa rezervasyonunuz bulunmamaktadır.
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="mySpaReservations">Spa Rezervasyonlarım</span></div>
+                    <div class="info-card-content" id="mySpaReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Yükleniyor...
                         </div>
                     </div>
                 </div>
@@ -10397,20 +10397,35 @@
                         const currency = reservation.currency || 'TRY';
                         const status = reservation.status || 'confirmed';
                         
+                        // Check if cancellation is allowed (check cancellation deadline)
+                        let canCancel = status === 'confirmed';
+                        if (canCancel && reservation.restaurant?.rules_json) {
+                            const rules = reservation.restaurant.rules_json;
+                            const cancellationDeadlineMinutes = rules.cancellation_deadline_minutes || 240;
+                            const now = new Date();
+                            const reservationDateTime = new Date(reservation.reservation_date);
+                            // Assume reservation time is at 19:00 (dinner time) - adjust if needed
+                            reservationDateTime.setHours(19, 0, 0, 0);
+                            const deadline = new Date(reservationDateTime.getTime() - (cancellationDeadlineMinutes * 60 * 1000));
+                            canCancel = now <= deadline;
+                        }
+                        
                         // Swipe container
                         const swipeWrapper = document.createElement('div');
                         swipeWrapper.style.cssText = 'position: relative; margin-bottom: 12px; overflow: hidden; border-radius: 8px;';
                         
-                        // Actions background (hidden by default)
+                        // Actions background (hidden by default, only show if canCancel)
                         const actionsBg = document.createElement('div');
                         actionsBg.className = 'swipe-actions';
                         actionsBg.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;';
                         
-                        // Cancel action (right side - swipe left reveals)
-                        const cancelAction = document.createElement('div');
-                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                        cancelAction.textContent = 'İptal Et';
-                        actionsBg.appendChild(cancelAction);
+                        if (canCancel) {
+                            // Cancel action (right side - swipe left reveals)
+                            const cancelAction = document.createElement('div');
+                            cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
+                            cancelAction.textContent = 'İptal Et';
+                            actionsBg.appendChild(cancelAction);
+                        }
                         
                         swipeWrapper.appendChild(actionsBg);
                         
@@ -10453,53 +10468,55 @@
                         
                         cardEl.appendChild(contentEl);
                         
-                        // Swipe gesture handlers
-                        let startX = 0;
-                        let currentX = 0;
-                        let isDragging = false;
-                        
-                        const handleTouchStart = (e) => {
-                            startX = e.touches[0].clientX;
-                            isDragging = true;
-                            cardEl.style.transition = 'none';
-                        };
-                        
-                        const handleTouchMove = (e) => {
-                            if (!isDragging) return;
-                            currentX = e.touches[0].clientX - startX;
+                        // Swipe gesture handlers (only if canCancel)
+                        if (canCancel) {
+                            let startX = 0;
+                            let currentX = 0;
+                            let isDragging = false;
                             
-                            // Only allow left swipe (negative = left)
-                            if (currentX < 0 && status === 'confirmed') {
-                                cardEl.style.transform = `translateX(${currentX}px)`;
-                                actionsBg.style.display = 'flex';
-                            }
-                        };
-                        
-                        const handleTouchEnd = () => {
-                            if (!isDragging) return;
-                            isDragging = false;
-                            cardEl.style.transition = 'transform 0.3s ease';
+                            const handleTouchStart = (e) => {
+                                startX = e.touches[0].clientX;
+                                isDragging = true;
+                                cardEl.style.transition = 'none';
+                            };
                             
-                            const threshold = 80; // Minimum swipe distance
+                            const handleTouchMove = (e) => {
+                                if (!isDragging) return;
+                                currentX = e.touches[0].clientX - startX;
+                                
+                                // Only allow left swipe (negative = left)
+                                if (currentX < 0) {
+                                    cardEl.style.transform = `translateX(${currentX}px)`;
+                                    actionsBg.style.display = 'flex';
+                                }
+                            };
                             
-                            if (currentX < -threshold && status === 'confirmed') {
-                                // Swipe left - Cancel
-                                cardEl.style.transform = 'translateX(-100%)';
-                                setTimeout(() => {
-                                    cancelRestaurantReservation(reservation.id);
-                                }, 300);
-                            } else {
-                                // Reset
-                                cardEl.style.transform = 'translateX(0)';
-                                actionsBg.style.display = 'none';
-                            }
+                            const handleTouchEnd = () => {
+                                if (!isDragging) return;
+                                isDragging = false;
+                                cardEl.style.transition = 'transform 0.3s ease';
+                                
+                                const threshold = 80; // Minimum swipe distance
+                                
+                                if (currentX < -threshold) {
+                                    // Swipe left - Cancel
+                                    cardEl.style.transform = 'translateX(-100%)';
+                                    setTimeout(() => {
+                                        cancelRestaurantReservation(reservation.id);
+                                    }, 300);
+                                } else {
+                                    // Reset
+                                    cardEl.style.transform = 'translateX(0)';
+                                    actionsBg.style.display = 'none';
+                                }
+                                
+                                currentX = 0;
+                            };
                             
-                            currentX = 0;
-                        };
-                        
-                        cardEl.addEventListener('touchstart', handleTouchStart);
-                        cardEl.addEventListener('touchmove', handleTouchMove);
-                        cardEl.addEventListener('touchend', handleTouchEnd);
+                            cardEl.addEventListener('touchstart', handleTouchStart);
+                            cardEl.addEventListener('touchmove', handleTouchMove);
+                            cardEl.addEventListener('touchend', handleTouchEnd);
+                        }
                         
                         swipeWrapper.appendChild(cardEl);
                         container.appendChild(swipeWrapper);
@@ -11032,77 +11049,143 @@
                     console.warn('Error fetching SPA cancellation deadline, using default:', e);
                 }
 
-                container.innerHTML = myRequests.map(request => {
+                container.innerHTML = '';
+                
+                myRequests.forEach(request => {
                     const startDate = new Date(request.start);
                     const endDate = new Date(request.end);
 
                     const status = request.status || 'PENDING';
-                    let statusClass = 'status-pending';
                     let statusText = 'Beklemede';
                     let statusColor = '#ffc107';
 
                     if (status === 'CONFIRMED') {
-                        statusClass = 'status-confirmed';
                         statusText = 'Onaylandı';
                         statusColor = '#28a745';
                     }
 
-                    const dateStr = startDate.toLocaleDateString('tr-TR', { 
+                    const formattedDate = startDate.toLocaleDateString('tr-TR', { 
                         day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric',
-                        weekday: 'long'
+                        month: 'short', 
+                        year: 'numeric'
                     });
-                    const timeStr = `${startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+                    const timeStr = `${startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}-${endDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
 
                     // Check if cancellation is allowed
                     const now = new Date();
                     const deadline = new Date(startDate.getTime() - (cancellationDeadlineMinutes * 60 * 1000));
                     const canCancel = now <= deadline && (status === 'PENDING' || status === 'CONFIRMED');
-                    const hoursUntilDeadline = Math.ceil((deadline - now) / (1000 * 60 * 60));
-                    const minutesUntilDeadline = Math.ceil((deadline - now) / (1000 * 60));
+                    
+                    const serviceName = request.serviceName || 'SPA Hizmeti';
+                    const therapistName = request.therapistDisplayName || '';
 
-                    return `
-                        <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                                <div style="flex: 1;">
-                                    <div style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 8px;">
-                                        ${request.serviceName || 'SPA Hizmeti'}
-                                    </div>
-                                    <div style="font-size: 14px; color: #667781; margin-bottom: 4px;">
-                                        📅 ${dateStr}
-                                    </div>
-                                    <div style="font-size: 14px; color: #667781; margin-bottom: 4px;">
-                                        🕐 ${timeStr}
-                                    </div>
-                                    ${request.therapistDisplayName ? `
-                                        <div style="font-size: 14px; color: #667781; margin-bottom: 4px;">
-                                            👤 Terapist: ${request.therapistDisplayName}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                <span style="padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: ${statusColor}; color: white;">
-                                    ${statusText}
-                                </span>
-                            </div>
-                            ${canCancel ? `
-                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e4e6e9;">
-                                    <button onclick="cancelSpaReservation('${request.requestId}')" 
-                                            style="width: 100%; padding: 10px; background: #dc3545; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
-                                            onmouseover="this.style.background='#c82333'"
-                                            onmouseout="this.style.background='#dc3545'">
-                                        İptal Et
-                                    </button>
-                                    <div style="font-size: 11px; color: #667781; text-align: center; margin-top: 6px;">
-                                        ${minutesUntilDeadline > 60 
-                                            ? `İptal için ${hoursUntilDeadline} saat kaldı`
-                                            : `İptal için ${minutesUntilDeadline} dakika kaldı`}
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                }).join('');
+                    // Swipe container
+                    const swipeWrapper = document.createElement('div');
+                    swipeWrapper.style.cssText = 'position: relative; margin-bottom: 12px; overflow: hidden; border-radius: 8px;';
+                    
+                    // Actions background (hidden by default, only show if canCancel)
+                    const actionsBg = document.createElement('div');
+                    actionsBg.className = 'swipe-actions';
+                    actionsBg.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;';
+                    
+                    if (canCancel) {
+                        // Cancel action (right side - swipe left reveals)
+                        const cancelAction = document.createElement('div');
+                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
+                        cancelAction.textContent = 'İptal Et';
+                        actionsBg.appendChild(cancelAction);
+                    }
+                    
+                    swipeWrapper.appendChild(actionsBg);
+                    
+                    // Content card
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'spa-reservation-card';
+                    cardEl.style.cssText = 'position: relative; padding: 10px 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; display: flex; gap: 10px; align-items: center; z-index: 2; transition: transform 0.3s ease;';
+                    cardEl.dataset.requestId = request.requestId;
+                    
+                    // Content
+                    const contentEl = document.createElement('div');
+                    contentEl.style.cssText = 'flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;';
+                    
+                    // Service name and status in one line
+                    const nameRow = document.createElement('div');
+                    nameRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 8px;';
+                    
+                    const nameEl = document.createElement('div');
+                    nameEl.style.cssText = 'font-size: 14px; font-weight: 600; color: #111b21; line-height: 1.2; flex: 1; min-width: 0;';
+                    nameEl.textContent = serviceName;
+                    nameRow.appendChild(nameEl);
+                    
+                    // Status badge
+                    const statusEl = document.createElement('span');
+                    statusEl.style.cssText = `padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; background: ${statusColor}; color: white; white-space: nowrap; flex-shrink: 0;`;
+                    statusEl.textContent = statusText;
+                    nameRow.appendChild(statusEl);
+                    
+                    contentEl.appendChild(nameRow);
+                    
+                    // Date and time in one line (compact)
+                    const infoEl = document.createElement('div');
+                    infoEl.style.cssText = 'font-size: 12px; color: #667781; line-height: 1.3;';
+                    infoEl.textContent = `${formattedDate} • ${timeStr}${therapistName ? ` • ${therapistName}` : ''}`;
+                    contentEl.appendChild(infoEl);
+                    
+                    cardEl.appendChild(contentEl);
+                    
+                    // Swipe gesture handlers (only if canCancel)
+                    if (canCancel) {
+                        let startX = 0;
+                        let currentX = 0;
+                        let isDragging = false;
+                        
+                        const handleTouchStart = (e) => {
+                            startX = e.touches[0].clientX;
+                            isDragging = true;
+                            cardEl.style.transition = 'none';
+                        };
+                        
+                        const handleTouchMove = (e) => {
+                            if (!isDragging) return;
+                            currentX = e.touches[0].clientX - startX;
+                            
+                            // Only allow left swipe (negative = left)
+                            if (currentX < 0) {
+                                cardEl.style.transform = `translateX(${currentX}px)`;
+                                actionsBg.style.display = 'flex';
+                            }
+                        };
+                        
+                        const handleTouchEnd = () => {
+                            if (!isDragging) return;
+                            isDragging = false;
+                            cardEl.style.transition = 'transform 0.3s ease';
+                            
+                            const threshold = 80; // Minimum swipe distance
+                            
+                            if (currentX < -threshold) {
+                                // Swipe left - Cancel
+                                cardEl.style.transform = 'translateX(-100%)';
+                                setTimeout(() => {
+                                    cancelSpaReservation(request.requestId);
+                                }, 300);
+                            } else {
+                                // Reset
+                                cardEl.style.transform = 'translateX(0)';
+                                actionsBg.style.display = 'none';
+                            }
+                            
+                            currentX = 0;
+                        };
+                        
+                        cardEl.addEventListener('touchstart', handleTouchStart);
+                        cardEl.addEventListener('touchmove', handleTouchMove);
+                        cardEl.addEventListener('touchend', handleTouchEnd);
+                    }
+                    
+                    swipeWrapper.appendChild(cardEl);
+                    container.appendChild(swipeWrapper);
+                });
 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (error) {
@@ -11724,9 +11807,9 @@
                 // Reservations
                 'myReservations': 'Rezervasyonlarım',
                 'mySpaReservations': 'Spa Rezervasyonlarım',
-                'restaurantReservations': 'A\'la Carte Restoran Rezervasyonları',
+                'restaurantReservations': 'Add New A\'la Carte Reservation',
                 'availableRestaurants': 'Bugün Açık Restoranlar',
-                'spaReservations': 'Spa Rezervasyonları',
+                'spaReservations': 'Add A New Spa Reservation',
                 'noRestaurantReservations': 'Henüz restoran rezervasyonunuz bulunmamaktadır.',
                 'noSpaReservations': 'Henüz spa rezervasyonunuz bulunmamaktadır.',
                 'spaRequests': 'SPA Taleplerim',
@@ -11859,9 +11942,9 @@
                 // Reservations
                 'myReservations': 'My Reservations',
                 'mySpaReservations': 'My SPA Reservations',
-                'restaurantReservations': 'A la Carte Restaurant Reservations',
+                'restaurantReservations': 'Add New A\'la Carte Reservation',
                 'availableRestaurants': 'Restaurants Open Today',
-                'spaReservations': 'Spa Reservations',
+                'spaReservations': 'Add A New Spa Reservation',
                 'noRestaurantReservations': 'You do not have any restaurant reservations yet.',
                 'noSpaReservations': 'You do not have any spa reservations yet.',
                 'spaRequests': 'My SPA Requests',
@@ -11994,9 +12077,9 @@
                 // Reservations
                 'myReservations': 'Meine Reservierungen',
                 'mySpaReservations': 'Meine SPA-Reservierungen',
-                'restaurantReservations': 'A la Carte Restaurant Reservierungen',
+                'restaurantReservations': 'Add New A\'la Carte Reservation',
                 'availableRestaurants': 'Heute geöffnete Restaurants',
-                'spaReservations': 'Spa Reservierungen',
+                'spaReservations': 'Add A New Spa Reservation',
                 'noRestaurantReservations': 'Sie haben noch keine Restaurantreservierungen.',
                 'noSpaReservations': 'Sie haben noch keine Spa-Reservierungen.',
                 'spaRequests': 'Meine SPA-Anfragen',
@@ -12129,9 +12212,9 @@
                 // Reservations
                 'myReservations': 'Мои бронирования',
                 'mySpaReservations': 'Мои бронирования SPA',
-                'restaurantReservations': 'Бронирования ресторана A la Carte',
+                'restaurantReservations': 'Add New A\'la Carte Reservation',
                 'availableRestaurants': 'Рестораны, открытые сегодня',
-                'spaReservations': 'Бронирования SPA',
+                'spaReservations': 'Add A New Spa Reservation',
                 'noRestaurantReservations': 'У вас пока нет бронирований ресторана.',
                 'noSpaReservations': 'У вас пока нет бронирований SPA.',
                 'spaRequests': 'Мои запросы SPA',
