@@ -10373,10 +10373,29 @@
                 restaurantSelectTitle.textContent = 'Restoran Seçin';
                 restaurantSelect.appendChild(restaurantSelectTitle);
                 
+                // Restaurant navigation controls
+                const restaurantNavContainer = document.createElement('div');
+                restaurantNavContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;';
+                
+                const restaurantPrevBtn = document.createElement('button');
+                restaurantPrevBtn.innerHTML = '<i data-lucide="chevron-left" class="icon icon-md"></i>';
+                restaurantPrevBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                restaurantPrevBtn.onclick = () => navigateRestaurantGrid('prev');
+                
+                const restaurantNextBtn = document.createElement('button');
+                restaurantNextBtn.innerHTML = '<i data-lucide="chevron-right" class="icon icon-md"></i>';
+                restaurantNextBtn.style.cssText = 'background: #f8f9fa; border: 1px solid #e4e6e9; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+                restaurantNextBtn.onclick = () => navigateRestaurantGrid('next');
+                
+                restaurantNavContainer.appendChild(restaurantPrevBtn);
+                
                 const restaurantGrid = document.createElement('div');
                 restaurantGrid.id = 'restaurant-grid';
-                restaurantGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: wrap;';
-                restaurantSelect.appendChild(restaurantGrid);
+                restaurantGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
+                
+                restaurantNavContainer.appendChild(restaurantGrid);
+                restaurantNavContainer.appendChild(restaurantNextBtn);
+                restaurantSelect.appendChild(restaurantNavContainer);
                 container.appendChild(restaurantSelect);
                 
                 // Existing reservations section
@@ -10673,8 +10692,14 @@
                     return;
                 }
                 
+                // Store restaurants for navigation
+                window.restaurantAvailableRestaurants = availableRestaurants;
+                window.restaurantCurrentIndex = 0;
+                window.restaurantSelectedRestaurantId = null;
+                window.restaurantSelectedRestaurantElement = null;
+                
                 // Render restaurant grid
-                renderRestaurantGrid(restaurantGrid, availableRestaurants, selectedDate);
+                renderRestaurantGrid(restaurantGrid, availableRestaurants, 0);
                 
             } catch (error) {
                 console.error('Error loading restaurants for date:', error);
@@ -10687,48 +10712,139 @@
         }
         
         // Render restaurant grid
-        function renderRestaurantGrid(container, restaurants, selectedDate) {
-            container.innerHTML = '';
+        function renderRestaurantGrid(container, restaurants, startIndex) {
+            if (!container || !window.restaurantAvailableRestaurants || window.restaurantAvailableRestaurants.length === 0) return;
             
-            restaurants.forEach(restaurant => {
-                const photos = restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : null;
-                const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
-                
+            container.innerHTML = '';
+            const itemsPerPage = 2;
+            const endIndex = Math.min(startIndex + itemsPerPage, window.restaurantAvailableRestaurants.length);
+            const visibleRestaurants = window.restaurantAvailableRestaurants.slice(startIndex, endIndex);
+            
+            visibleRestaurants.forEach((restaurant, idx) => {
                 const restaurantEl = document.createElement('div');
-                restaurantEl.style.cssText = 'flex: 1; min-width: 200px; max-width: 300px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9; cursor: pointer; transition: all 0.2s;';
+                restaurantEl.className = 'restaurant-item';
+                restaurantEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
                 
-                restaurantEl.onmouseenter = () => {
-                    restaurantEl.style.background = '#f0f2f5';
+                // Highlight selected restaurant
+                const isSelected = restaurant.id === window.restaurantSelectedRestaurantId;
+                if (isSelected) {
+                    restaurantEl.style.background = '#1A4D6D';
                     restaurantEl.style.borderColor = '#1A4D6D';
-                };
+                    restaurantEl.style.color = 'white';
+                    window.restaurantSelectedRestaurantElement = restaurantEl;
+                }
                 
-                restaurantEl.onmouseleave = () => {
-                    restaurantEl.style.background = '#f8f9fa';
-                    restaurantEl.style.borderColor = '#e4e6e9';
-                };
+                const restaurantName = (restaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const workingHours = restaurant.working_hours || '';
+                const pricePerPerson = restaurant.price_per_person || 0;
+                const currency = restaurant.currency || 'TRY';
+                const selectedDate = window.restaurantSelectedDate;
+                
+                restaurantEl.innerHTML = `
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: ${isSelected ? 'white' : '#111b21'};">
+                        ${restaurantName}
+                    </div>
+                    ${workingHours ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#667781'}; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                    <div style="font-size: 13px; font-weight: 600; color: ${isSelected ? 'white' : '#1A4D6D'}; margin-top: auto;">
+                        ${pricePerPerson} ${currency} / kişi
+                    </div>
+                `;
                 
                 restaurantEl.onclick = () => {
+                    // Remove previous selection highlight
+                    if (window.restaurantSelectedRestaurantElement && window.restaurantSelectedRestaurantElement !== restaurantEl) {
+                        const prevRestaurantId = window.restaurantSelectedRestaurantId;
+                        const prevRestaurant = window.restaurantAvailableRestaurants?.find(r => r.id === prevRestaurantId);
+                        
+                        window.restaurantSelectedRestaurantElement.style.background = 'white';
+                        window.restaurantSelectedRestaurantElement.style.borderColor = '#e4e6e9';
+                        window.restaurantSelectedRestaurantElement.style.color = '';
+                        
+                        // Update previous element's innerHTML with unselected colors
+                        if (prevRestaurant && window.restaurantSelectedRestaurantElement) {
+                            const prevName = (prevRestaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const prevWorkingHours = prevRestaurant.working_hours || '';
+                            const prevPrice = prevRestaurant.price_per_person || 0;
+                            const prevCurrency = prevRestaurant.currency || 'TRY';
+                            
+                            window.restaurantSelectedRestaurantElement.innerHTML = `
+                                <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
+                                    ${prevName}
+                                </div>
+                                ${prevWorkingHours ? `<div style="font-size: 12px; color: #667781; margin-bottom: 4px;">${prevWorkingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                                <div style="font-size: 13px; font-weight: 600; color: #1A4D6D; margin-top: auto;">
+                                    ${prevPrice} ${prevCurrency} / kişi
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // Highlight new selection
+                    restaurantEl.style.background = '#1A4D6D';
+                    restaurantEl.style.borderColor = '#1A4D6D';
+                    restaurantEl.style.color = 'white';
+                    window.restaurantSelectedRestaurantElement = restaurantEl;
+                    
+                    // Update innerHTML with white colors
+                    restaurantEl.innerHTML = `
+                        <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: white;">
+                            ${restaurantName}
+                        </div>
+                        ${workingHours ? `<div style="font-size: 12px; color: white; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                        <div style="font-size: 13px; font-weight: 600; color: white; margin-top: auto;">
+                            ${pricePerPerson} ${currency} / kişi
+                        </div>
+                    `;
+                    
+                    // Update selected restaurant
+                    window.restaurantSelectedRestaurantId = restaurant.id;
+                    
+                    // Open reservation modal
                     openRestaurantReservationModal(restaurant.id, restaurant.name, selectedDate);
                 };
                 
-                restaurantEl.innerHTML = `
-                    ${photoUrl ? `<img src="${photoUrl}" alt="${(restaurant.name || '').replace(/"/g, '&quot;')}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">` : ''}
-                    <h3 style="font-size: 18px; font-weight: 600; color: #111b21; margin-bottom: 8px;">
-                        ${(restaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-                    </h3>
-                    ${restaurant.description ? `<p style="font-size: 14px; color: #667781; margin-bottom: 12px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${restaurant.description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''}
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <span style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
-                            ${restaurant.price_per_person || 0} ${restaurant.currency || 'TRY'} / kişi
-                        </span>
-                    </div>
-                    <button style="width: 100%; padding: 12px; background: #1a4d6d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; pointer-events: none;">
-                        Rezervasyon Yap
-                    </button>
-                `;
+                restaurantEl.onmouseenter = () => {
+                    if (restaurant.id !== window.restaurantSelectedRestaurantId) {
+                        restaurantEl.style.background = '#f0f2f5';
+                        restaurantEl.style.borderColor = '#c1c7cd';
+                    }
+                };
+                
+                restaurantEl.onmouseleave = () => {
+                    if (restaurant.id !== window.restaurantSelectedRestaurantId) {
+                        restaurantEl.style.background = 'white';
+                        restaurantEl.style.borderColor = '#e4e6e9';
+                    }
+                };
                 
                 container.appendChild(restaurantEl);
             });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        
+        // Navigate restaurant grid
+        function navigateRestaurantGrid(direction) {
+            if (!window.restaurantAvailableRestaurants || window.restaurantAvailableRestaurants.length === 0) return;
+            
+            const itemsPerPage = 2;
+            let currentIndex = window.restaurantCurrentIndex || 0;
+            
+            if (direction === 'prev') {
+                currentIndex = Math.max(0, currentIndex - itemsPerPage);
+            } else if (direction === 'next') {
+                currentIndex = Math.min(
+                    window.restaurantAvailableRestaurants.length - itemsPerPage,
+                    currentIndex + itemsPerPage
+                );
+            }
+            
+            window.restaurantCurrentIndex = currentIndex;
+            
+            const restaurantGrid = document.getElementById('restaurant-grid');
+            if (restaurantGrid) {
+                renderRestaurantGrid(restaurantGrid, window.restaurantAvailableRestaurants, currentIndex);
+            }
         }
         
         // Open restaurant reservation modal

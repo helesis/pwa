@@ -1366,6 +1366,10 @@
                     </label>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Çalışma Saati (örn: 18:00-23:00)</label>
+                    <input type="text" id="restaurant-working-hours" class="form-input" placeholder="18:00-23:00">
+                </div>
+                <div class="form-group">
                     <label class="form-label">Kişi Başına Fiyat *</label>
                     <input type="number" id="restaurant-price-per-person" class="form-input" step="0.01" min="0" required>
                 </div>
@@ -5220,6 +5224,7 @@
                         document.getElementById('restaurant-name').value = restaurant.name || '';
                         document.getElementById('restaurant-description').value = restaurant.description || '';
                         document.getElementById('restaurant-active').checked = restaurant.active !== false;
+                        document.getElementById('restaurant-working-hours').value = restaurant.working_hours || '';
                         document.getElementById('restaurant-price-per-person').value = restaurant.price_per_person || '';
                         document.getElementById('restaurant-currency').value = restaurant.currency || 'TRY';
                         
@@ -5285,6 +5290,7 @@
             const name = document.getElementById('restaurant-name').value.trim();
             const description = document.getElementById('restaurant-description').value.trim();
             const active = document.getElementById('restaurant-active').checked;
+            const workingHours = document.getElementById('restaurant-working-hours').value.trim();
             const pricePerPerson = parseFloat(document.getElementById('restaurant-price-per-person').value);
             const currency = document.getElementById('restaurant-currency').value;
             
@@ -5358,6 +5364,7 @@
                 description: description || null,
                 photos,
                 active,
+                working_hours: workingHours || null,
                 price_per_person: pricePerPerson,
                 currency,
                 rules_json: rules
