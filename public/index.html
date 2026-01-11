@@ -10213,63 +10213,6 @@
         // RESTAURANT RESERVATIONS FUNCTIONS
         // ============================================
         
-        // Load available restaurants for today
-        async function loadAvailableRestaurants() {
-            const container = document.getElementById('availableRestaurants');
-            if (!container) return;
-            
-            try {
-                container.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading">Yükleniyor...</div></div>';
-                
-                const response = await fetch('/restaurants');
-                if (!response.ok) {
-                    throw new Error('Restoranlar yüklenemedi');
-                }
-                
-                const result = await response.json();
-                const restaurants = result.success && result.data ? result.data : [];
-                
-                if (restaurants.length === 0) {
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 20px; color: #667781;">
-                            Bugün açık restoran bulunmamaktadır.
-                        </div>
-                    `;
-                    return;
-                }
-                
-                container.innerHTML = restaurants.map(restaurant => {
-                    const photos = restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : null;
-                    const photoUrl = photos ? (photos.startsWith('/') ? photos : `/${photos}`) : null;
-                    
-                    return `
-                        <div style="margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e4e6e9;">
-                            ${photoUrl ? `<img src="${photoUrl}" alt="${restaurant.name}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">` : ''}
-                            <h3 style="font-size: 18px; font-weight: 600; color: #111b21; margin-bottom: 8px;">${restaurant.name || 'Restoran'}</h3>
-                            ${restaurant.description ? `<p style="font-size: 14px; color: #667781; margin-bottom: 12px; line-height: 1.4;">${restaurant.description}</p>` : ''}
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <span style="font-size: 16px; font-weight: 600; color: #1a4d6d;">
-                                    ${restaurant.price_per_person || 0} ${restaurant.currency || 'TRY'} / kişi
-                                </span>
-                            </div>
-                            <button onclick="openRestaurantReservationModal(${restaurant.id}, '${(restaurant.name || '').replace(/'/g, "\\'")}')" 
-                                    style="width: 100%; padding: 12px; background: #1a4d6d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
-                                Rezervasyon Yap
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-                
-            } catch (error) {
-                console.error('Error loading restaurants:', error);
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #dc3545;">
-                        <p>Restoranlar yüklenirken hata oluştu: ${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-        
         // Load restaurant reservations for guest
         async function loadRestaurantReservations() {
             const container = document.getElementById('restaurantReservations');
@@ -10734,8 +10677,8 @@
                     <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: ${isSelected ? 'white' : '#111b21'};">
                         ${restaurantName}
                     </div>
-                    ${workingHours ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#667781'}; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
-                    <div style="font-size: 13px; font-weight: 600; color: ${isSelected ? 'white' : '#1A4D6D'}; margin-top: auto;">
+                    ${workingHours ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#111b21'}; margin-bottom: 4px;">${workingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                    <div style="font-size: 13px; font-weight: 600; color: ${isSelected ? 'white' : '#111b21'}; margin-top: auto;">
                         ${pricePerPerson} ${currency} / kişi
                     </div>
                 `;
@@ -10761,8 +10704,8 @@
                                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
                                     ${prevName}
                                 </div>
-                                ${prevWorkingHours ? `<div style="font-size: 12px; color: #667781; margin-bottom: 4px;">${prevWorkingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
-                                <div style="font-size: 13px; font-weight: 600; color: #1A4D6D; margin-top: auto;">
+                                ${prevWorkingHours ? `<div style="font-size: 12px; color: #111b21; margin-bottom: 4px;">${prevWorkingHours.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                                <div style="font-size: 13px; font-weight: 600; color: #111b21; margin-top: auto;">
                                     ${prevPrice} ${prevCurrency} / kişi
                                 </div>
                             `;
