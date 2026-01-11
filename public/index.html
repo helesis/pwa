@@ -2626,32 +2626,6 @@
             </div>
             <div class="info-section">
                 <div class="info-card">
-                    <div class="info-card-title"><i data-lucide="calendar" class="icon icon-md"></i> <span data-i18n="myReservations">Rezervasyonlarım</span></div>
-                    <div class="info-card-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 14px;">
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="room">Oda</span>
-                            <span id="reservationRoomNumber" style="font-weight: 500;">-</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="checkinDate">Giriş Tarihi</span>
-                            <span id="reservationCheckinDate" style="font-weight: 500;">-</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="checkoutDate">Çıkış Tarihi</span>
-                            <span id="reservationCheckoutDate" style="font-weight: 500;">-</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="adult">Yetişkin</span>
-                            <span id="reservationAdultCount" style="font-weight: 500;">-</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="color: #667781; font-size: 12px; margin-bottom: 2px;" data-i18n="kids">Çocuk</span>
-                            <span id="reservationChildCount" style="font-weight: 500;">-</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="info-card">
                     <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">A'la Carte Restoran Rezervasyonları</span></div>
                     <div class="info-card-content" id="restaurantReservations">
                         <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
@@ -10338,7 +10312,7 @@
                 
                 const existingReservationsTitle = document.createElement('div');
                 existingReservationsTitle.style.cssText = 'font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;';
-                existingReservationsTitle.textContent = 'Mevcut Rezervasyonlarım';
+                existingReservationsTitle.textContent = 'A\'la Carte Rezervasyonlarım';
                 existingReservationsSection.appendChild(existingReservationsTitle);
                 
                 const existingReservationsContainer = document.createElement('div');
