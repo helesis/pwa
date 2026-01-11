@@ -430,6 +430,8 @@ async function initializeDatabase() {
         description TEXT,
         photos JSONB DEFAULT '[]'::jsonb,
         active BOOLEAN DEFAULT true,
+        opening_hour VARCHAR(5),
+        closing_hour VARCHAR(5),
         price_per_person DECIMAL(10, 2) NOT NULL,
         currency VARCHAR(3) DEFAULT 'TRY',
         rules_json JSONB DEFAULT '{
@@ -648,6 +650,41 @@ async function addNewTablesIfNeeded() {
         ADD COLUMN ghost_mode BOOLEAN DEFAULT false;
       `);
       logDebug('Added avatar columns to rooms table');
+    }
+
+    // Check and add opening_hour and closing_hour columns to restaurants table if they don't exist
+    const restaurantsTableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'restaurants'
+      );
+    `);
+    
+    if (restaurantsTableCheck.rows[0].exists) {
+      const openingHourCheck = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'restaurants' 
+        AND column_name = 'opening_hour'
+      `);
+      
+      const closingHourCheck = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'restaurants' 
+        AND column_name = 'closing_hour'
+      `);
+      
+      if (openingHourCheck.rows.length === 0) {
+        await pool.query(`ALTER TABLE restaurants ADD COLUMN opening_hour VARCHAR(5);`);
+        logDebug('Added opening_hour column to restaurants table');
+      }
+      
+      if (closingHourCheck.rows.length === 0) {
+        await pool.query(`ALTER TABLE restaurants ADD COLUMN closing_hour VARCHAR(5);`);
+        logDebug('Added closing_hour column to restaurants table');
+      }
     }
 
     // Check and add user_locations table
@@ -1155,6 +1192,8 @@ async function addNewTablesIfNeeded() {
           description TEXT,
           photos JSONB DEFAULT '[]'::jsonb,
           active BOOLEAN DEFAULT true,
+          opening_hour VARCHAR(5),
+          closing_hour VARCHAR(5),
           price_per_person DECIMAL(10, 2) NOT NULL,
           currency VARCHAR(3) DEFAULT 'TRY',
           rules_json JSONB DEFAULT '{
