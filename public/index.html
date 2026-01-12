@@ -9,6 +9,10 @@
     <meta name="apple-mobile-web-app-title" content="Voyage Sorgun">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
+    <!-- Android Chrome için ek ayarlar -->
+    <meta name="application-name" content="Voyage Chat">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-navbutton-color" content="#ffffff">
     
     <title>Voyage Sorgun Chat</title>
     
@@ -13182,55 +13186,129 @@
     </div>
     
     <script>
-        // Android için adres çubuğunu gizle
+        // Android PWA Adres Çubuğu Gizleme ve Debug
         (function() {
-            // PWA modunda mı kontrol et
-            if (window.matchMedia('(display-mode: standalone)').matches || 
-                window.matchMedia('(display-mode: fullscreen)').matches ||
-                window.navigator.standalone === true) {
-                // PWA modunda, adres çubuğu zaten gizli olmalı
-                return;
+            console.log('🔍 PWA Display Mode Kontrolü Başlatılıyor...');
+            
+            // Display mode kontrolü
+            const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
+            const isFullscreenMode = window.matchMedia('(display-mode: fullscreen)').matches;
+            const isIOSStandalone = window.navigator.standalone === true;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            const isChrome = /Chrome/.test(navigator.userAgent);
+            
+            // Detaylı log
+            console.log('📱 Cihaz Bilgileri:');
+            console.log('  - User Agent:', navigator.userAgent);
+            console.log('  - Android:', isAndroid);
+            console.log('  - Chrome:', isChrome);
+            console.log('  - Display Mode Standalone:', isStandaloneMode);
+            console.log('  - Display Mode Fullscreen:', isFullscreenMode);
+            console.log('  - iOS Standalone:', isIOSStandalone);
+            console.log('  - Window Inner Height:', window.innerHeight);
+            console.log('  - Window Outer Height:', window.outerHeight);
+            console.log('  - Screen Height:', screen.height);
+            
+            // Manifest kontrolü
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                console.log('  - Manifest Link:', manifestLink.href);
+                fetch(manifestLink.href)
+                    .then(res => res.json())
+                    .then(manifest => {
+                        console.log('  - Manifest Display:', manifest.display);
+                        console.log('  - Manifest Scope:', manifest.scope);
+                        console.log('  - Manifest Start URL:', manifest.start_url);
+                    })
+                    .catch(err => console.error('  - Manifest yüklenemedi:', err));
             }
             
-            // Android Chrome için adres çubuğunu gizle
-            function hideAddressBar() {
-                if (/Android/.test(navigator.userAgent)) {
-                    // Viewport height'ı ayarla
-                    const setViewportHeight = () => {
-                        const vh = window.innerHeight * 0.01;
-                        document.documentElement.style.setProperty('--vh', `${vh}px`);
-                    };
+            // PWA modunda mı kontrol et
+            const isPWA = isStandaloneMode || isFullscreenMode || isIOSStandalone;
+            
+            if (isPWA) {
+                console.log('✅ PWA modunda açıldı - Adres çubuğu görünmemeli');
+                if (isAndroid && window.outerHeight > window.innerHeight) {
+                    console.warn('⚠️ Android PWA modunda ama hala adres çubuğu görünüyor olabilir');
+                    console.warn('   Çözüm: Uygulamayı ana ekrandan kaldırıp tekrar ekleyin');
+                }
+            } else {
+                console.warn('⚠️ Tarayıcı modunda açıldı - Adres çubuğu görünecek');
+                console.warn('   Çözüm: Uygulamayı ana ekrana ekleyin');
+                
+                if (isAndroid) {
+                    // Android Chrome için adres çubuğunu gizleme denemesi
+                    console.log('🔧 Android tarayıcı modunda adres çubuğunu gizlemeye çalışılıyor...');
                     
-                    setViewportHeight();
-                    window.addEventListener('resize', setViewportHeight);
-                    window.addEventListener('orientationchange', setViewportHeight);
+                    function hideAddressBar() {
+                        // Viewport height'ı ayarla
+                        const setViewportHeight = () => {
+                            const vh = window.innerHeight * 0.01;
+                            document.documentElement.style.setProperty('--vh', `${vh}px`);
+                            console.log('  - Viewport height ayarlandı:', vh);
+                        };
+                        
+                        setViewportHeight();
+                        window.addEventListener('resize', () => {
+                            setViewportHeight();
+                            console.log('  - Resize event - Inner:', window.innerHeight, 'Outer:', window.outerHeight);
+                        });
+                        window.addEventListener('orientationchange', () => {
+                            setTimeout(setViewportHeight, 100);
+                            console.log('  - Orientation changed');
+                        });
+                        
+                        // Scroll ile adres çubuğunu gizle
+                        let lastScrollTop = 0;
+                        window.addEventListener('scroll', function() {
+                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                            if (scrollTop > lastScrollTop && scrollTop > 0) {
+                                // Aşağı scroll - adres çubuğunu gizle
+                                setTimeout(() => {
+                                    window.scrollTo(0, window.pageYOffset + 1);
+                                }, 0);
+                            }
+                            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                        }, false);
+                        
+                        // İlk yüklemede scroll yap
+                        setTimeout(() => {
+                            window.scrollTo(0, 1);
+                            console.log('  - İlk scroll yapıldı');
+                        }, 100);
+                        
+                        // Viewport height'ı sürekli kontrol et
+                        let lastInnerHeight = window.innerHeight;
+                        setInterval(() => {
+                            if (window.innerHeight !== lastInnerHeight) {
+                                console.log('  - Viewport height değişti:', lastInnerHeight, '->', window.innerHeight);
+                                lastInnerHeight = window.innerHeight;
+                                setViewportHeight();
+                            }
+                        }, 500);
+                    }
                     
-                    // Scroll ile adres çubuğunu gizle
-                    let lastScrollTop = 0;
-                    window.addEventListener('scroll', function() {
-                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                        if (scrollTop > lastScrollTop) {
-                            // Aşağı scroll - adres çubuğunu gizle
-                            setTimeout(() => {
-                                window.scrollTo(0, window.pageYOffset + 1);
-                            }, 0);
-                        }
-                        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-                    }, false);
-                    
-                    // İlk yüklemede scroll yap
-                    setTimeout(() => {
-                        window.scrollTo(0, 1);
-                    }, 100);
+                    // DOM yüklendikten sonra çalıştır
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', hideAddressBar);
+                    } else {
+                        hideAddressBar();
+                    }
                 }
             }
             
-            // DOM yüklendikten sonra çalıştır
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', hideAddressBar);
-            } else {
-                hideAddressBar();
+            // Service Worker kontrolü
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(registration => {
+                    if (registration) {
+                        console.log('✅ Service Worker kayıtlı:', registration.scope);
+                    } else {
+                        console.warn('⚠️ Service Worker kayıtlı değil');
+                    }
+                });
             }
+            
+            console.log('🔍 PWA Display Mode Kontrolü Tamamlandı');
         })();
     </script>
 </body>
