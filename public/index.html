@@ -12920,25 +12920,25 @@
             const roomDiv = document.createElement('div');
             roomDiv.id = roomId;
             roomDiv.style.display = 'flex';
-            roomDiv.style.gap = '10px';
-            roomDiv.style.marginBottom = '10px';
+            roomDiv.style.gap = '8px';
+            roomDiv.style.marginBottom = '8px';
             roomDiv.style.alignItems = 'center';
             
             roomDiv.innerHTML = `
                 <div style="flex: 1;">
-                    <label style="display: block; font-size: 12px; color: #6C757D; margin-bottom: 4px;">Oda Numarası</label>
-                    <input type="text" class="additional-room-number" placeholder="Örn: 102" onchange="calculateTotalPax()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <label style="display: block; font-size: 10px; color: #6C757D; margin-bottom: 3px;">Oda Numarası</label>
+                    <input type="text" class="additional-room-number" placeholder="Örn: 102" onchange="calculateTotalPax()" style="width: 100%; padding: 6px; border: 1px solid #dee2e6; border-radius: 5px;">
                 </div>
                 <div style="flex: 1;">
-                    <label style="display: block; font-size: 12px; color: #6C757D; margin-bottom: 4px;">Yetişkin</label>
-                    <input type="number" class="additional-room-adult" min="0" value="0" onchange="calculateTotalPax()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <label style="display: block; font-size: 10px; color: #6C757D; margin-bottom: 3px;">Yetişkin</label>
+                    <input type="number" class="additional-room-adult" min="0" value="0" onchange="calculateTotalPax()" style="width: 100%; padding: 6px; border: 1px solid #dee2e6; border-radius: 5px;">
                 </div>
                 <div style="flex: 1;">
-                    <label style="display: block; font-size: 12px; color: #6C757D; margin-bottom: 4px;">Çocuk</label>
-                    <input type="number" class="additional-room-child" min="0" value="0" onchange="calculateTotalPax()" style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <label style="display: block; font-size: 10px; color: #6C757D; margin-bottom: 3px;">Çocuk</label>
+                    <input type="number" class="additional-room-child" min="0" value="0" onchange="calculateTotalPax()" style="width: 100%; padding: 6px; border: 1px solid #dee2e6; border-radius: 5px;">
                 </div>
-                <div style="flex: 0 0 auto; padding-top: 20px;">
-                    <button type="button" onclick="removeAdditionalRoom('${roomId}')" style="padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Sil</button>
+                <div style="flex: 0 0 auto; padding-top: 16px;">
+                    <button type="button" onclick="removeAdditionalRoom('${roomId}')" style="padding: 6px 10px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px;">Sil</button>
                 </div>
             `;
             
@@ -13021,62 +13021,62 @@
 
     </script>
     <div id="restaurantReservationModal" class="modal" onclick="if(event.target === this) closeRestaurantReservationModal()" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
-        <div class="modal-content" style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #E8F1F5;">
-                <h3 style="font-size: 20px; font-weight: 600; color: #1A4D6D; margin: 0;" id="restaurantReservationModalTitle">Restoran Rezervasyonu</h3>
-                <button onclick="closeRestaurantReservationModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6C757D; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        <div class="modal-content" style="background: white; border-radius: 10px; padding: 19px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 13px; border-bottom: 2px solid #E8F1F5;">
+                <h3 style="font-size: 16px; font-weight: 600; color: #1A4D6D; margin: 0;" id="restaurantReservationModalTitle">Restoran Rezervasyonu</h3>
+                <button onclick="closeRestaurantReservationModal()" style="background: none; border: none; font-size: 19px; cursor: pointer; color: #6C757D; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
             <form id="restaurantReservationForm" onsubmit="submitRestaurantReservation(event)">
                 <input type="hidden" id="reservation-restaurant-id">
                 <input type="hidden" id="reservation-date">
                 <input type="hidden" id="reservation-session-instance-id" value="" style="display: none;">
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Yetişkin Sayısı *</label>
-                    <input type="number" id="reservation-pax-adult" class="form-input" min="1" value="1" required style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 11px; font-weight: 500; color: #2C3E50; margin-bottom: 6px;">Yetişkin Sayısı *</label>
+                    <input type="number" id="reservation-pax-adult" class="form-input" min="1" value="1" required style="width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 13px;">
                 </div>
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Çocuk Sayısı</label>
-                    <input type="number" id="reservation-pax-child" class="form-input" min="0" value="0" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 11px; font-weight: 500; color: #2C3E50; margin-bottom: 6px;">Çocuk Sayısı</label>
+                    <input type="number" id="reservation-pax-child" class="form-input" min="0" value="0" style="width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 13px;">
                 </div>
                 
                 <!-- Additional Rooms Section (Conditional) -->
-                <div id="reservation-additional-rooms-section" style="margin-bottom: 15px; display: none;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Başka Odaları Dahil Et <span style="color: #6C757D; font-weight: 400;">(Opsiyonel)</span></label>
-                    <div id="reservation-additional-rooms-list" style="margin-bottom: 10px;">
+                <div id="reservation-additional-rooms-section" style="margin-bottom: 12px; display: none;">
+                    <label style="display: block; font-size: 11px; font-weight: 500; color: #2C3E50; margin-bottom: 6px;">Başka Odaları Dahil Et <span style="color: #6C757D; font-weight: 400;">(Opsiyonel)</span></label>
+                    <div id="reservation-additional-rooms-list" style="margin-bottom: 8px;">
                         <!-- Dynamic room inputs will be added here -->
                     </div>
-                    <button type="button" onclick="addAdditionalRoom()" style="padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">+ Oda Ekle</button>
-                    <div id="reservation-total-pax-summary" style="margin-top: 10px; padding: 10px; background: #E8F1F5; border-radius: 8px; font-size: 14px; color: #1A4D6D;">
+                    <button type="button" onclick="addAdditionalRoom()" style="padding: 6px 13px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 5px; font-size: 11px; font-weight: 500; cursor: pointer;">+ Oda Ekle</button>
+                    <div id="reservation-total-pax-summary" style="margin-top: 8px; padding: 8px; background: #E8F1F5; border-radius: 6px; font-size: 11px; color: #1A4D6D;">
                         <strong>Toplam Kişi Sayısı: <span id="reservation-total-pax-count">1</span></strong>
-                        <span id="reservation-max-pax-warning" style="color: #dc3545; display: none; margin-left: 10px;">⚠️ Maksimum limit aşıldı!</span>
+                        <span id="reservation-max-pax-warning" style="color: #dc3545; display: none; margin-left: 8px;">⚠️ Maksimum limit aşıldı!</span>
                     </div>
                 </div>
                 
                 <!-- Masa/Alan Tercihi (Conditional) -->
-                <div id="reservation-table-preference-section" style="margin-bottom: 15px; display: none;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Masa/Alan Tercihi <span style="color: #6C757D; font-weight: 400;">(Opsiyonel)</span></label>
-                    <div style="display: flex; gap: 10px;">
-                        <label style="flex: 1; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white;" id="reservation-preference-smoking-label" onclick="selectTablePreference('smoking')">
+                <div id="reservation-table-preference-section" style="margin-bottom: 12px; display: none;">
+                    <label style="display: block; font-size: 11px; font-weight: 500; color: #2C3E50; margin-bottom: 6px;">Masa/Alan Tercihi <span style="color: #6C757D; font-weight: 400;">(Opsiyonel)</span></label>
+                    <div style="display: flex; gap: 8px;">
+                        <label style="flex: 1; padding: 10px; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s; background: white;" id="reservation-preference-smoking-label" onclick="selectTablePreference('smoking')">
                             <input type="radio" name="table-preference" value="smoking" id="reservation-preference-smoking" style="display: none;">
-                            <span style="font-size: 14px; color: #2C3E50; font-weight: 500;">🚬 Sigara</span>
+                            <span style="font-size: 11px; color: #2C3E50; font-weight: 500;">🚬 Sigara</span>
                         </label>
-                        <label style="flex: 1; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white;" id="reservation-preference-non-smoking-label" onclick="selectTablePreference('non-smoking')">
+                        <label style="flex: 1; padding: 10px; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s; background: white;" id="reservation-preference-non-smoking-label" onclick="selectTablePreference('non-smoking')">
                             <input type="radio" name="table-preference" value="non-smoking" id="reservation-preference-non-smoking" style="display: none;">
-                            <span style="font-size: 14px; color: #2C3E50; font-weight: 500;">🚭 Sigarasız</span>
+                            <span style="font-size: 11px; color: #2C3E50; font-weight: 500;">🚭 Sigarasız</span>
                         </label>
                     </div>
                 </div>
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Özel İstekler (Opsiyonel)</label>
-                    <textarea id="reservation-special-requests" rows="3" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 11px; font-weight: 500; color: #2C3E50; margin-bottom: 6px;">Özel İstekler (Opsiyonel)</label>
+                    <textarea id="reservation-special-requests" rows="3" style="width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 11px; resize: vertical;"></textarea>
                 </div>
                 
-                <div style="display: flex; gap: 10px; margin-top: 24px;">
-                    <button type="button" onclick="closeRestaurantReservationModal()" style="flex: 1; padding: 12px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">İptal</button>
-                    <button type="submit" style="flex: 1; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Rezervasyon Yap</button>
+                <div style="display: flex; gap: 8px; margin-top: 19px;">
+                    <button type="button" onclick="closeRestaurantReservationModal()" style="flex: 1; padding: 10px; background: #6C757D; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">İptal</button>
+                    <button type="submit" style="flex: 1; padding: 10px; background: #1A4D6D; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">Rezervasyon Yap</button>
                 </div>
             </form>
         </div>
