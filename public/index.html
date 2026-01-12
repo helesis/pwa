@@ -8689,6 +8689,7 @@
             const dateEl = document.getElementById('spa-confirm-date');
             const timeEl = document.getElementById('spa-confirm-time');
             const therapistEl = document.getElementById('spa-confirm-therapist');
+            const priceEl = document.getElementById('spa-confirm-price');
             const noteInput = document.getElementById('spa-confirm-note');
             
             if (serviceEl && spaBookingState.selectedService) {
@@ -8713,6 +8714,12 @@
             
             if (therapistEl && spaBookingState.selectedTherapist) {
                 therapistEl.textContent = spaBookingState.selectedTherapist.displayName;
+            }
+            
+            if (priceEl && spaBookingState.selectedService) {
+                const price = spaBookingState.selectedService.price || 0;
+                const currency = spaBookingState.selectedService.currency || 'TL';
+                priceEl.textContent = `${price} ${currency}`;
             }
             
             if (noteInput) {
@@ -13185,6 +13192,10 @@
                     <div style="margin-bottom: 12px;">
                         <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Terapist</div>
                         <div style="font-weight: 600; color: #111b21;" id="spa-confirm-therapist">-</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Fiyat</div>
+                        <div style="font-weight: 600; color: #111b21;" id="spa-confirm-price">-</div>
                     </div>
                 </div>
                 
