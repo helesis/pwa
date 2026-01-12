@@ -1204,7 +1204,7 @@
 
         .map-search-input {
             flex: 1;
-            padding: 10px 12px;
+            padding: 10px 16px;
             border-radius: 999px;
             border: 1px solid #e4e6e9;
             font-size: 14px;
@@ -1219,6 +1219,8 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            padding-left: 16px;
+            padding-right: 16px;
         }
 
         .map-chip {
@@ -2681,7 +2683,7 @@
 
         <div class="content-section active" id="infoSection">
             <div class="section-header">
-                <h1 class="section-header-title" data-i18n="info">Hotel Info</h1>
+                <h1 class="section-header-title" data-i18n="info">Info</h1>
             </div>
             <div class="info-section">
                 <!-- Instagram Story Tray Style Activity Notifications -->
@@ -2729,7 +2731,6 @@
                     <button class="category-filter-chip active" onclick="filterByCategory(this)" data-category="All" data-i18n="all">Tümü</button>
                     <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Kids" data-i18n="kids">Çocuk</button>
                     <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
-                    <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="All Ages" data-i18n="allAges">Tüm Yaşlar</button>
                     </div>
 
                 <!-- Timeline -->
@@ -7897,9 +7898,7 @@
                     { keywords: ['resepsiyon', 'lobby'], displayName: 'Resepsiyon' },
                     { keywords: ['ana restoran', 'restoran teras'], displayName: 'Ana Restoran' },
                     { keywords: ['sahil'], displayName: 'Sahil' },
-                    { keywords: ['aquapark'], displayName: 'Aquapark' },
-                    { keywords: ['beach club'], displayName: 'Beach Club' },
-                    { keywords: ['tenis court'], displayName: 'Tenis Court' }
+                    { keywords: ['beach club'], displayName: 'Beach Club' }
                 ];
                 
                 // Filter and create chips only for featured locations
@@ -11867,7 +11866,7 @@
         const translations = {
             tr: {
                 // Navigation
-                'info': 'Hotel Info',
+                'info': 'Info',
                 'reservations': 'Rezervasyonlar',
                 'chat': 'Sohbetler',
                 'map': 'Harita',
@@ -12008,7 +12007,7 @@
             },
             en: {
                 // Navigation
-                'info': 'Hotel Info',
+                'info': 'Info',
                 'reservations': 'Reservations',
                 'chat': 'Chats',
                 'map': 'Map',
@@ -12149,7 +12148,7 @@
             },
             de: {
                 // Navigation
-                'info': 'Hotel Info',
+                'info': 'Info',
                 'reservations': 'Reservierungen',
                 'chat': 'Chats',
                 'map': 'Karte',
@@ -12290,7 +12289,7 @@
             },
             ru: {
                 // Navigation
-                'info': 'Информация об отеле',
+                'info': 'Информация',
                 'reservations': 'Бронирования',
                 'chat': 'Чаты',
                 'map': 'Карта',
