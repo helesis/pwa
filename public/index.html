@@ -8865,7 +8865,7 @@
                 
                 const serviceGrid = document.createElement('div');
                 serviceGrid.id = 'spa-service-grid';
-                serviceGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
+                serviceGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
                 
                 serviceNavContainer.appendChild(serviceGrid);
                 serviceNavContainer.appendChild(serviceNextBtn);
@@ -8900,7 +8900,7 @@
                 
                 const therapistGrid = document.createElement('div');
                 therapistGrid.id = 'spa-therapist-grid';
-                therapistGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
+                therapistGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
                 
                 therapistNavContainer.appendChild(therapistGrid);
                 therapistNavContainer.appendChild(therapistNextBtn);
@@ -9511,7 +9511,7 @@
             visibleServices.forEach((service, idx) => {
                 const serviceEl = document.createElement('div');
                 serviceEl.className = 'spa-service-item';
-                serviceEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
+                serviceEl.style.cssText = 'position: relative; min-width: 100px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected service
                 if (service.id === window.spaSelectedServiceId) {
@@ -9636,7 +9636,7 @@
             visibleTherapists.forEach((therapist, idx) => {
                 const therapistEl = document.createElement('div');
                 therapistEl.className = 'spa-therapist-item';
-                therapistEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
+                therapistEl.style.cssText = 'position: relative; min-width: 100px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected therapist
                 if (therapist.id === window.spaSelectedTherapistId) {
@@ -10313,7 +10313,7 @@
                 
                 const restaurantGrid = document.createElement('div');
                 restaurantGrid.id = 'restaurant-grid';
-                restaurantGrid.style.cssText = 'display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
+                restaurantGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: nowrap; justify-content: center; flex: 1; margin: 0 8px; overflow: hidden;';
                 
                 restaurantNavContainer.appendChild(restaurantGrid);
                 restaurantNavContainer.appendChild(restaurantNextBtn);
@@ -10794,7 +10794,7 @@
             visibleRestaurants.forEach((restaurant, idx) => {
                 const restaurantEl = document.createElement('div');
                 restaurantEl.className = 'restaurant-item';
-                restaurantEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
+                restaurantEl.style.cssText = 'position: relative; min-width: 100px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected restaurant
                 const isSelected = restaurant.id === window.restaurantSelectedRestaurantId;
