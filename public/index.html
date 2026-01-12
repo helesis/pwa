@@ -2384,11 +2384,11 @@
         .spa-therapist-item {
             display: flex;
             align-items: center;
-            padding: 16px;
+            padding: 10px;
             background: white;
-            border: 1px solid #e4e6e9;
-            border-radius: 8px;
-            margin-bottom: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -2408,17 +2408,17 @@
 
         .spa-time-slot.disabled:hover {
             background: #f8f9fa;
-            border-color: #e4e6e9;
+            border-color: #dee2e6;
         }
 
         .spa-calendar-day {
             position: relative;
             width: 70px;
             height: 80px;
-            padding: 12px 8px;
+            padding: 10px 6px;
             background: white;
-            border: 2px solid #e4e6e9;
-            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
@@ -8407,9 +8407,9 @@
                     item.onclick = () => selectSpaService(service);
                     item.innerHTML = `
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; color: #111b21; margin-bottom: 4px;">${service.name}</div>
-                            <div style="font-size: 13px; color: #667781; margin-bottom: 4px;">${service.shortDescription || service.category || ''}</div>
-                            <div style="font-size: 12px; color: #667781;">${service.durationMin} dk • ${service.price} ${service.currency}</div>
+                            <div style="font-weight: 600; color: #111b21; margin-bottom: 3px; font-size: 11px;">${service.name}</div>
+                            <div style="font-size: 11px; color: #667781; margin-bottom: 3px;">${service.shortDescription || service.category || ''}</div>
+                            <div style="font-size: 10px; color: #667781;">${service.durationMin} dk • ${service.price} ${service.currency}</div>
                         </div>
                         <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
                     `;
@@ -9138,7 +9138,7 @@
             slots.forEach(({ slot, serviceId }) => {
                 const slotEl = document.createElement('div');
                 slotEl.className = 'spa-time-slot';
-                slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+                slotEl.style.cssText = 'padding: 10px; background: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
                 slotEl.onclick = () => startBookingFromSlot(date, slot, serviceId);
                 
                 const start = new Date(slot.start);
@@ -9501,7 +9501,7 @@
             visibleServices.forEach((service, idx) => {
                 const serviceEl = document.createElement('div');
                 serviceEl.className = 'spa-service-item';
-                serviceEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                serviceEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected service
                 if (service.id === window.spaSelectedServiceId) {
@@ -9512,13 +9512,13 @@
                 }
                 
                 serviceEl.innerHTML = `
-                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 5px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
                         ${service.name || 'Hizmet'}
                     </div>
-                    <div style="font-size: 12px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#667781'}; margin-bottom: 4px;">
+                    <div style="font-size: 10px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#667781'}; margin-bottom: 3px;">
                         ${service.durationMin || 0} dakika
                     </div>
-                    <div style="font-size: 13px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
+                    <div style="font-size: 11px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
                         ${service.price || 0} ${service.currency || 'TL'}
                     </div>
                 `;
@@ -9626,7 +9626,7 @@
             visibleTherapists.forEach((therapist, idx) => {
                 const therapistEl = document.createElement('div');
                 therapistEl.className = 'spa-therapist-item';
-                therapistEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                therapistEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected therapist
                 if (therapist.id === window.spaSelectedTherapistId) {
@@ -9639,12 +9639,12 @@
                 // Therapist photo or placeholder
                 const photoUrl = therapist.photoUrl || therapist.avatar || therapist.photo || null;
                 const photoHTML = photoUrl 
-                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; margin-bottom: 8px;">`
-                    : `<div style="width: 60px; height: 60px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#e4e6e9'}; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 24px;">👤</div>`;
+                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#dee2e6'}; margin-bottom: 6px;">`
+                    : `<div style="width: 48px; height: 48px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#dee2e6'}; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; font-size: 19px;">👤</div>`;
                 
                 therapistEl.innerHTML = `
                     ${photoHTML}
-                    <div style="font-size: 13px; font-weight: 600; text-align: center; color: ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#111b21'};">
+                    <div style="font-size: 11px; font-weight: 600; text-align: center; color: ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#111b21'};">
                         ${therapist.displayName || `Terapist ${therapist.id}`}
                     </div>
                 `;
@@ -9987,7 +9987,7 @@
             availableSlots.forEach(slot => {
                 const slotEl = document.createElement('div');
                 slotEl.className = 'spa-time-slot';
-                slotEl.style.cssText = 'padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
+                slotEl.style.cssText = 'padding: 10px; background: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;';
                 // Try to get serviceId from selector if available
                 const serviceSelector = document.getElementById('spa-service-selector');
                 const serviceId = serviceSelector?.value || null;
@@ -10784,7 +10784,7 @@
             visibleRestaurants.forEach((restaurant, idx) => {
                 const restaurantEl = document.createElement('div');
                 restaurantEl.className = 'restaurant-item';
-                restaurantEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 12px; border: 2px solid #e4e6e9; border-radius: 12px; cursor: pointer; background: white; transition: all 0.2s;';
+                restaurantEl.style.cssText = 'position: relative; min-width: 120px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected restaurant
                 const isSelected = restaurant.id === window.restaurantSelectedRestaurantId;
@@ -10804,11 +10804,11 @@
                 const selectedDate = window.restaurantSelectedDate;
                 
                 restaurantEl.innerHTML = `
-                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: ${isSelected ? 'white' : '#111b21'};">
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 5px; color: ${isSelected ? 'white' : '#111b21'};">
                         ${restaurantName}
                     </div>
-                    ${workingHoursText ? `<div style="font-size: 12px; color: ${isSelected ? 'white' : '#111b21'}; margin-bottom: 4px;">${workingHoursText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
-                    <div style="font-size: 13px; font-weight: 600; color: ${isSelected ? 'white' : '#111b21'}; margin-top: auto;">
+                    ${workingHoursText ? `<div style="font-size: 10px; color: ${isSelected ? 'white' : '#111b21'}; margin-bottom: 3px;">${workingHoursText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+                    <div style="font-size: 11px; font-weight: 600; color: ${isSelected ? 'white' : '#111b21'}; margin-top: auto;">
                         ${pricePerPerson} ${currency} / ${t('perPerson')}
                     </div>
                 `;
@@ -10820,7 +10820,7 @@
                         const prevRestaurant = window.restaurantAvailableRestaurants?.find(r => r.id === prevRestaurantId);
                         
                         window.restaurantSelectedRestaurantElement.style.background = 'white';
-                        window.restaurantSelectedRestaurantElement.style.borderColor = '#e4e6e9';
+                        window.restaurantSelectedRestaurantElement.style.borderColor = '#dee2e6';
                         window.restaurantSelectedRestaurantElement.style.color = '';
                         
                         // Update previous element's innerHTML with unselected colors
