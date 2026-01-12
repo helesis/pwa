@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Voyage Sorgun">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
     
     <title>Voyage Sorgun Chat</title>
     
@@ -13179,6 +13180,59 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        // Android için adres çubuğunu gizle
+        (function() {
+            // PWA modunda mı kontrol et
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.matchMedia('(display-mode: fullscreen)').matches ||
+                window.navigator.standalone === true) {
+                // PWA modunda, adres çubuğu zaten gizli olmalı
+                return;
+            }
+            
+            // Android Chrome için adres çubuğunu gizle
+            function hideAddressBar() {
+                if (/Android/.test(navigator.userAgent)) {
+                    // Viewport height'ı ayarla
+                    const setViewportHeight = () => {
+                        const vh = window.innerHeight * 0.01;
+                        document.documentElement.style.setProperty('--vh', `${vh}px`);
+                    };
+                    
+                    setViewportHeight();
+                    window.addEventListener('resize', setViewportHeight);
+                    window.addEventListener('orientationchange', setViewportHeight);
+                    
+                    // Scroll ile adres çubuğunu gizle
+                    let lastScrollTop = 0;
+                    window.addEventListener('scroll', function() {
+                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                        if (scrollTop > lastScrollTop) {
+                            // Aşağı scroll - adres çubuğunu gizle
+                            setTimeout(() => {
+                                window.scrollTo(0, window.pageYOffset + 1);
+                            }, 0);
+                        }
+                        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                    }, false);
+                    
+                    // İlk yüklemede scroll yap
+                    setTimeout(() => {
+                        window.scrollTo(0, 1);
+                    }, 100);
+                }
+            }
+            
+            // DOM yüklendikten sonra çalıştır
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', hideAddressBar);
+            } else {
+                hideAddressBar();
+            }
+        })();
+    </script>
 </body>
 </html>
 
