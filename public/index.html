@@ -13235,9 +13235,32 @@
             } else {
                 console.warn('⚠️ Tarayıcı modunda açıldı - Adres çubuğu görünecek');
                 console.warn('   Çözüm: Uygulamayı ana ekrana ekleyin');
+                console.warn('   📱 Android\'de PWA Kurulum Adımları:');
+                console.warn('   1. Chrome menüsünü açın (sağ üstteki 3 nokta)');
+                console.warn('   2. "Ana ekrana ekle" veya "Add to Home Screen" seçeneğini bulun');
+                console.warn('   3. Uygulamayı ana ekrana ekleyin');
+                console.warn('   4. Ana ekrandan uygulamayı açın (tarayıcıdan değil!)');
+                console.warn('   5. PWA modunda açıldığında adres çubuğu görünmeyecek');
+                
+                // Kullanıcıya görsel uyarı da göster
+                if (isAndroid && isChrome) {
+                    setTimeout(() => {
+                        const banner = document.createElement('div');
+                        banner.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: #ff9800; color: white; padding: 12px; text-align: center; z-index: 99999; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+                        banner.innerHTML = '📱 Adres çubuğunu gizlemek için uygulamayı ana ekrana ekleyin. Chrome menü > "Ana ekrana ekle"';
+                        document.body.appendChild(banner);
+                        
+                        // 10 saniye sonra kapat
+                        setTimeout(() => {
+                            banner.style.transition = 'opacity 0.3s';
+                            banner.style.opacity = '0';
+                            setTimeout(() => banner.remove(), 300);
+                        }, 10000);
+                    }, 2000);
+                }
                 
                 if (isAndroid) {
-                    // Android Chrome için adres çubuğunu gizleme denemesi
+                    // Android Chrome için agresif adres çubuğu gizleme
                     console.log('🔧 Android tarayıcı modunda adres çubuğunu gizlemeye çalışılıyor...');
                     
                     function hideAddressBar() {
@@ -13246,29 +13269,59 @@
                             const vh = window.innerHeight * 0.01;
                             document.documentElement.style.setProperty('--vh', `${vh}px`);
                             console.log('  - Viewport height ayarlandı:', vh);
+                            
+                            // Body ve app-container height'ını da ayarla
+                            document.body.style.height = window.innerHeight + 'px';
+                            const appContainer = document.querySelector('.app-container');
+                            if (appContainer) {
+                                appContainer.style.height = window.innerHeight + 'px';
+                            }
                         };
                         
                         setViewportHeight();
+                        
+                        // Resize event - adres çubuğu gösterildiğinde/gizlendiğinde
+                        let resizeTimer;
                         window.addEventListener('resize', () => {
-                            setViewportHeight();
-                            console.log('  - Resize event - Inner:', window.innerHeight, 'Outer:', window.outerHeight);
+                            clearTimeout(resizeTimer);
+                            resizeTimer = setTimeout(() => {
+                                const heightDiff = window.outerHeight - window.innerHeight;
+                                console.log('  - Resize event - Inner:', window.innerHeight, 'Outer:', window.outerHeight, 'Diff:', heightDiff);
+                                
+                                if (heightDiff > 50) {
+                                    // Adres çubuğu görünüyor - scroll yap
+                                    console.log('  - Adres çubuğu tespit edildi, scroll yapılıyor...');
+                                    window.scrollTo(0, window.pageYOffset + 1);
+                                }
+                                
+                                setViewportHeight();
+                            }, 100);
                         });
+                        
                         window.addEventListener('orientationchange', () => {
-                            setTimeout(setViewportHeight, 100);
-                            console.log('  - Orientation changed');
+                            setTimeout(() => {
+                                setViewportHeight();
+                                window.scrollTo(0, 1);
+                                console.log('  - Orientation changed');
+                            }, 200);
                         });
                         
                         // Scroll ile adres çubuğunu gizle
                         let lastScrollTop = 0;
+                        let scrollTimer;
                         window.addEventListener('scroll', function() {
-                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                            if (scrollTop > lastScrollTop && scrollTop > 0) {
-                                // Aşağı scroll - adres çubuğunu gizle
-                                setTimeout(() => {
-                                    window.scrollTo(0, window.pageYOffset + 1);
-                                }, 0);
-                            }
-                            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                            clearTimeout(scrollTimer);
+                            scrollTimer = setTimeout(() => {
+                                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                                const heightDiff = window.outerHeight - window.innerHeight;
+                                
+                                if (scrollTop > lastScrollTop && scrollTop > 0 && heightDiff > 50) {
+                                    // Aşağı scroll ve adres çubuğu görünüyor - gizle
+                                    console.log('  - Scroll ile adres çubuğu gizleniyor...');
+                                    window.scrollTo(0, scrollTop + 1);
+                                }
+                                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                            }, 10);
                         }, false);
                         
                         // İlk yüklemede scroll yap
@@ -13277,15 +13330,49 @@
                             console.log('  - İlk scroll yapıldı');
                         }, 100);
                         
-                        // Viewport height'ı sürekli kontrol et
+                        // Sürekli kontrol - adres çubuğu görünürse scroll yap
                         let lastInnerHeight = window.innerHeight;
+                        let lastOuterHeight = window.outerHeight;
                         setInterval(() => {
-                            if (window.innerHeight !== lastInnerHeight) {
-                                console.log('  - Viewport height değişti:', lastInnerHeight, '->', window.innerHeight);
-                                lastInnerHeight = window.innerHeight;
+                            const currentInner = window.innerHeight;
+                            const currentOuter = window.outerHeight;
+                            const heightDiff = currentOuter - currentInner;
+                            
+                            if (currentInner !== lastInnerHeight || currentOuter !== lastOuterHeight) {
+                                console.log('  - Viewport değişti - Inner:', lastInnerHeight, '->', currentInner, 'Outer:', lastOuterHeight, '->', currentOuter, 'Diff:', heightDiff);
+                                lastInnerHeight = currentInner;
+                                lastOuterHeight = currentOuter;
+                                
+                                if (heightDiff > 50) {
+                                    // Adres çubuğu görünüyor
+                                    console.log('  - Adres çubuğu tespit edildi, scroll yapılıyor...');
+                                    window.scrollTo(0, window.pageYOffset + 1);
+                                }
+                                
                                 setViewportHeight();
                             }
-                        }, 500);
+                        }, 300);
+                        
+                        // Touch event ile de kontrol et
+                        let touchStartY = 0;
+                        document.addEventListener('touchstart', (e) => {
+                            touchStartY = e.touches[0].clientY;
+                        }, { passive: true });
+                        
+                        document.addEventListener('touchend', (e) => {
+                            const touchEndY = e.changedTouches[0].clientY;
+                            const diff = touchStartY - touchEndY;
+                            
+                            // Aşağı kaydırma - adres çubuğunu gizle
+                            if (diff > 10) {
+                                setTimeout(() => {
+                                    const heightDiff = window.outerHeight - window.innerHeight;
+                                    if (heightDiff > 50) {
+                                        window.scrollTo(0, window.pageYOffset + 1);
+                                    }
+                                }, 50);
+                            }
+                        }, { passive: true });
                     }
                     
                     // DOM yüklendikten sonra çalıştır

@@ -2,6 +2,7 @@
   "name": "Voyage Sorgun Chat",
   "short_name": "Voyage Chat",
   "description": "Voyage Sorgun otel müşteri iletişim uygulaması",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
