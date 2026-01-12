@@ -1200,6 +1200,8 @@
         .map-search-input-wrapper {
             display: flex;
             gap: 8px;
+            padding-left: 16px;
+            padding-right: 16px;
         }
 
         .map-search-input {
@@ -8964,7 +8966,8 @@
                         const availability = await spaApi.getAvailability(service.id, selectedDate, selectedDate);
                         if (availability.days && availability.days.length > 0) {
                             const day = availability.days[0];
-                            if (day.slots && day.slots.some(s => s.availability === 'AVAILABLE' && s.therapists && s.therapists.length > 0)) {
+                            // Show service if it has at least one available slot with at least one therapist (even if just 1 therapist)
+                            if (day.slots && day.slots.some(s => s.availability === 'AVAILABLE' && s.therapists && s.therapists.length >= 1)) {
                                 availableServices.push(service);
                                 allSlotsByService.set(service.id, day.slots || []);
                             }
@@ -9012,19 +9015,22 @@
         }
         
         // Called when a service is selected (from grid)
+        // Shows all therapists who can do this service and are available on the selected date
         async function onSpaServiceSelected(selectedServiceId) {
             if (!selectedServiceId || !window.spaSelectedDate) return;
             
             const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
             
-            // Get slots for this service
+            // Get all slots for this service on the selected date
             const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
             
-            // Collect all therapists who can do this service on this date
+            // Collect all unique therapists who can do this service and are available on this date
+            // This includes therapists from all available slots for this service
             const therapists = new Map();
             serviceSlots.forEach(slot => {
-                if (slot.availability === 'AVAILABLE' && slot.therapists) {
+                if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
                     slot.therapists.forEach(therapist => {
+                        // Add therapist if not already added (avoid duplicates)
                         if (!therapists.has(therapist.id)) {
                             therapists.set(therapist.id, therapist);
                         }
@@ -9032,7 +9038,7 @@
                 }
             });
             
-            // Populate therapist grid
+            // Show therapist selector if there are therapists available
             if (therapists.size > 0 && therapistSelectorWrapper) {
                 therapistSelectorWrapper.style.display = 'block';
                 
@@ -9042,7 +9048,7 @@
                 window.spaSelectedTherapistElement = null;
                 window.spaSelectedTherapistId = null;
                 
-                // Render therapist grid
+                // Render therapist grid with all available therapists for this service
                 const therapistGrid = document.getElementById('spa-therapist-grid');
                 if (therapistGrid) {
                     renderSpaTherapistGrid(therapistGrid, window.spaAvailableTherapists, 0);
@@ -9052,7 +9058,7 @@
                 window.spaSelectedTherapistId = null;
             }
             
-            // Show slots for this service (without therapist filter)
+            // Show time slots for this service (without therapist filter initially)
             await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
         }
         
