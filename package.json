@@ -9,7 +9,11 @@
     "dev": "node --watch server.js",
     "build": "node scripts/build.js",
     "prebuild": "echo '🔨 Building...'",
-    "predeploy": "npm run build"
+    "predeploy": "npm run build",
+    "generate-icons": "node scripts/generate-icons.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
