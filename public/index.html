@@ -10530,7 +10530,8 @@
                             isDragging = false;
                             cardEl.style.transition = 'transform 0.3s ease';
                             
-                            const threshold = 80; // Minimum swipe distance
+                            // Threshold: %25 of button width (which equals card width)
+                            const threshold = cardEl.offsetWidth * 0.25;
                             
                             if (currentX < -threshold) {
                                 if (canCancel) {
@@ -11257,7 +11258,8 @@
                         isDragging = false;
                         cardEl.style.transition = 'transform 0.3s ease';
                         
-                        const threshold = 80; // Minimum swipe distance
+                        // Threshold: %25 of button width (which equals card width)
+                        const threshold = cardEl.offsetWidth * 0.25;
                         
                         if (currentX < -threshold) {
                             if (canCancel) {
