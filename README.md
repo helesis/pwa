@@ -88,6 +88,46 @@ Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi. Wha
 - Takım bazlı bildirimler
 - Oda atama bildirimleri
 
+### 🗺️ Harita Özellikleri
+- **Mapbox Entegrasyonu:**
+  - İnteraktif harita görünümü
+  - Otel konumu gösterimi
+  - Gerçek zamanlı kullanıcı konum takibi
+  - Diğer misafirlerin konumlarını görme
+  - Aktivite marker'ları (restoran, spa, sahil, vb.)
+  - Konum arama (oda numarası veya alan adı)
+  - Hızlı erişim chip'leri (Resepsiyon, Ana Restoran, Sahil, Beach Club)
+  - Konum izni yönetimi
+  - Ghost mode desteği (konum paylaşımını gizleme)
+  - Smooth animasyonlar ve zoom kontrolleri
+
+### 🍽️ Restoran Rezervasyonları
+- **A'la Carte Rezervasyon Sistemi:**
+  - Restoran listesi ve detay görünümü
+  - Tarih ve seans seçimi
+  - Müsaitlik takvimi (yeşil/sarı/kırmızı göstergeler)
+  - Kişi sayısı seçimi (yetişkin/çocuk)
+  - Otomatik masa atama algoritması
+  - Fiyat hesaplama ve snapshot (rezervasyon anındaki fiyat korunur)
+  - İptal kuralları ve son iptal tarihi kontrolü
+  - Rezervasyon geçmişi ve yönetimi
+  - Swipe ile iptal (mobil UX)
+  - Çoklu dil desteği (TR/EN/DE/RU)
+
+### 💆 SPA Rezervasyonları
+- **SPA Booking Wizard:**
+  - 5 adımlı rezervasyon akışı
+  - Hizmet seçimi
+  - Tarih seçimi (müsaitlik heat map ile)
+  - Saat dilimi seçimi
+  - Terapist seçimi (opsiyonel)
+  - Onay ekranı ve not ekleme
+  - Taleplerin durum takibi (Beklemede/Onaylandı/Reddedildi/İptal Edildi)
+  - "En erken uygun" hızlı seçim butonu
+  - Müsaitlik uyarıları (10 dakikadan eski veri)
+  - Rezervasyon iptal etme
+  - Misafir konaklama tarihlerine göre otomatik tarih aralığı
+
 ## 🌐 Arayüzler
 
 ### 1. Landing Page (`/`)
@@ -100,6 +140,19 @@ Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi. Wha
 - Token ile erişim zorunlu
 - WhatsApp benzeri arayüz
 - Fotoğraf gönderme
+- **Harita Sekmesi:**
+  - İnteraktif harita görünümü
+  - Konum takibi ve paylaşımı
+  - Diğer misafirlerin konumlarını görme
+  - Aktivite ve konum arama
+- **Restoran Rezervasyonları Sekmesi:**
+  - Restoran listesi ve detayları
+  - Rezervasyon oluşturma
+  - Rezervasyon geçmişi ve yönetimi
+- **SPA Rezervasyonları Sekmesi:**
+  - SPA hizmet rezervasyonu
+  - 5 adımlı booking wizard
+  - Rezervasyon durum takibi
 
 ### 3. Assistant Dashboard (`/assistant`)
 - Assistant'ların takımlarına atanmış odaları görüp chat yaptığı sayfa
@@ -115,6 +168,15 @@ Gerçek zamanlı tone analizi ile akıllı otel müşteri iletişim sistemi. Wha
 - Oda-takım eşleştirmesi
 - Eşleşmemiş odalar listesi
 - QR kod oluşturma
+- **Restoran Yönetimi:**
+  - Restoran oluşturma ve düzenleme
+  - Seans şablonları yönetimi
+  - Masa envanteri ayarlama
+  - Takvim görünümü ve seans örnekleri oluşturma
+  - Fiyatlandırma ve iş kuralları yönetimi
+- **Harita Konumları:**
+  - Harita konumları yönetimi
+  - Aktivite marker'ları ekleme/düzenleme
 
 ## 🚀 Kurulum
 
@@ -154,6 +216,7 @@ PORT=3000
 DATABASE_URL=postgresql://user:password@localhost:5432/voyage_chat
 CLAUDE_API_KEY=your_actual_api_key_here  # Opsiyonel
 FRONTEND_URL=http://localhost:3000
+MAPBOX_TOKEN=your_mapbox_access_token  # Harita özellikleri için gerekli
 ```
 
 **PostgreSQL Kurulumu (Local):**
@@ -170,6 +233,12 @@ Claude API Key almak için (Opsiyonel):
 1. https://console.anthropic.com/ adresine gidin
 2. API Keys bölümünden yeni key oluşturun
 3. Key'i `.env` dosyasına yapıştırın
+
+Mapbox Token almak için (Harita özellikleri için gerekli):
+1. https://account.mapbox.com/ adresine gidin
+2. Access tokens bölümünden yeni token oluşturun
+3. Token'ı `.env` dosyasına yapıştırın
+4. `public/index.html` içinde `MAPBOX_TOKEN` değişkenini güncelleyin
 
 ### Adım 4: Serveri Başlat
 
@@ -295,6 +364,32 @@ GET  /api/alerts                   - Tone alert'ler
 POST /api/alerts/:id/sent          - Alert'i okundu işaretle
 ```
 
+#### Harita
+```
+GET  /api/map/locations            - Tüm harita konumları
+GET  /api/location/users           - Aktif kullanıcı konumları
+POST /api/location/update          - Kullanıcı konumunu güncelle
+GET  /api/activities               - Aktivite marker'ları
+```
+
+#### Restoran Rezervasyonları
+```
+GET    /restaurants                - Müsait restoranlar listesi
+GET    /restaurants/:id/availability - Tarih aralığı için müsaitlik
+POST   /reservations               - Yeni rezervasyon oluştur
+GET    /reservations?room_no=...   - Misafir rezervasyonları
+DELETE /reservations/:id           - Rezervasyon iptal et
+```
+
+#### SPA Rezervasyonları
+```
+GET    /api/spa/services          - Müsait SPA hizmetleri
+GET    /api/spa/availability       - Tarih aralığı için müsaitlik
+POST   /api/spa/requests           - Yeni SPA talebi oluştur
+GET    /api/spa/requests?mine=true - Kullanıcının SPA talepleri
+POST   /api/spa/requests/:id/cancel - SPA talebini iptal et
+```
+
 ### WebSocket Events
 
 **Client → Server:**
@@ -332,6 +427,16 @@ socket.on('auto_join_room', { roomNumber, checkinDate, teamId });
 - **team_room_assignments**: Takım-oda eşleştirmeleri
 - **room_invites**: Misafir davet token'ları
 - **team_invites**: Takım davet token'ları
+- **map_locations**: Harita konumları (restoran, spa, sahil, vb.)
+- **user_locations**: Kullanıcı konum takibi (gerçek zamanlı)
+- **restaurants**: Restoran tanımları (fiyat, kurallar, JSON)
+- **session_templates**: Restoran seans şablonları (tekrarlayan zaman dilimleri)
+- **session_instances**: Tarihli seans örnekleri
+- **session_table_groups**: Seans başına masa envanteri
+- **reservations**: Restoran rezervasyonları (fiyat snapshot ile)
+- **reservation_table_assignments**: Rezervasyon-masa atamaları
+- **spa_services**: SPA hizmet tanımları
+- **spa_requests**: SPA rezervasyon talepleri
 
 ### Önemli İlişkiler
 
@@ -379,6 +484,7 @@ Detaylı deployment rehberi için [DEPLOY.md](./DEPLOY.md) dosyasına bakın.
    - `DATABASE_URL` (otomatik oluşturulur)
    - `FRONTEND_URL` (örn: https://voyage-chat-backend.onrender.com)
    - `CLAUDE_API_KEY` (opsiyonel)
+   - `MAPBOX_TOKEN` (harita özellikleri için gerekli)
 6. Deploy!
 
 **Maliyet:** Ücretsiz (Starter plan) veya $7/ay (Standard plan)
