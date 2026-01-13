@@ -1,0 +1,141 @@
+# Cursor AI Rules - Voyage Sorgun Guest PWA
+
+## Project Context
+- Hotel guest experience PWA for Voyage Sorgun
+- Tech Stack: React, TypeScript, Tailwind CSS, shadcn/ui
+- Target: Mobile-first, offline-capable progressive web app
+- Users: Hotel guests (Turkish, English, German speakers)
+- Domain: Hotel operations, guest services, activity booking
+
+## Code Style & Standards
+- TypeScript strict mode
+- Functional components with hooks only
+- Tailwind CSS for styling (no custom CSS unless necessary)
+- shadcn/ui components for UI consistency
+- File naming: kebab-case for components (e.g., `activity-card.tsx`)
+- Folder structure: feature-based organization
+
+## Response Format
+- Show only changed code blocks, not full files
+- Use diff format for modifications:
+```diff
+  - old line
+  + new line
+```
+- Skip imports/exports unless they change
+- No explanations unless asked - code speaks for itself
+- Line numbers when referencing specific changes
+
+## Component Development
+- Mobile-first responsive design (320px minimum)
+- Accessibility: ARIA labels, keyboard navigation, screen reader support
+- Performance: lazy loading, code splitting, optimized images
+- Offline support: service worker, local storage, cache strategies
+- i18n ready: use translation keys, no hardcoded strings
+
+## Data & State Management
+- React Context for global state (user preferences, language)
+- Local state with useState for component-specific data
+- LocalStorage for offline persistence
+- Optimistic UI updates for better UX
+
+## Hotel-Specific Features
+- Activity booking system integration
+- Real-time notifications (activities, events, weather)
+- Interactive hotel map with POI markers
+- Multi-language support (TR/EN/DE)
+- Weather integration for Antalya
+- Guest services integration (room service, spa booking)
+
+## PWA Requirements
+- Service worker for offline functionality
+- App manifest with proper icons
+- Install prompts for mobile devices
+- Push notification support
+- Background sync for data updates
+- Cache-first strategy for static assets
+
+## API Integration Patterns
+- Fetch API with error handling
+- Loading states for all async operations
+- Retry logic for failed requests
+- Mock data for development (when backend unavailable)
+- Type-safe API responses with TypeScript interfaces
+
+## Performance Guidelines
+- Bundle size: keep under 500KB initial load
+- Images: WebP format, lazy loading, proper sizing
+- Code splitting: route-based chunks
+- Tree shaking: import only what's needed
+- Memoization: useMemo/useCallback for expensive operations
+
+## Testing Approach (when requested)
+- Unit tests: Jest + React Testing Library
+- E2E tests: Playwright for critical user flows
+- Accessibility tests: axe-core integration
+- Mobile testing: real device testing when possible
+
+## Security Considerations
+- No sensitive data in localStorage (use sessionStorage)
+- API key management (environment variables)
+- Input validation for all user inputs
+- XSS prevention (React's default escaping)
+- HTTPS only for production
+
+## Don't Do
+- Don't rewrite entire files
+- Don't add boilerplate comments
+- Don't suggest backend changes (focus on frontend)
+- Don't use class components
+- Don't inline large data structures (use separate files)
+- Don't add dependencies without necessity
+
+## Do Prefer
+- Pure functions and immutability
+- Composition over inheritance
+- Explicit over implicit
+- Simple over complex
+- TypeScript interfaces over types (for extensibility)
+
+## Common Tasks Shortcuts
+- "Add activity card" → Create component with image, title, time, booking button
+- "Make responsive" → Add Tailwind breakpoints (sm/md/lg/xl)
+- "Add loading state" → Skeleton component from shadcn
+- "Fix accessibility" → Add ARIA labels, keyboard handlers, focus management
+- "Optimize image" → Convert to WebP, add lazy loading, srcset
+
+## File Organization
+```
+src/
+├── components/
+│   ├── ui/           # shadcn components
+│   ├── features/     # feature-specific components
+│   └── layout/       # layout components
+├── hooks/            # custom React hooks
+├── lib/              # utilities, helpers
+├── types/            # TypeScript types
+├── contexts/         # React contexts
+└── pages/            # route components
+```
+
+## When Stuck
+- Check shadcn/ui docs first for UI components
+- Tailwind docs for styling questions
+- React docs for hooks/patterns
+- TypeScript docs for type issues
+
+## Language Preference
+- Code comments: English
+- Variable names: English
+- UI strings: Translation keys (e.g., `t('activity.title')`)
+- Documentation: Turkish or English (context-dependent)
+
+## Example Good Prompt Responses
+✅ "Line 45-52: Replace map loop with filter + map chain for better readability"
+✅ "Add `loading` state to ActivityCard, show Skeleton while fetching"
+✅ "Extract hardcoded 'Book Now' to translation key: `t('common.bookNow')`"
+
+## Example Bad Responses to Avoid
+❌ "Let me rewrite your entire component with better practices..."
+❌ "Here's a complete file with all the imports and exports..."
+❌ "As an AI assistant, I notice several improvements..."
