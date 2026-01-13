@@ -10163,17 +10163,29 @@
             }
             
             try {
+                // Check if a therapist is already selected from the grid
+                let selectedTherapist = null;
+                if (window.spaSelectedTherapistId && slot.therapists) {
+                    selectedTherapist = slot.therapists.find(t => t.id === window.spaSelectedTherapistId);
+                }
+                
                 // Set booking state
                 spaBookingState = {
                     selectedService: selectedService,
                     selectedDate: date,
                     selectedSlot: slot,
-                    selectedTherapist: null,
+                    selectedTherapist: selectedTherapist,
                     note: ''
                 };
                 
+                // If therapist already selected from grid and available in this slot, go directly to confirm
+                if (selectedTherapist) {
+                    spaBookingState.selectedTherapist = selectedTherapist;
+                    showSpaBookingStep('confirm');
+                    renderSpaConfirmStep();
+                }
                 // If only one therapist, auto-select; otherwise go to therapist selection
-                if (slot.therapists && slot.therapists.length === 1) {
+                else if (slot.therapists && slot.therapists.length === 1) {
                     spaBookingState.selectedTherapist = slot.therapists[0];
                     showSpaBookingStep('confirm');
                     renderSpaConfirmStep();
