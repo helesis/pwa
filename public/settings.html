@@ -1280,7 +1280,7 @@
                     <select id="restaurant-currency" class="form-input" required>
                         <option value="TRY">TRY (₺)</option>
                         <option value="USD">USD ($)</option>
-                        <option value="EUR">EUR (€)</option>
+                        <option value="EUR" selected>EUR (€)</option>
                     </select>
                 </div>
                 
@@ -4790,7 +4790,7 @@
                                             (restaurant.description.substring(0, 50) + (restaurant.description.length > 50 ? '...' : '')) : 
                                             '-';
                                         const price = restaurant.price_per_person || 0;
-                                        const currency = restaurant.currency || 'TRY';
+                                        const currency = restaurant.currency || 'EUR';
                                         const active = restaurant.active !== undefined ? restaurant.active : true;
                                         
                                         return `
@@ -5128,7 +5128,7 @@
                         document.getElementById('restaurant-opening-hour').value = restaurant.opening_hour || '';
                         document.getElementById('restaurant-closing-hour').value = restaurant.closing_hour || '';
                         document.getElementById('restaurant-price-per-person').value = restaurant.price_per_person || '';
-                        document.getElementById('restaurant-currency').value = restaurant.currency || 'TRY';
+                        document.getElementById('restaurant-currency').value = restaurant.currency || 'EUR';
                         
                         // Load photos
                         if (restaurant.photos && Array.isArray(restaurant.photos) && restaurant.photos.length > 0) {

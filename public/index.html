@@ -8430,7 +8430,7 @@
                         <div style="flex: 1;">
                             <div style="font-weight: 600; color: #111b21; margin-bottom: 3px; font-size: 11px;">${service.name}</div>
                             <div style="font-size: 11px; color: #667781; margin-bottom: 3px;">${service.shortDescription || service.category || ''}</div>
-                            <div style="font-size: 10px; color: #667781;">${service.durationMin} dk • ${service.price} ${service.currency}</div>
+                            <div style="font-size: 10px; color: #667781;">${service.durationMin} dk • ${service.price} ${service.currency || 'EUR'}</div>
                         </div>
                         <i data-lucide="chevron-right" class="icon icon-md" style="color: #667781;"></i>
                     `;
@@ -8719,7 +8719,7 @@
             
             if (priceEl && spaBookingState.selectedService) {
                 const price = spaBookingState.selectedService.price || 0;
-                const currency = spaBookingState.selectedService.currency || 'TL';
+                const currency = spaBookingState.selectedService.currency || 'EUR';
                 priceEl.textContent = `${price} ${currency}`;
             }
             
@@ -9551,7 +9551,7 @@
                         ${service.durationMin || 0} dakika
                     </div>
                     <div style="font-size: 11px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
-                        ${service.price || 0} ${service.currency || 'TL'}
+                        ${service.price || 0} ${service.currency || 'EUR'}
                     </div>
                 `;
                 
@@ -9572,7 +9572,7 @@
                                     ${prevService.durationMin || 0} dakika
                                 </div>
                                 <div style="font-size: 13px; font-weight: 600; color: #008069; margin-top: auto;">
-                                    ${prevService.price || 0} ${prevService.currency || 'TL'}
+                                    ${prevService.price || 0} ${prevService.currency || 'EUR'}
                                 </div>
                             `;
                         }
@@ -9593,7 +9593,7 @@
                             ${service.durationMin || 0} dakika
                         </div>
                         <div style="font-size: 13px; font-weight: 600; color: white; margin-top: auto;">
-                            ${service.price || 0} ${service.currency || 'TL'}
+                            ${service.price || 0} ${service.currency || 'EUR'}
                         </div>
                     `;
                     
@@ -10140,8 +10140,12 @@
         async function startBookingFromSlot(date, slot, serviceId) {
             let selectedService = null;
             
+            // First, check if we already have the selected service in booking state and it matches
+            if (spaBookingState?.selectedService && spaBookingState.selectedService.id === serviceId) {
+                selectedService = spaBookingState.selectedService;
+            }
             // If serviceId provided, use it; otherwise try to get from selector
-            if (serviceId) {
+            else if (serviceId) {
                 if (window.spaAvailableServices) {
                     selectedService = window.spaAvailableServices.find(s => s.id === serviceId);
                 }
@@ -10152,8 +10156,14 @@
             } else {
                 const serviceSelector = document.getElementById('spa-service-selector');
                 if (serviceSelector && serviceSelector.value) {
-                    const serviceList = await spaApi.getServices();
-                    selectedService = serviceList.find(s => s.id === serviceSelector.value);
+                    // Check if we have it in available services first
+                    if (window.spaAvailableServices) {
+                        selectedService = window.spaAvailableServices.find(s => s.id === serviceSelector.value);
+                    }
+                    if (!selectedService) {
+                        const serviceList = await spaApi.getServices();
+                        selectedService = serviceList.find(s => s.id === serviceSelector.value);
+                    }
                 }
             }
             
@@ -10443,7 +10453,7 @@
                         const paxAdult = reservation.pax_adult || 0;
                         const paxChild = reservation.pax_child || 0;
                         const totalPrice = reservation.total_price || 0;
-                        const currency = reservation.currency || 'TRY';
+                        const currency = reservation.currency || 'EUR';
                         const status = reservation.status || 'confirmed';
                         
                         // Check if cancellation is allowed (check cancellation deadline)
@@ -10845,7 +10855,7 @@
                 const closingHour = restaurant.closing_hour || '';
                 const workingHoursText = openingHour && closingHour ? `${openingHour} - ${closingHour}` : '';
                 const pricePerPerson = restaurant.price_per_person || 0;
-                const currency = restaurant.currency || 'TRY';
+                const currency = restaurant.currency || 'EUR';
                 const selectedDate = window.restaurantSelectedDate;
                 
                 restaurantEl.innerHTML = `
@@ -10875,7 +10885,7 @@
                             const prevClosingHour = prevRestaurant.closing_hour || '';
                             const prevWorkingHoursText = prevOpeningHour && prevClosingHour ? `${prevOpeningHour} - ${prevClosingHour}` : '';
                             const prevPrice = prevRestaurant.price_per_person || 0;
-                            const prevCurrency = prevRestaurant.currency || 'TRY';
+                            const prevCurrency = prevRestaurant.currency || 'EUR';
                             
                             window.restaurantSelectedRestaurantElement.innerHTML = `
                                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
@@ -11235,7 +11245,7 @@
                     
                     // Price (3rd line) - always show
                     const price = request.price || request.servicePrice || request.amount || request.service?.price || 0;
-                    const currency = request.currency || request.serviceCurrency || request.service?.currency || 'TRY';
+                    const currency = request.currency || request.serviceCurrency || request.service?.currency || 'EUR';
                     const priceEl = document.createElement('div');
                     priceEl.style.cssText = 'font-size: 13px; font-weight: 600; color: #1a4d6d; margin-top: 2px;';
                     priceEl.textContent = `${price} ${currency}`;
