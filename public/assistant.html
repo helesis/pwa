@@ -142,6 +142,37 @@
             background: rgba(255,255,255,0.15);
         }
 
+        .session-management {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e4e6e9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: white;
+        }
+
+        .session-management-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #111b21;
+        }
+
+        .session-logout-btn {
+            background: white;
+            color: #111b21;
+            border: 1px solid #e4e6e9;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .session-logout-btn:hover {
+            background: white;
+        }
+
         .assistant-avatar-header {
             width: 40px;
             height: 40px;
@@ -883,6 +914,11 @@
                 </div>
             </div>
             
+            <div class="session-management">
+                <div class="session-management-title">Oturum Yönetimi</div>
+                <button class="session-logout-btn" onclick="handleAssistantLogout()">Çıkış Yap</button>
+            </div>
+
             <div class="date-filter" id="dateFilterContainer">
                 <input type="date" id="dateFilter" value="">
             </div>

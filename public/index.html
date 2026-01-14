@@ -1861,6 +1861,11 @@
             flex-direction: column;
         }
 
+        body.story-viewer-open #infoSection .section-header {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
         .story-viewer-header {
             position: absolute;
             top: 0;
@@ -5874,6 +5879,7 @@
             // Show modal
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
+            document.body.classList.add('story-viewer-open');
             
             // Handle scroll to update indicators
             let currentIndex = 0;
@@ -5946,6 +5952,7 @@
             if (modal) {
                 modal.classList.remove('active');
                 document.body.style.overflow = '';
+                document.body.classList.remove('story-viewer-open');
                 
                 // Stop all videos
                 modal.querySelectorAll('video').forEach(video => {
