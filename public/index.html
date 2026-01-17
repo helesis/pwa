@@ -1011,6 +1011,60 @@
             display: none;
         }
 
+        /* Landscape Daily Program View (Full Screen) */
+        .landscape-program-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #ffffff;
+            z-index: 20000;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .landscape-program-view.sky-theme {
+            background: linear-gradient(180deg, #b8ddff 0%, #f6fbff 55%, #ffffff 100%);
+        }
+
+        .landscape-program-header {
+            padding: 20px 24px;
+            background: linear-gradient(135deg, #008069 0%, #00a884 100%);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .landscape-program-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+            text-align: center;
+        }
+
+        .landscape-program-content {
+            flex: 1;
+            overflow: hidden;
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (orientation: landscape) {
+            .landscape-program-view {
+                display: flex !important;
+            }
+
+            .app-container {
+                display: none !important;
+            }
+
+            .bottom-nav {
+                display: none !important;
+            }
+        }
+
         /* Bottom Navigation Bar */
         .bottom-nav {
             position: fixed !important;
@@ -1923,16 +1977,20 @@
         }
 
         @media (orientation: landscape) {
-            .daily-program-wrapper {
+            .landscape-program-view {
                 display: flex !important;
             }
 
-            .timeline-container {
+            .app-container {
+                display: none !important;
+            }
+
+            .bottom-nav {
                 display: none !important;
             }
         }
 
-        /* Instagram Story Tray Style Activity Notifications */
+        /* Bottom Navigation Bar */
         .activity-stories-tray {
             display: flex;
             gap: 12px;
@@ -2930,17 +2988,6 @@
                     <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
                     </div>
 
-                <div class="daily-program-wrapper" id="dailyProgramWrapper">
-                    <div class="daily-program-header">
-                        <div class="daily-program-title" data-i18n="dailyProgramTitle">Misafir Günlük Programı</div>
-                    </div>
-                    <div class="daily-program-scroll">
-                        <div class="daily-program-timeline" id="dailyProgramTimeline">
-                            <div class="daily-program-empty" data-i18n="dailyProgramLoading">Yükleniyor...</div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Timeline -->
                 <div class="timeline-container" id="timelineContainer">
                     <div class="empty-timeline">
@@ -3306,6 +3353,20 @@
             </div>
         </div>
 
+    </div>
+    
+    <!-- Landscape Daily Program View (Full Screen Overlay) -->
+    <div class="landscape-program-view" id="landscapeProgramView">
+        <div class="landscape-program-header">
+            <h1 class="landscape-program-title" data-i18n="myDailyProgram">Programım</h1>
+        </div>
+        <div class="landscape-program-content">
+            <div class="daily-program-scroll">
+                <div class="daily-program-timeline" id="landscapeProgramTimeline">
+                    <div class="daily-program-empty" data-i18n="dailyProgramLoading">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Bottom Navigation Bar (moved outside app-container to prevent overflow clipping) -->
@@ -5218,15 +5279,12 @@
                 setTimeout(setHeight, 100);
                 
                 // Force render daily program timeline in landscape mode
-                const activitiesSection = document.getElementById('activitiesSection');
-                if (activitiesSection && activitiesSection.classList.contains('active')) {
-                    setTimeout(() => {
-                        if (window.innerWidth > window.innerHeight) {
-                            // Landscape mode
-                            renderDailyProgramTimeline();
-                        }
-                    }, 300);
-                }
+                setTimeout(() => {
+                    if (window.innerWidth > window.innerHeight) {
+                        // Landscape mode - render timeline
+                        renderDailyProgramTimeline();
+                    }
+                }, 300);
             });
             
             // Prevent zoom on double tap (iOS)
@@ -12240,6 +12298,7 @@
                 'morning': 'Sabah',
                 'noon': 'Öğle',
                 'dailyProgramTitle': 'Misafir Günlük Programı',
+                'myDailyProgram': 'Programım',
                 'dailyProgramLoading': 'Günlük program yükleniyor...',
                 'dailyProgramEmpty': 'Bu tarihte günlük program bulunmuyor.',
                 'dailyProgramCheckout': 'Çıkış Saati',
@@ -12389,6 +12448,7 @@
                 'morning': 'Morning',
                 'noon': 'Noon',
                 'dailyProgramTitle': 'Guest Daily Program',
+                'myDailyProgram': 'My Program',
                 'dailyProgramLoading': 'Loading daily program...',
                 'dailyProgramEmpty': 'No daily program items for this date.',
                 'dailyProgramCheckout': 'Checkout Time',
@@ -12538,6 +12598,7 @@
                 'morning': 'Morgen',
                 'noon': 'Mittag',
                 'dailyProgramTitle': 'Tagesprogramm für Gäste',
+                'myDailyProgram': 'Mein Programm',
                 'dailyProgramLoading': 'Tagesprogramm wird geladen...',
                 'dailyProgramEmpty': 'Für dieses Datum gibt es kein Tagesprogramm.',
                 'dailyProgramCheckout': 'Check-out Zeit',
@@ -12687,6 +12748,7 @@
                 'morning': 'Утро',
                 'noon': 'Полдень',
                 'dailyProgramTitle': 'Ежедневная программа гостя',
+                'myDailyProgram': 'Моя программа',
                 'dailyProgramLoading': 'Загрузка ежедневной программы...',
                 'dailyProgramEmpty': 'На эту дату нет ежедневной программы.',
                 'dailyProgramCheckout': 'Время выезда',
@@ -13106,8 +13168,8 @@
         }
 
         async function renderDailyProgramTimeline() {
-            const wrapper = document.getElementById('dailyProgramWrapper');
-            const container = document.getElementById('dailyProgramTimeline');
+            const wrapper = document.getElementById('landscapeProgramView');
+            const container = document.getElementById('landscapeProgramTimeline');
             if (!container || !wrapper) return;
 
             const dateStr = getActivityDateString();
