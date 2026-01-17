@@ -1075,6 +1075,16 @@
             display: none !important;
         }
 
+        @media (orientation: landscape) and (max-width: 900px) {
+            .bottom-nav {
+                display: none !important;
+            }
+
+            .content-section {
+                padding-bottom: calc(16px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            }
+        }
+
         /* Content sections */
         .content-section {
             display: none !important; /* Force hide when not active */
@@ -1740,6 +1750,186 @@
 
         .empty-timeline-text {
             font-size: 15px;
+        }
+
+        /* Daily Program - Landscape Timeline */
+        .daily-program-wrapper {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            margin: 8px 16px 16px;
+            padding: 12px;
+            border-radius: 16px;
+            background: #f8f9fa;
+            border: 1px solid #e4e6e9;
+        }
+
+        .daily-program-wrapper.sky-theme {
+            background: linear-gradient(180deg, #b8ddff 0%, #f6fbff 55%, #ffffff 100%);
+            border-color: #c7def5;
+        }
+
+        .daily-program-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .daily-program-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111b21;
+        }
+
+        .daily-program-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .daily-program-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .daily-program-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 140px;
+        }
+
+        .daily-program-hours {
+            display: flex;
+            min-width: calc(var(--hour-width) * var(--hour-count));
+            gap: 0;
+        }
+
+        .daily-program-hour {
+            min-width: var(--hour-width);
+            font-size: 12px;
+            font-weight: 600;
+            color: #667781;
+            text-align: left;
+            padding-left: 6px;
+        }
+
+        .daily-program-events {
+            position: relative;
+            min-width: calc(var(--hour-width) * var(--hour-count));
+            border-top: 1px dashed #d8dadd;
+            padding-top: 12px;
+        }
+
+        .daily-program-event {
+            position: absolute;
+            min-height: 92px;
+            background: white;
+            border-radius: 12px;
+            padding: 10px 12px 10px 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            border-left: 4px solid #008069;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+
+        .daily-program-event.type-spa {
+            border-left-color: #8e44ad;
+        }
+
+        .daily-program-event.type-restaurant {
+            border-left-color: #d35400;
+        }
+
+        .daily-program-event.type-show {
+            border-left-color: #f39c12;
+        }
+
+        .daily-program-event.type-checkout {
+            border-left-color: #1f6feb;
+        }
+
+        .daily-program-event-time {
+            font-size: 14px;
+            font-weight: 700;
+            color: #111b21;
+        }
+
+        .daily-program-event-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111b21;
+        }
+
+        .daily-program-event-location {
+            font-size: 12px;
+            color: #667781;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .daily-program-event-actions {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .daily-program-reminder-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: #f0f2f5;
+            color: #667781;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .daily-program-reminder-btn.active {
+            background: #fff3cd;
+            color: #ff9800;
+        }
+
+        .daily-program-remove-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: #f0f2f5;
+            color: #667781;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .daily-program-empty {
+            text-align: center;
+            padding: 32px 16px;
+            color: #667781;
+            font-size: 14px;
+        }
+
+        @media (orientation: landscape) and (max-width: 900px) {
+            .daily-program-wrapper {
+                display: flex;
+            }
+
+            .timeline-container {
+                display: none;
+            }
         }
 
         /* Instagram Story Tray Style Activity Notifications */
@@ -2739,6 +2929,17 @@
                     <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Kids" data-i18n="kids">Çocuk</button>
                     <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
                     </div>
+
+                <div class="daily-program-wrapper" id="dailyProgramWrapper">
+                    <div class="daily-program-header">
+                        <div class="daily-program-title" data-i18n="dailyProgramTitle">Misafir Günlük Programı</div>
+                    </div>
+                    <div class="daily-program-scroll">
+                        <div class="daily-program-timeline" id="dailyProgramTimeline">
+                            <div class="daily-program-empty" data-i18n="dailyProgramLoading">Yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Timeline -->
                 <div class="timeline-container" id="timelineContainer">
@@ -12027,6 +12228,14 @@
                 'evening': 'Akşam',
                 'morning': 'Sabah',
                 'noon': 'Öğle',
+                'dailyProgramTitle': 'Misafir Günlük Programı',
+                'dailyProgramLoading': 'Günlük program yükleniyor...',
+                'dailyProgramEmpty': 'Bu tarihte günlük program bulunmuyor.',
+                'dailyProgramCheckout': 'Çıkış Saati',
+                'dailyProgramShow': 'Gösteri',
+                'dailyProgramRemove': 'Kaldır',
+                'dailyProgramReminderOn': 'Alarm kapat',
+                'dailyProgramReminderOff': 'Alarm kur',
                 'other': 'Diğer',
                 'noActivitiesForDate': 'Bu tarihte aktivite bulunmuyor',
                 'activitiesLoadingError': 'Aktiviteler yüklenirken hata oluştu',
@@ -12168,6 +12377,14 @@
                 'evening': 'Evening',
                 'morning': 'Morning',
                 'noon': 'Noon',
+                'dailyProgramTitle': 'Guest Daily Program',
+                'dailyProgramLoading': 'Loading daily program...',
+                'dailyProgramEmpty': 'No daily program items for this date.',
+                'dailyProgramCheckout': 'Checkout Time',
+                'dailyProgramShow': 'Show',
+                'dailyProgramRemove': 'Remove',
+                'dailyProgramReminderOn': 'Disable reminder',
+                'dailyProgramReminderOff': 'Set reminder',
                 'other': 'Other',
                 'noActivitiesForDate': 'No activities for this date',
                 'activitiesLoadingError': 'Error loading activities',
@@ -12309,6 +12526,14 @@
                 'evening': 'Abend',
                 'morning': 'Morgen',
                 'noon': 'Mittag',
+                'dailyProgramTitle': 'Tagesprogramm für Gäste',
+                'dailyProgramLoading': 'Tagesprogramm wird geladen...',
+                'dailyProgramEmpty': 'Für dieses Datum gibt es kein Tagesprogramm.',
+                'dailyProgramCheckout': 'Check-out Zeit',
+                'dailyProgramShow': 'Show',
+                'dailyProgramRemove': 'Entfernen',
+                'dailyProgramReminderOn': 'Erinnerung ausschalten',
+                'dailyProgramReminderOff': 'Erinnerung setzen',
                 'other': 'Andere',
                 'noActivitiesForDate': 'Keine Aktivitäten für dieses Datum',
                 'activitiesLoadingError': 'Fehler beim Laden der Aktivitäten',
@@ -12450,6 +12675,14 @@
                 'evening': 'Вечер',
                 'morning': 'Утро',
                 'noon': 'Полдень',
+                'dailyProgramTitle': 'Ежедневная программа гостя',
+                'dailyProgramLoading': 'Загрузка ежедневной программы...',
+                'dailyProgramEmpty': 'На эту дату нет ежедневной программы.',
+                'dailyProgramCheckout': 'Время выезда',
+                'dailyProgramShow': 'Шоу',
+                'dailyProgramRemove': 'Удалить',
+                'dailyProgramReminderOn': 'Отключить напоминание',
+                'dailyProgramReminderOff': 'Включить напоминание',
                 'other': 'Другое',
                 'noActivitiesForDate': 'На эту дату нет активностей',
                 'activitiesLoadingError': 'Ошибка при загрузке активностей',
@@ -12756,6 +12989,376 @@
             
             // Start countdown timers
             startCountdownTimers();
+
+            // Render daily program timeline (landscape view)
+            renderDailyProgramTimeline();
+        }
+
+        const DAILY_PROGRAM_START_HOUR = 6;
+        const DAILY_PROGRAM_END_HOUR = 23;
+        const DAILY_PROGRAM_HOUR_WIDTH = 120;
+        const DAILY_PROGRAM_EVENT_HEIGHT = 92;
+        const DAILY_PROGRAM_EVENT_GAP = 12;
+        const dailyProgramReminderTimers = {};
+        let dailyProgramEventCache = {};
+
+        function getStoredArray(key) {
+            try {
+                const raw = localStorage.getItem(key);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('Failed to read stored array:', key, error);
+                return [];
+            }
+        }
+
+        function getStoredObject(key) {
+            try {
+                const raw = localStorage.getItem(key);
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                console.warn('Failed to read stored object:', key, error);
+                return {};
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function parseTimeToMinutes(timeStr) {
+            if (!timeStr) return null;
+            const parts = timeStr.split(':');
+            const hours = parseInt(parts[0], 10);
+            const minutes = parseInt(parts[1] || '0', 10);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+            return hours * 60 + minutes;
+        }
+
+        function formatTimeFromDate(dateObj) {
+            if (!dateObj) return '';
+            return dateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function getDateKey(dateValue) {
+            if (!dateValue) return '';
+            return String(dateValue).split('T')[0];
+        }
+
+        function buildDateTime(dateStr, timeStr) {
+            if (!dateStr || !timeStr) return null;
+            return new Date(`${dateStr}T${timeStr}`);
+        }
+
+        async function fetchRestaurantReservationsForTimeline() {
+            if (!GUEST_UNIQUE_ID) return [];
+            try {
+                const cacheBuster = new Date().getTime();
+                const response = await fetch(`/reservations?guest_unique_id=${encodeURIComponent(GUEST_UNIQUE_ID)}&_t=${cacheBuster}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                if (!response.ok) return [];
+                const result = await response.json();
+                return result.success && Array.isArray(result.data) ? result.data : [];
+            } catch (error) {
+                console.warn('Failed to load restaurant reservations for timeline:', error);
+                return [];
+            }
+        }
+
+        async function fetchSpaRequestsForTimeline() {
+            if (!GUEST_UNIQUE_ID || typeof spaApi === 'undefined') return [];
+            try {
+                const requests = await spaApi.listMyRequests();
+                return requests.filter(req => req.status === 'PENDING' || req.status === 'CONFIRMED');
+            } catch (error) {
+                console.warn('Failed to load spa requests for timeline:', error);
+                return [];
+            }
+        }
+
+        function getShowRegistrationsForTimeline() {
+            const registrations = getStoredArray('showRegistrations');
+            return registrations.filter(item => item && item.date);
+        }
+
+        function buildTimelineEventId(prefix, id) {
+            return `${prefix}-${id}`;
+        }
+
+        async function renderDailyProgramTimeline() {
+            const wrapper = document.getElementById('dailyProgramWrapper');
+            const container = document.getElementById('dailyProgramTimeline');
+            if (!container || !wrapper) return;
+
+            const dateStr = getActivityDateString();
+            const hiddenIds = new Set(getStoredArray('dailyProgramHiddenEvents'));
+            const reminderMap = getStoredObject('dailyProgramReminders');
+            const favoriteIds = new Set(getStoredArray('activityFavorites'));
+
+            container.innerHTML = `
+                <div class="daily-program-empty" data-i18n="dailyProgramLoading">${t('dailyProgramLoading')}</div>
+            `;
+
+            const events = [];
+
+            activitiesData
+                .filter(activity => favoriteIds.has(activity.id))
+                .forEach(activity => {
+                    if (getDateKey(activity.activity_date) !== dateStr) return;
+                    if (!activity.start_time) return;
+                    const startTime = formatTime(activity.start_time);
+                    const endTime = formatTime(activity.end_time);
+                    const eventId = buildTimelineEventId('activity', activity.id);
+                    if (hiddenIds.has(eventId)) return;
+                    events.push({
+                        id: eventId,
+                        type: 'activity',
+                        title: activity.title || '',
+                        location: activity.location || '',
+                        startTime,
+                        endTime,
+                        dateStr
+                    });
+                });
+
+            const spaRequests = await fetchSpaRequestsForTimeline();
+            spaRequests.forEach(request => {
+                const startDate = request.start ? new Date(request.start) : null;
+                const endDate = request.end ? new Date(request.end) : null;
+                if (!startDate || getDateKey(startDate.toISOString()) !== dateStr) return;
+                const eventId = buildTimelineEventId('spa', request.id || request._id || startDate.getTime());
+                if (hiddenIds.has(eventId)) return;
+                events.push({
+                    id: eventId,
+                    type: 'spa',
+                    title: request.serviceName || t('spa'),
+                    location: t('spa'),
+                    startTime: formatTimeFromDate(startDate),
+                    endTime: endDate ? formatTimeFromDate(endDate) : '',
+                    dateStr
+                });
+            });
+
+            const restaurantReservations = await fetchRestaurantReservationsForTimeline();
+            restaurantReservations.forEach(reservation => {
+                const reservationDateValue = reservation.reservation_date || reservation.date;
+                if (!reservationDateValue) return;
+                const reservationDate = new Date(reservationDateValue);
+                if (getDateKey(reservationDate.toISOString()) !== dateStr) return;
+                const eventId = buildTimelineEventId('restaurant', reservation.id || reservationDate.getTime());
+                if (hiddenIds.has(eventId)) return;
+                let startTime = reservation.reservation_time;
+                if (!startTime) {
+                    const timeMatch = String(reservationDateValue).split('T')[1];
+                    startTime = timeMatch ? timeMatch.slice(0, 5) : '19:00';
+                }
+                const startMinutes = parseTimeToMinutes(startTime) ?? (19 * 60);
+                const endMinutes = startMinutes + 90;
+                const endHours = Math.floor(endMinutes / 60);
+                const endMins = String(endMinutes % 60).padStart(2, '0');
+                const endTime = `${String(endHours).padStart(2, '0')}:${endMins}`;
+                events.push({
+                    id: eventId,
+                    type: 'restaurant',
+                    title: reservation.restaurant?.name || t('restaurant'),
+                    location: reservation.restaurant?.name || t('restaurant'),
+                    startTime,
+                    endTime,
+                    dateStr
+                });
+            });
+
+            const showRegistrations = getShowRegistrationsForTimeline();
+            showRegistrations.forEach(show => {
+                if (getDateKey(show.date) !== dateStr) return;
+                const eventId = buildTimelineEventId('show', show.id || `${show.title || 'show'}-${show.date}`);
+                if (hiddenIds.has(eventId)) return;
+                events.push({
+                    id: eventId,
+                    type: 'show',
+                    title: show.title || t('dailyProgramShow'),
+                    location: show.location || '',
+                    startTime: formatTime(show.start_time || show.startTime || ''),
+                    endTime: formatTime(show.end_time || show.endTime || ''),
+                    dateStr
+                });
+            });
+
+            if (CHECKOUT_DATE && getDateKey(CHECKOUT_DATE) === dateStr) {
+                const eventId = buildTimelineEventId('checkout', dateStr);
+                if (!hiddenIds.has(eventId)) {
+                    events.push({
+                        id: eventId,
+                        type: 'checkout',
+                        title: t('dailyProgramCheckout'),
+                        location: t('reception'),
+                        startTime: '12:00',
+                        endTime: '12:30',
+                        dateStr
+                    });
+                }
+            }
+
+            events.sort((a, b) => {
+                const aMinutes = parseTimeToMinutes(a.startTime) ?? 0;
+                const bMinutes = parseTimeToMinutes(b.startTime) ?? 0;
+                return aMinutes - bMinutes;
+            });
+
+            dailyProgramEventCache = {};
+            events.forEach(event => {
+                dailyProgramEventCache[event.id] = event;
+            });
+
+            events.forEach(event => {
+                if (reminderMap[event.id]) {
+                    scheduleDailyProgramReminder(event.id, event.title, event.dateStr, event.startTime);
+                }
+            });
+
+            const now = new Date();
+            const isCheckoutDay = CHECKOUT_DATE && getDateKey(CHECKOUT_DATE) === dateStr;
+            const isToday = getDateKey(now.toISOString()) === dateStr;
+            const isAfterCheckoutNoon = isCheckoutDay && isToday && now.getHours() >= 12;
+            wrapper.classList.toggle('sky-theme', Boolean(isAfterCheckoutNoon));
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="daily-program-empty" data-i18n="dailyProgramEmpty">${t('dailyProgramEmpty')}</div>
+                `;
+                return;
+            }
+
+            const hours = [];
+            for (let hour = DAILY_PROGRAM_START_HOUR; hour <= DAILY_PROGRAM_END_HOUR; hour += 1) {
+                hours.push(hour);
+            }
+
+            const hoursHtml = hours.map(hour => {
+                const label = `${String(hour).padStart(2, '0')}:00`;
+                return `<div class="daily-program-hour">${label}</div>`;
+            }).join('');
+
+            const totalMinutesRange = (DAILY_PROGRAM_END_HOUR + 1) * 60 - (DAILY_PROGRAM_START_HOUR * 60);
+
+            const eventsHtml = events.map((event, index) => {
+                const startMinutes = parseTimeToMinutes(event.startTime);
+                const endMinutes = parseTimeToMinutes(event.endTime) ?? (startMinutes !== null ? startMinutes + 60 : null);
+                if (startMinutes === null) return '';
+                const clampedStart = Math.max(startMinutes, DAILY_PROGRAM_START_HOUR * 60);
+                const clampedEnd = Math.min(endMinutes, (DAILY_PROGRAM_END_HOUR + 1) * 60);
+                if (clampedEnd <= DAILY_PROGRAM_START_HOUR * 60 || clampedStart >= (DAILY_PROGRAM_END_HOUR + 1) * 60) {
+                    return '';
+                }
+                const left = ((clampedStart - DAILY_PROGRAM_START_HOUR * 60) / totalMinutesRange) * (hours.length * DAILY_PROGRAM_HOUR_WIDTH);
+                const width = Math.max(90, ((clampedEnd - clampedStart) / totalMinutesRange) * (hours.length * DAILY_PROGRAM_HOUR_WIDTH) - 8);
+                const top = index * (DAILY_PROGRAM_EVENT_HEIGHT + DAILY_PROGRAM_EVENT_GAP);
+                const reminderActive = Boolean(reminderMap[event.id]);
+                const timeRange = event.endTime ? `${event.startTime} - ${event.endTime}` : event.startTime;
+                const reminderIcon = reminderActive ? 'bell-off' : 'bell';
+                const reminderLabel = reminderActive ? t('dailyProgramReminderOn') : t('dailyProgramReminderOff');
+                return `
+                    <div class="daily-program-event type-${event.type}" style="left: ${left}px; width: ${width}px; top: ${top}px;" data-event-id="${event.id}">
+                        <button class="daily-program-remove-btn" onclick="removeDailyProgramEvent('${event.id}')" title="${t('dailyProgramRemove')}" aria-label="${t('dailyProgramRemove')}">&times;</button>
+                        <div class="daily-program-event-time">${timeRange}</div>
+                        <div class="daily-program-event-title">${escapeHtml(event.title)}</div>
+                        ${event.location ? `
+                            <div class="daily-program-event-location">
+                                <i data-lucide="map-pin" class="icon icon-sm"></i>
+                                <span>${escapeHtml(event.location)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="daily-program-event-actions">
+                            <button class="daily-program-reminder-btn ${reminderActive ? 'active' : ''}" onclick="toggleDailyProgramReminder('${event.id}')" title="${reminderLabel}" aria-label="${reminderLabel}">
+                                <i data-lucide="${reminderIcon}" class="icon icon-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const eventsHeight = Math.max(DAILY_PROGRAM_EVENT_HEIGHT, (events.length * (DAILY_PROGRAM_EVENT_HEIGHT + DAILY_PROGRAM_EVENT_GAP)));
+
+            container.innerHTML = `
+                <div class="daily-program-hours" style="--hour-width: ${DAILY_PROGRAM_HOUR_WIDTH}px; --hour-count: ${hours.length};">
+                    ${hoursHtml}
+                </div>
+                <div class="daily-program-events" style="--hour-width: ${DAILY_PROGRAM_HOUR_WIDTH}px; --hour-count: ${hours.length}; height: ${eventsHeight}px;">
+                    ${eventsHtml}
+                </div>
+            `;
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        function removeDailyProgramEvent(eventId) {
+            const hidden = getStoredArray('dailyProgramHiddenEvents');
+            if (!hidden.includes(eventId)) {
+                hidden.push(eventId);
+                localStorage.setItem('dailyProgramHiddenEvents', JSON.stringify(hidden));
+            }
+            renderDailyProgramTimeline();
+        }
+
+        async function toggleDailyProgramReminder(eventId) {
+            const event = dailyProgramEventCache[eventId];
+            if (!event) return;
+
+            const reminders = getStoredObject('dailyProgramReminders');
+            if (reminders[eventId]) {
+                delete reminders[eventId];
+                if (dailyProgramReminderTimers[eventId]) {
+                    clearTimeout(dailyProgramReminderTimers[eventId]);
+                    delete dailyProgramReminderTimers[eventId];
+                }
+                localStorage.setItem('dailyProgramReminders', JSON.stringify(reminders));
+                renderDailyProgramTimeline();
+                return;
+            }
+
+            const notificationsEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+            if (!notificationsEnabled) {
+                await requestNotificationPermission();
+            }
+
+            reminders[eventId] = { dateStr: event.dateStr, startTime: event.startTime, title: event.title };
+            localStorage.setItem('dailyProgramReminders', JSON.stringify(reminders));
+            scheduleDailyProgramReminder(eventId, event.title, event.dateStr, event.startTime);
+            renderDailyProgramTimeline();
+        }
+
+        function scheduleDailyProgramReminder(eventId, title, dateStr, startTime) {
+            const startDate = buildDateTime(dateStr, startTime);
+            if (!startDate) return;
+            const delay = startDate.getTime() - Date.now();
+            if (delay <= 0) return;
+
+            if (dailyProgramReminderTimers[eventId]) {
+                clearTimeout(dailyProgramReminderTimers[eventId]);
+            }
+
+            dailyProgramReminderTimers[eventId] = setTimeout(() => {
+                if (Notification.permission === 'granted') {
+                    new Notification('Voyage Sorgun', {
+                        body: title,
+                        icon: '/icon-192.png',
+                        badge: '/icon-192.png',
+                        tag: eventId
+                    });
+                }
+                delete dailyProgramReminderTimers[eventId];
+            }, delay);
         }
 
         // Update Now Playing banner
@@ -12875,6 +13478,8 @@
                 favorites.push(activityId);
             }
             localStorage.setItem('activityFavorites', JSON.stringify(favorites));
+
+            renderDailyProgramTimeline();
         }
 
         // Show activity on map
