@@ -5216,6 +5216,17 @@
             window.addEventListener('resize', setHeight);
             window.addEventListener('orientationchange', () => {
                 setTimeout(setHeight, 100);
+                
+                // Force render daily program timeline in landscape mode
+                const activitiesSection = document.getElementById('activitiesSection');
+                if (activitiesSection && activitiesSection.classList.contains('active')) {
+                    setTimeout(() => {
+                        if (window.innerWidth > window.innerHeight) {
+                            // Landscape mode
+                            renderDailyProgramTimeline();
+                        }
+                    }, 300);
+                }
             });
             
             // Prevent zoom on double tap (iOS)
