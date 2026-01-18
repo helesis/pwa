@@ -5028,6 +5028,11 @@
 
         // Play notification sound
         function playNotificationSound() {
+            // Sadece bildirim izni verilmişse ses çal
+            if (Notification.permission !== 'granted') {
+                return;
+            }
+            
             try {
                 const audio = new Audio('/notification.mp3');
                 audio.volume = 0.6;
