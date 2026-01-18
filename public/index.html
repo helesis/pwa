@@ -5026,11 +5026,25 @@
                    window.matchMedia('(display-mode: standalone)').matches;
         }
 
+        // Play notification sound
+        function playNotificationSound() {
+            try {
+                const audio = new Audio('/notification.mp3');
+                audio.volume = 0.6;
+                audio.play().catch(err => console.log('🔇 Notification sound blocked:', err));
+            } catch (err) {
+                console.log('🔇 Could not play notification sound:', err);
+            }
+        }
+
         // Send notification
         function sendNotification(messageData) {
             if (!('Notification' in window)) {
                 return;
             }
+            
+            // Play notification sound
+            playNotificationSound();
             
             if (Notification.permission === 'granted') {
                 const senderName = messageData.senderName || 'Voyage Sorgun';
@@ -10715,6 +10729,11 @@
                             return;
                         }
                         
+                        // Schedule reminder for this reservation
+                        if (reservation.status === 'confirmed') {
+                            scheduleRestaurantReminder(reservation);
+                        }
+                        
                         const resDate = reservation.reservation_date ? new Date(reservation.reservation_date) : new Date();
                         const formattedDate = resDate.toLocaleDateString('tr-TR', {
                             day: 'numeric',
@@ -11446,6 +11465,11 @@
                 myRequests.forEach(request => {
                     const startDate = new Date(request.start);
                     const endDate = new Date(request.end);
+
+                    // Schedule reminder for this spa request
+                    if (request.status === 'CONFIRMED' || request.status === 'PENDING') {
+                        scheduleSpaReminder(request);
+                    }
 
                     const status = request.status || 'PENDING';
                     let statusText = t('requestPending');
@@ -12300,6 +12324,9 @@
                 'noon': 'Öğle',
                 'dailyProgramTitle': 'Misafir Günlük Programı',
                 'myDailyProgram': 'Programım',
+                'restaurantReservation': 'Restoran Rezervasyonu',
+                'spaReservation': 'Spa Rezervasyonu',
+                'in15Minutes': '15 dakika sonra',
                 'dailyProgramLoading': 'Günlük program yükleniyor...',
                 'dailyProgramEmpty': 'Bu tarihte günlük program bulunmuyor.',
                 'dailyProgramCheckout': 'Çıkış Saati',
@@ -12450,6 +12477,9 @@
                 'noon': 'Noon',
                 'dailyProgramTitle': 'Guest Daily Program',
                 'myDailyProgram': 'My Program',
+                'restaurantReservation': 'Restaurant Reservation',
+                'spaReservation': 'Spa Reservation',
+                'in15Minutes': 'In 15 minutes',
                 'dailyProgramLoading': 'Loading daily program...',
                 'dailyProgramEmpty': 'No daily program items for this date.',
                 'dailyProgramCheckout': 'Checkout Time',
@@ -12600,6 +12630,9 @@
                 'noon': 'Mittag',
                 'dailyProgramTitle': 'Tagesprogramm für Gäste',
                 'myDailyProgram': 'Mein Programm',
+                'restaurantReservation': 'Restaurantreservierung',
+                'spaReservation': 'Spa-Reservierung',
+                'in15Minutes': 'In 15 Minuten',
                 'dailyProgramLoading': 'Tagesprogramm wird geladen...',
                 'dailyProgramEmpty': 'Für dieses Datum gibt es kein Tagesprogramm.',
                 'dailyProgramCheckout': 'Check-out Zeit',
@@ -12750,6 +12783,9 @@
                 'noon': 'Полдень',
                 'dailyProgramTitle': 'Ежедневная программа гостя',
                 'myDailyProgram': 'Моя программа',
+                'restaurantReservation': 'Бронирование ресторана',
+                'spaReservation': 'Бронирование спа',
+                'in15Minutes': 'Через 15 минут',
                 'dailyProgramLoading': 'Загрузка ежедневной программы...',
                 'dailyProgramEmpty': 'На эту дату нет ежедневной программы.',
                 'dailyProgramCheckout': 'Время выезда',
@@ -13423,6 +13459,8 @@
             }
 
             dailyProgramReminderTimers[eventId] = setTimeout(() => {
+                playNotificationSound();
+                
                 if (Notification.permission === 'granted') {
                     new Notification('Voyage Sorgun', {
                         body: title,
@@ -13432,6 +13470,72 @@
                     });
                 }
                 delete dailyProgramReminderTimers[eventId];
+            }, delay);
+        }
+
+        // Schedule restaurant reservation reminder (15 minutes before)
+        const restaurantReminderTimers = {};
+        
+        function scheduleRestaurantReminder(reservation) {
+            if (!reservation || !reservation.reservation_date) return;
+            
+            const reservationDate = new Date(reservation.reservation_date);
+            const reminderTime = new Date(reservationDate.getTime() - (15 * 60 * 1000)); // 15 minutes before
+            const delay = reminderTime.getTime() - Date.now();
+            
+            if (delay <= 0) return; // Already passed
+            
+            const timerId = `restaurant-${reservation.id}`;
+            if (restaurantReminderTimers[timerId]) {
+                clearTimeout(restaurantReminderTimers[timerId]);
+            }
+            
+            restaurantReminderTimers[timerId] = setTimeout(() => {
+                playNotificationSound();
+                
+                if (Notification.permission === 'granted') {
+                    const restaurantName = reservation.restaurant?.name || t('restaurant');
+                    new Notification(t('restaurantReservation'), {
+                        body: `${restaurantName} - ${t('in15Minutes')}`,
+                        icon: '/icon-192.png',
+                        badge: '/icon-192.png',
+                        tag: timerId
+                    });
+                }
+                delete restaurantReminderTimers[timerId];
+            }, delay);
+        }
+
+        // Schedule spa reservation reminder (15 minutes before)
+        const spaReminderTimers = {};
+        
+        function scheduleSpaReminder(spaRequest) {
+            if (!spaRequest || !spaRequest.start) return;
+            
+            const startDate = new Date(spaRequest.start);
+            const reminderTime = new Date(startDate.getTime() - (15 * 60 * 1000)); // 15 minutes before
+            const delay = reminderTime.getTime() - Date.now();
+            
+            if (delay <= 0) return; // Already passed
+            
+            const timerId = `spa-${spaRequest.id || spaRequest._id || startDate.getTime()}`;
+            if (spaReminderTimers[timerId]) {
+                clearTimeout(spaReminderTimers[timerId]);
+            }
+            
+            spaReminderTimers[timerId] = setTimeout(() => {
+                playNotificationSound();
+                
+                if (Notification.permission === 'granted') {
+                    const serviceName = spaRequest.serviceName || t('spa');
+                    new Notification(t('spaReservation'), {
+                        body: `${serviceName} - ${t('in15Minutes')}`,
+                        icon: '/icon-192.png',
+                        badge: '/icon-192.png',
+                        tag: timerId
+                    });
+                }
+                delete spaReminderTimers[timerId];
             }, delay);
         }
 
