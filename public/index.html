@@ -3421,16 +3421,273 @@
     <input type="file" id="galleryInput" accept="image/*" class="hidden-input">
 
     <script>
-        // Configuration
-        let ROOM_NUMBER = null;
-        let GUEST_NAME = 'Misafir';
-        let GUEST_SURNAME = null;
-        let GUEST_UNIQUE_ID = null;
-        let CHECKIN_DATE = null;
-        let IS_AUTHENTICATED = false; // Session state
-        let CHECKOUT_DATE = null;
-        let TEAM_ID = null;
-        const SERVER_URL = window.location.origin;
+        // ============================================
+        // CENTRALIZED STATE MANAGEMENT - AppState
+        // ============================================
+        
+        const AppState = (() => {
+            // Private state object
+            const state = {
+                // Authentication & User Profile
+                auth: {
+                    uniqueId: localStorage.getItem('guest_unique_id') || null,
+                    name: localStorage.getItem('guest_name') || 'Misafir',
+                    surname: localStorage.getItem('guest_surname') || null,
+                    roomNumber: localStorage.getItem('room_number') || null,
+                    checkinDate: localStorage.getItem('checkin_date') || null,
+                    checkoutDate: localStorage.getItem('checkout_date') || null,
+                    teamId: localStorage.getItem('team_id') || null,
+                    isAuthenticated: false,
+                    profilePhoto: null,
+                    teamAvatar: null,
+                    infoLoaded: false
+                },
+                
+                // Network & Communication
+                network: {
+                    socket: null,
+                    isTyping: false,
+                    typingTimeout: null,
+                    connectionTimeout: null,
+                    serverUrl: window.location.origin
+                },
+                
+                // Activities & Timeline
+                activities: {
+                    currentDate: new Date().toISOString().split('T')[0],
+                    currentCategory: 'All',
+                    data: []
+                },
+                
+                // Daily Program & Reminders
+                dailyProgram: {
+                    // Constants
+                    START_HOUR: 6,
+                    END_HOUR: 23,
+                    HOUR_WIDTH: 120,
+                    EVENT_HEIGHT: 92,
+                    EVENT_GAP: 12,
+                    
+                    // Runtime data
+                    reminderTimers: {},
+                    eventCache: {},
+                    hiddenEvents: JSON.parse(localStorage.getItem('dailyProgramHiddenEvents') || '[]'),
+                    reminders: JSON.parse(localStorage.getItem('dailyProgramReminders') || '{}')
+                },
+                
+                // Reminders (Restaurant & Spa)
+                reminders: {
+                    restaurant: {},
+                    spa: {}
+                },
+                
+                // Localization
+                localization: {
+                    currentLanguage: localStorage.getItem('appLanguage') || 'tr',
+                    translations: {} // Will be populated later
+                },
+                
+                // Booking State
+                booking: {
+                    spa: {
+                        step: 'service',
+                        serviceId: null,
+                        date: null,
+                        slot: null,
+                        therapistId: null,
+                        note: ''
+                    },
+                    restaurant: {
+                        allDates: [],
+                        currentDateIndex: 0,
+                        selectedDateElement: null,
+                        selectedDate: null,
+                        dateRange: null
+                    }
+                }
+            };
+            
+            // Event listeners for state changes
+            const listeners = {};
+            
+            // Public API
+            return {
+                // Get nested property (e.g., 'auth.uniqueId')
+                get(path) {
+                    const keys = path.split('.');
+                    let value = state;
+                    for (const key of keys) {
+                        value = value?.[key];
+                    }
+                    return value;
+                },
+                
+                // Set nested property with localStorage sync
+                set(path, value) {
+                    const keys = path.split('.');
+                    const lastKey = keys.pop();
+                    let target = state;
+                    
+                    for (const key of keys) {
+                        target = target[key];
+                    }
+                    
+                    target[lastKey] = value;
+                    
+                    // Auto-sync critical data to localStorage
+                    this.syncToLocalStorage(path, value);
+                    
+                    // Notify listeners
+                    this.notify(path, value);
+                    
+                    return value;
+                },
+                
+                // Direct access to state (for complex operations)
+                getState() {
+                    return state;
+                },
+                
+                // Subscribe to state changes
+                on(path, callback) {
+                    if (!listeners[path]) listeners[path] = [];
+                    listeners[path].push(callback);
+                },
+                
+                // Notify listeners
+                notify(path, value) {
+                    listeners[path]?.forEach(cb => cb(value));
+                },
+                
+                // Sync to localStorage
+                syncToLocalStorage(path, value) {
+                    const syncMap = {
+                        'auth.uniqueId': 'guest_unique_id',
+                        'auth.name': 'guest_name',
+                        'auth.surname': 'guest_surname',
+                        'auth.roomNumber': 'room_number',
+                        'auth.checkinDate': 'checkin_date',
+                        'auth.checkoutDate': 'checkout_date',
+                        'auth.teamId': 'team_id',
+                        'localization.currentLanguage': 'appLanguage',
+                        'dailyProgram.hiddenEvents': 'dailyProgramHiddenEvents',
+                        'dailyProgram.reminders': 'dailyProgramReminders'
+                    };
+                    
+                    const storageKey = syncMap[path];
+                    if (storageKey) {
+                        if (value === null || value === undefined) {
+                            localStorage.removeItem(storageKey);
+                        } else if (typeof value === 'object') {
+                            localStorage.setItem(storageKey, JSON.stringify(value));
+                        } else {
+                            localStorage.setItem(storageKey, value);
+                        }
+                    }
+                },
+                
+                // Clear all auth data (logout)
+                clearAuth() {
+                    state.auth = {
+                        uniqueId: null,
+                        name: 'Misafir',
+                        surname: null,
+                        roomNumber: null,
+                        checkinDate: null,
+                        checkoutDate: null,
+                        teamId: null,
+                        isAuthenticated: false,
+                        profilePhoto: null,
+                        teamAvatar: null,
+                        infoLoaded: false
+                    };
+                    
+                    // Clear localStorage
+                    ['guest_unique_id', 'guest_name', 'guest_surname', 'room_number', 
+                     'checkin_date', 'checkout_date', 'team_id'].forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+                }
+            };
+        })();
+        
+        // ============================================
+        // LEGACY COMPATIBILITY LAYER (Backward Compatibility)
+        // Bu değişkenler kod içinde hala kullanılıyor, AppState'e proxy olarak çalışırlar
+        // ============================================
+        
+        Object.defineProperty(window, 'GUEST_UNIQUE_ID', {
+            get: () => AppState.get('auth.uniqueId'),
+            set: (val) => AppState.set('auth.uniqueId', val)
+        });
+        
+        Object.defineProperty(window, 'GUEST_NAME', {
+            get: () => AppState.get('auth.name'),
+            set: (val) => AppState.set('auth.name', val)
+        });
+        
+        Object.defineProperty(window, 'GUEST_SURNAME', {
+            get: () => AppState.get('auth.surname'),
+            set: (val) => AppState.set('auth.surname', val)
+        });
+        
+        Object.defineProperty(window, 'ROOM_NUMBER', {
+            get: () => AppState.get('auth.roomNumber'),
+            set: (val) => AppState.set('auth.roomNumber', val)
+        });
+        
+        Object.defineProperty(window, 'CHECKIN_DATE', {
+            get: () => AppState.get('auth.checkinDate'),
+            set: (val) => AppState.set('auth.checkinDate', val)
+        });
+        
+        Object.defineProperty(window, 'CHECKOUT_DATE', {
+            get: () => AppState.get('auth.checkoutDate'),
+            set: (val) => AppState.set('auth.checkoutDate', val)
+        });
+        
+        Object.defineProperty(window, 'TEAM_ID', {
+            get: () => AppState.get('auth.teamId'),
+            set: (val) => AppState.set('auth.teamId', val)
+        });
+        
+        Object.defineProperty(window, 'IS_AUTHENTICATED', {
+            get: () => AppState.get('auth.isAuthenticated'),
+            set: (val) => AppState.set('auth.isAuthenticated', val)
+        });
+        
+        const SERVER_URL = AppState.get('network.serverUrl');
+        
+        // Legacy proxy for socket
+        Object.defineProperty(window, 'socket', {
+            get: () => AppState.get('network.socket'),
+            set: (val) => AppState.set('network.socket', val)
+        });
+        
+        Object.defineProperty(window, 'isTyping', {
+            get: () => AppState.get('network.isTyping'),
+            set: (val) => AppState.set('network.isTyping', val)
+        });
+        
+        Object.defineProperty(window, 'typingTimeout', {
+            get: () => AppState.get('network.typingTimeout'),
+            set: (val) => AppState.set('network.typingTimeout', val)
+        });
+        
+        Object.defineProperty(window, 'guestProfilePhoto', {
+            get: () => AppState.get('auth.profilePhoto'),
+            set: (val) => AppState.set('auth.profilePhoto', val)
+        });
+        
+        Object.defineProperty(window, 'teamAvatar', {
+            get: () => AppState.get('auth.teamAvatar'),
+            set: (val) => AppState.set('auth.teamAvatar', val)
+        });
+        
+        Object.defineProperty(window, 'guestInfoLoaded', {
+            get: () => AppState.get('auth.infoLoaded'),
+            set: (val) => AppState.set('auth.infoLoaded', val)
+        });
 
         // Check guest authentication
         async function checkGuestAuth() {
@@ -3639,7 +3896,7 @@
         }
 
         // Load guest info after login
-        let guestInfoLoaded = false;
+        // Removed: Now using AppState.get('auth.infoLoaded')
         
         async function loadGuestInfo() {
             console.log('🔍 Loading guest info...', { GUEST_UNIQUE_ID, GUEST_NAME, GUEST_SURNAME, CHECKIN_DATE, CHECKOUT_DATE });
@@ -3747,8 +4004,7 @@
         }
 
         // Profile Photo Management
-        let guestProfilePhoto = null;
-        let teamAvatar = null;
+        // Removed: Now using AppState.get('auth.profilePhoto') and AppState.get('auth.teamAvatar')
 
         // Load profile photo from backend
         async function loadProfilePhoto() {
@@ -4083,9 +4339,7 @@
         }
 
         // Socket.IO Connection - Wait for guest info to load first
-        let socket = null;
-        let isTyping = false;
-        let typingTimeout;
+        // Removed: Now using AppState.get('network.socket'), AppState.get('network.isTyping'), AppState.get('network.typingTimeout')
 
         // Initialize socket after guest info is loaded
         async function initializeSocket() {
@@ -8643,13 +8897,8 @@
         // ============================================
         // SPA Booking Wizard State
         // ============================================
-        let spaBookingState = {
-            selectedService: null,
-            selectedDate: null,
-            selectedSlot: null,
-            selectedTherapist: null,
-            note: ''
-        };
+        // Removed: Now using AppState.getState().booking.spa
+        const spaBookingState = AppState.getState().booking.spa;
 
         // ============================================
         // SPA Booking Wizard Functions
@@ -12198,7 +12447,11 @@
         }
 
         // ========== ÇEVİRİ SİSTEMİ ==========
-        let currentLanguage = localStorage.getItem('appLanguage') || 'tr';
+        // Removed: Now using AppState.get('localization.currentLanguage')
+        Object.defineProperty(window, 'currentLanguage', {
+            get: () => AppState.get('localization.currentLanguage'),
+            set: (val) => AppState.set('localization.currentLanguage', val)
+        });
         
         const translations = {
             tr: {
@@ -12865,8 +13118,7 @@
         }
         
         function changeLanguage(lang) {
-            currentLanguage = lang;
-            localStorage.setItem('appLanguage', lang);
+            AppState.set('localization.currentLanguage', lang);
             applyTranslations();
             // Update location permission status when language changes
             if (typeof updateLocationPermissionStatus === 'function') {
@@ -12893,9 +13145,21 @@
         // Activities Timeline Functions
         // ============================================
 
-        let currentActivityDate = new Date().toISOString().split('T')[0]; // Default: today's date
-        let currentActivityCategory = 'All'; // Backend category value
-        let activitiesData = [];
+        // Removed: Now using AppState
+        Object.defineProperty(window, 'currentActivityDate', {
+            get: () => AppState.get('activities.currentDate'),
+            set: (val) => AppState.set('activities.currentDate', val)
+        });
+        
+        Object.defineProperty(window, 'currentActivityCategory', {
+            get: () => AppState.get('activities.currentCategory'),
+            set: (val) => AppState.set('activities.currentCategory', val)
+        });
+        
+        Object.defineProperty(window, 'activitiesData', {
+            get: () => AppState.get('activities.data'),
+            set: (val) => AppState.set('activities.data', val)
+        });
 
         // Format time
         function formatTime(timeString) {
@@ -13109,13 +13373,14 @@
             renderDailyProgramTimeline();
         }
 
-        const DAILY_PROGRAM_START_HOUR = 6;
-        const DAILY_PROGRAM_END_HOUR = 23;
-        const DAILY_PROGRAM_HOUR_WIDTH = 120;
-        const DAILY_PROGRAM_EVENT_HEIGHT = 92;
-        const DAILY_PROGRAM_EVENT_GAP = 12;
-        const dailyProgramReminderTimers = {};
-        let dailyProgramEventCache = {};
+        // Removed: Now using AppState.get('dailyProgram.*')
+        const DAILY_PROGRAM_START_HOUR = AppState.get('dailyProgram.START_HOUR');
+        const DAILY_PROGRAM_END_HOUR = AppState.get('dailyProgram.END_HOUR');
+        const DAILY_PROGRAM_HOUR_WIDTH = AppState.get('dailyProgram.HOUR_WIDTH');
+        const DAILY_PROGRAM_EVENT_HEIGHT = AppState.get('dailyProgram.EVENT_HEIGHT');
+        const DAILY_PROGRAM_EVENT_GAP = AppState.get('dailyProgram.EVENT_GAP');
+        const dailyProgramReminderTimers = AppState.getState().dailyProgram.reminderTimers;
+        const dailyProgramEventCache = AppState.getState().dailyProgram.eventCache;
 
         function getStoredArray(key) {
             try {
@@ -13479,7 +13744,8 @@
         }
 
         // Schedule restaurant reservation reminder (15 minutes before)
-        const restaurantReminderTimers = {};
+        // Removed: Now using AppState.getState().reminders.restaurant
+        const restaurantReminderTimers = AppState.getState().reminders.restaurant;
         
         function scheduleRestaurantReminder(reservation) {
             if (!reservation || !reservation.reservation_date) return;
@@ -13512,7 +13778,8 @@
         }
 
         // Schedule spa reservation reminder (15 minutes before)
-        const spaReminderTimers = {};
+        // Removed: Now using AppState.getState().reminders.spa
+        const spaReminderTimers = AppState.getState().reminders.spa;
         
         function scheduleSpaReminder(spaRequest) {
             if (!spaRequest || !spaRequest.start) return;
