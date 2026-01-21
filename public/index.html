@@ -11123,8 +11123,55 @@
                 // Generate all dates from today to checkout - 1 (excluding checkout day)
                 const allDates = [];
                 let currentDate = new Date(from);
+                
+                // Fetch restaurants once to check cutoff times for today
+                let restaurantsForCutoffCheck = [];
+                try {
+                    const restaurantsResponse = await fetch('/restaurants');
+                    if (restaurantsResponse.ok) {
+                        const restaurantsResult = await restaurantsResponse.json();
+                        restaurantsForCutoffCheck = restaurantsResult.success && restaurantsResult.data ? restaurantsResult.data : [];
+                    }
+                } catch (error) {
+                    console.error('Error fetching restaurants for cutoff check:', error);
+                }
+                
                 while (currentDate <= to) {
-                    allDates.push(new Date(currentDate));
+                    const dateToCheck = new Date(currentDate);
+                    const isCheckingToday = dateToCheck.toDateString() === today.toDateString();
+                    
+                    // If it's today, check if ALL restaurants have passed their cutoff time
+                    let includeTodayDate = true;
+                    if (isCheckingToday && restaurantsForCutoffCheck.length > 0) {
+                        // Check if at least ONE restaurant is still available today
+                        const hasAvailableRestaurant = restaurantsForCutoffCheck.some(r => {
+                            if (r.active === false) return false;
+                            
+                            const rules = r.rules_json || {};
+                            const cutoffMinutes = rules.cutoff_minutes || 120;
+                            const openingHour = r.opening_hour;
+                            
+                            if (!openingHour) return false;
+                            
+                            const [hour, minute] = openingHour.split(':').map(Number);
+                            const earliestSessionTime = new Date();
+                            earliestSessionTime.setHours(hour, minute, 0, 0);
+                            const cutoffTime = new Date(earliestSessionTime.getTime() - (cutoffMinutes * 60 * 1000));
+                            const now = new Date();
+                            
+                            return now <= cutoffTime; // Restaurant still available
+                        });
+                        
+                        // If NO restaurant is available today, don't include today
+                        if (!hasAvailableRestaurant) {
+                            includeTodayDate = false;
+                        }
+                    }
+                    
+                    if (includeTodayDate) {
+                        allDates.push(new Date(currentDate));
+                    }
+                    
                     currentDate.setDate(currentDate.getDate() + 1);
                 }
                 
