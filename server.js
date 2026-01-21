@@ -6183,6 +6183,8 @@ app.get('/admin/restaurants/:id', async (req, res) => {
     restaurant.photos = Array.isArray(restaurant.photos) ? restaurant.photos : (restaurant.photos ? JSON.parse(restaurant.photos) : []);
     restaurant.rules_json = typeof restaurant.rules_json === 'object' ? restaurant.rules_json : (restaurant.rules_json ? JSON.parse(restaurant.rules_json) : {});
     
+    console.log('⚡ ABOUT TO SEND RESPONSE:', JSON.stringify(restaurant, null, 2));
+    
     res.json({ success: true, data: restaurant });
   } catch (error) {
     console.error('Error fetching restaurant:', error);
