@@ -6563,6 +6563,32 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
   }
 });
 
+// Get guest info (for prefilling forms)
+app.get('/api/guest-info', async (req, res) => {
+  try {
+    const { guest_unique_id } = req.query;
+    
+    if (!guest_unique_id) {
+      return res.status(400).json({ success: false, error: 'guest_unique_id is required' });
+    }
+    
+    const result = await pool.query(`
+      SELECT adult_count, child_count, room_no
+      FROM rooms
+      WHERE guest_unique_id = $1
+    `, [guest_unique_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Guest not found' });
+    }
+    
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching guest info:', error);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
 // Create restaurant reservation (guest)
 app.post('/reservations', async (req, res) => {
   try {
@@ -6576,10 +6602,12 @@ app.post('/reservations', async (req, res) => {
     }
     
     // Get guest info to determine adult/child count if not provided
+    // Only fetch from database if values are explicitly undefined or null
+    // 0 is a valid value (e.g., no children)
     let adultCount = pax_adult;
-    let childCount = pax_child || 0;
+    let childCount = pax_child;
     
-    if (!adultCount || !childCount) {
+    if (adultCount === undefined || adultCount === null || childCount === undefined || childCount === null) {
       const guestResult = await pool.query(`
         SELECT adult_count, child_count
         FROM rooms
@@ -6587,11 +6615,15 @@ app.post('/reservations', async (req, res) => {
       `, [guest_unique_id]);
       
       if (guestResult.rows.length > 0) {
-        adultCount = adultCount || guestResult.rows[0].adult_count || 1;
-        childCount = childCount || guestResult.rows[0].child_count || 0;
+        if (adultCount === undefined || adultCount === null) {
+          adultCount = guestResult.rows[0].adult_count || 1;
+        }
+        if (childCount === undefined || childCount === null) {
+          childCount = guestResult.rows[0].child_count || 0;
+        }
       } else {
-        adultCount = adultCount || 1;
-        childCount = childCount || 0;
+        adultCount = adultCount !== undefined && adultCount !== null ? adultCount : 1;
+        childCount = childCount !== undefined && childCount !== null ? childCount : 0;
       }
     }
     

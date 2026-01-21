@@ -11877,7 +11877,7 @@
         
         // Open restaurant reservation modal
         // MOVED TO AppState.booking.restaurant.currentForReservation
-        function openRestaurantReservationModal(restaurantId, restaurantName, selectedDate) {
+        async function openRestaurantReservationModal(restaurantId, restaurantName, selectedDate) {
             // If no date provided, default to today
             const reservationDate = selectedDate || new Date().toISOString().split('T')[0];
             currentRestaurantForReservation = { id: restaurantId, name: restaurantName, date: reservationDate };
@@ -11894,14 +11894,32 @@
                     dateInput.value = reservationDate;
                 }
                 
-                // Set default values from guest info
+                // Fetch guest info from backend to prefill form with room details
                 const adultInput = document.getElementById('reservation-pax-adult');
                 const childInput = document.getElementById('reservation-pax-child');
-                if (adultInput) {
-                    adultInput.value = 1;
-                }
-                if (childInput) {
-                    childInput.value = 0;
+                
+                try {
+                    const guestResponse = await fetch(`/api/guest-info?guest_unique_id=${encodeURIComponent(GUEST_UNIQUE_ID)}`);
+                    if (guestResponse.ok) {
+                        const guestData = await guestResponse.json();
+                        if (guestData.success && guestData.data) {
+                            if (adultInput) {
+                                adultInput.value = guestData.data.adult_count || 1;
+                            }
+                            if (childInput) {
+                                childInput.value = guestData.data.child_count || 0;
+                            }
+                        }
+                    } else {
+                        // Fallback to defaults if API fails
+                        if (adultInput) adultInput.value = 1;
+                        if (childInput) childInput.value = 0;
+                    }
+                } catch (error) {
+                    console.error('Error fetching guest info:', error);
+                    // Fallback to defaults
+                    if (adultInput) adultInput.value = 1;
+                    if (childInput) childInput.value = 0;
                 }
                 
                 modal.style.display = 'flex';
