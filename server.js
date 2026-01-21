@@ -6173,6 +6173,13 @@ app.get('/admin/restaurants/:id', async (req, res) => {
     }
     
     const restaurant = result.rows[0];
+    
+    // 🔍 DEBUG: PostgreSQL'den gelen RAW veriyi logla
+    console.log('🔍 Raw restaurant from DB:', restaurant);
+    console.log('🕐 opening_hour:', restaurant.opening_hour);
+    console.log('🕐 closing_hour:', restaurant.closing_hour);
+    console.log('🔑 All keys:', Object.keys(restaurant));
+    
     restaurant.photos = Array.isArray(restaurant.photos) ? restaurant.photos : (restaurant.photos ? JSON.parse(restaurant.photos) : []);
     restaurant.rules_json = typeof restaurant.rules_json === 'object' ? restaurant.rules_json : (restaurant.rules_json ? JSON.parse(restaurant.rules_json) : {});
     
