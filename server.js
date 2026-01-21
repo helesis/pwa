@@ -6492,6 +6492,77 @@ app.get('/restaurants', async (req, res) => {
   }
 });
 
+// Check restaurant availability for a specific date
+app.get('/api/restaurants/check-availability', async (req, res) => {
+  try {
+    const { date, restaurant_ids } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({ success: false, error: 'Date is required' });
+    }
+    
+    // Parse restaurant IDs (comma-separated)
+    const restaurantIdsArray = restaurant_ids ? restaurant_ids.split(',').map(id => parseInt(id)) : [];
+    
+    if (restaurantIdsArray.length === 0) {
+      return res.json({ success: true, data: {} });
+    }
+    
+    // Get all reservations for the given date and restaurants
+    const reservationsResult = await pool.query(`
+      SELECT 
+        restaurant_id,
+        SUM(pax_adult + pax_child) as total_pax
+      FROM restaurant_reservations
+      WHERE reservation_date = $1
+        AND restaurant_id = ANY($2::int[])
+        AND status != 'cancelled'
+        AND deleted_at IS NULL
+      GROUP BY restaurant_id
+    `, [date, restaurantIdsArray]);
+    
+    // Get restaurant capacity info
+    const restaurantsResult = await pool.query(`
+      SELECT id, rules_json
+      FROM restaurants
+      WHERE id = ANY($1::int[])
+        AND deleted_at IS NULL
+    `, [restaurantIdsArray]);
+    
+    // Build availability map
+    const availabilityMap = {};
+    
+    restaurantsResult.rows.forEach(restaurant => {
+      const rules = restaurant.rules_json || {};
+      const tableSetup = rules.table_setup || [];
+      
+      // Calculate total capacity
+      let totalCapacity = 0;
+      tableSetup.forEach(table => {
+        const capacity = table.capacity || 0;
+        const count = table.count || 0;
+        totalCapacity += capacity * count;
+      });
+      
+      // Get current reservations
+      const reservation = reservationsResult.rows.find(r => r.restaurant_id === restaurant.id);
+      const currentPax = reservation ? parseInt(reservation.total_pax) : 0;
+      
+      availabilityMap[restaurant.id] = {
+        total_capacity: totalCapacity,
+        reserved_pax: currentPax,
+        available_capacity: totalCapacity - currentPax,
+        is_full: currentPax >= totalCapacity
+      };
+    });
+    
+    res.json({ success: true, data: availabilityMap });
+  } catch (error) {
+    console.error('Error checking restaurant availability:', error);
+    res.status(500).json({ success: false, error: 'Database error: ' + error.message });
+  }
+});
+
 // Create restaurant reservation (guest)
 app.post('/reservations', async (req, res) => {
   try {

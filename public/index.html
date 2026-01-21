@@ -11649,9 +11649,30 @@
                 selectedDateObj.setHours(0, 0, 0, 0);
                 const isToday = selectedDateObj.getTime() === today.getTime();
                 
+                // Check capacity for all restaurants on selected date
+                let capacityMap = {};
+                try {
+                    const restaurantIds = restaurants.map(r => r.id).join(',');
+                    const capacityResponse = await fetch(`/api/restaurants/check-availability?date=${selectedDate}&restaurant_ids=${restaurantIds}`);
+                    if (capacityResponse.ok) {
+                        const capacityResult = await capacityResponse.json();
+                        if (capacityResult.success) {
+                            capacityMap = capacityResult.data;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking restaurant capacity:', error);
+                }
+                
                 const availableRestaurants = restaurants.filter(r => {
                     // Filter out inactive restaurants
                     if (r.active === false) return false;
+                    
+                    // Check if restaurant is full (capacity check)
+                    const capacityInfo = capacityMap[r.id];
+                    if (capacityInfo && capacityInfo.is_full) {
+                        return false; // Restaurant is full, exclude it
+                    }
                     
                     // If selected date is today, check cutoff time
                     if (isToday) {
