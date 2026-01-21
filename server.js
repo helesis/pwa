@@ -6157,6 +6157,7 @@ app.get('/admin/restaurants', async (req, res) => {
 
 // Get single restaurant (admin)
 app.get('/admin/restaurants/:id', async (req, res) => {
+  console.log('🚨 GET /admin/restaurants/:id CALLED - ID:', req.params.id);
   try {
     const { id } = req.params;
     const result = await pool.query(`
