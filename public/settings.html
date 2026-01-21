@@ -5122,6 +5122,12 @@
                     
                     if (result.success && result.data) {
                         const restaurant = result.data;
+                        
+                        // 🔍 DEBUG: Gelen veriyi konsola yazdır
+                        console.log('🔍 Restaurant data:', restaurant);
+                        console.log('🕐 Opening hour:', restaurant.opening_hour, '(type:', typeof restaurant.opening_hour, ')');
+                        console.log('🕐 Closing hour:', restaurant.closing_hour, '(type:', typeof restaurant.closing_hour, ')');
+                        
                         document.getElementById('restaurant-name').value = restaurant.name || '';
                         document.getElementById('restaurant-description').value = restaurant.description || '';
                         document.getElementById('restaurant-active').checked = restaurant.active !== false;
