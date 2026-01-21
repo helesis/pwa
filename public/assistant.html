@@ -970,12 +970,134 @@
 
 
     <script>
-        let ASSISTANT_ID = null; // Will be set after login
-        let ASSISTANT_AVATAR = null; // Assistant avatar for chat messages
-        let ASSISTANT_NAME = null; // Assistant name
-        let ASSISTANT_SURNAME = null; // Assistant surname
-        let ASSISTANT_TEAM_NAME = null; // Assistant team name
-        const SERVER_URL = window.location.origin;
+        // ============================================
+        // CENTRALIZED STATE MANAGEMENT - AppState
+        // ============================================
+        
+        const AppState = (() => {
+            const state = {
+                assistant: {
+                    id: null,
+                    avatar: null,
+                    name: null,
+                    surname: null,
+                    teamName: null
+                },
+                network: {
+                    serverUrl: window.location.origin,
+                    socket: null
+                },
+                chat: {
+                    currentRoom: null,
+                    currentRoomNumber: null,
+                    currentCheckinDate: null,
+                    currentGuestUniqueId: null
+                },
+                // Messaging System
+                messaging: {
+                    observer: null
+                },
+                // UI State
+                ui: {
+                    roomTimeUpdateInterval: null,
+                    inviteData: null
+                }
+            };
+            
+            return {
+                get(path) {
+                    const keys = path.split('.');
+                    let value = state;
+                    for (const key of keys) {
+                        value = value?.[key];
+                    }
+                    return value;
+                },
+                
+                set(path, value) {
+                    const keys = path.split('.');
+                    const lastKey = keys.pop();
+                    let target = state;
+                    
+                    for (const key of keys) {
+                        target = target[key];
+                    }
+                    
+                    target[lastKey] = value;
+                    return value;
+                },
+                
+                getState() {
+                    return state;
+                }
+            };
+        })();
+        
+        // Legacy compatibility layer
+        Object.defineProperty(window, 'ASSISTANT_ID', {
+            get: () => AppState.get('assistant.id'),
+            set: (val) => AppState.set('assistant.id', val)
+        });
+        
+        Object.defineProperty(window, 'ASSISTANT_AVATAR', {
+            get: () => AppState.get('assistant.avatar'),
+            set: (val) => AppState.set('assistant.avatar', val)
+        });
+        
+        Object.defineProperty(window, 'ASSISTANT_NAME', {
+            get: () => AppState.get('assistant.name'),
+            set: (val) => AppState.set('assistant.name', val)
+        });
+        
+        Object.defineProperty(window, 'ASSISTANT_SURNAME', {
+            get: () => AppState.get('assistant.surname'),
+            set: (val) => AppState.set('assistant.surname', val)
+        });
+        
+        Object.defineProperty(window, 'ASSISTANT_TEAM_NAME', {
+            get: () => AppState.get('assistant.teamName'),
+            set: (val) => AppState.set('assistant.teamName', val)
+        });
+        
+        const SERVER_URL = AppState.get('network.serverUrl');
+        
+        // Chat room state proxies
+        Object.defineProperty(window, 'currentRoom', {
+            get: () => AppState.get('chat.currentRoom'),
+            set: (val) => AppState.set('chat.currentRoom', val)
+        });
+        
+        Object.defineProperty(window, 'currentRoomNumber', {
+            get: () => AppState.get('chat.currentRoomNumber'),
+            set: (val) => AppState.set('chat.currentRoomNumber', val)
+        });
+        
+        Object.defineProperty(window, 'currentCheckinDate', {
+            get: () => AppState.get('chat.currentCheckinDate'),
+            set: (val) => AppState.set('chat.currentCheckinDate', val)
+        });
+        
+        Object.defineProperty(window, 'currentGuestUniqueId', {
+            get: () => AppState.get('chat.currentGuestUniqueId'),
+            set: (val) => AppState.set('chat.currentGuestUniqueId', val)
+        });
+        
+        // Messaging system proxies
+        Object.defineProperty(window, 'messageObserver', {
+            get: () => AppState.get('messaging.observer'),
+            set: (val) => AppState.set('messaging.observer', val)
+        });
+        
+        // UI state proxies
+        Object.defineProperty(window, 'roomTimeUpdateInterval', {
+            get: () => AppState.get('ui.roomTimeUpdateInterval'),
+            set: (val) => AppState.set('ui.roomTimeUpdateInterval', val)
+        });
+        
+        Object.defineProperty(window, 'inviteData', {
+            get: () => AppState.get('ui.inviteData'),
+            set: (val) => AppState.set('ui.inviteData', val)
+        });
 
         // Check authentication on page load
         async function checkAuth() {
@@ -1252,11 +1374,9 @@
             }
         }
         
-        let currentRoom = null;
-        let currentRoomNumber = null;
-        let currentCheckinDate = null;
-        let currentGuestUniqueId = null;
-        let inviteData = null;
+        // MOVED TO AppState.chat namespace
+        // Access via proxies: currentRoom, currentRoomNumber, etc.
+        // MOVED TO AppState.ui.inviteData
 
         // Date filter removed - rooms are now shown based on checkout date and last message time
         // Hide date filter container
@@ -1475,7 +1595,7 @@
         }
 
         // Update room times periodically
-        let roomTimeUpdateInterval = null;
+        // MOVED TO AppState.ui.roomTimeUpdateInterval
         function startRoomTimeUpdates() {
             if (roomTimeUpdateInterval) {
                 clearInterval(roomTimeUpdateInterval);
@@ -2083,7 +2203,7 @@
         }
         
         // Intersection Observer for read status
-        let messageObserver = null;
+        // MOVED TO AppState.messaging.observer
         
         function initMessageObserver() {
             const chatContainer = document.getElementById('chatContainer');

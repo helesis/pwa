@@ -3487,6 +3487,49 @@
                     translations: {} // Will be populated later
                 },
                 
+                // Messaging System
+                messaging: {
+                    observer: null,
+                    isLoadingOlder: false,
+                    oldestTimestamp: null
+                },
+                
+                // Map & Location
+                map: {
+                    instance: null,
+                    markers: {
+                        user: null,
+                        hotel: null,
+                        others: {},
+                        activities: [],
+                        search: [],
+                        temp: null
+                    },
+                    location: {
+                        watchId: null,
+                        lastUpdateTime: null,
+                        updateInterval: null,
+                        permissionState: null,
+                        isCreatingUserMarker: false
+                    },
+                    animation: {
+                        hasPlayedCinematic: false
+                    },
+                    data: {
+                        locations: {},
+                        searchTimeout: null
+                    },
+                    config: {
+                        token: 'pk.eyJ1IjoiYWxpbXVyc2l0IiwiYSI6ImNtazRnYTRjZjAwa2IzZXF2cWJnaW9ocDcifQ.EL6OVUXoR22l0vrNPzVyoQ'
+                    }
+                },
+                
+                // Avatar System
+                avatar: {
+                    style: 'avataaars',
+                    seed: null
+                },
+                
                 // Booking State
                 booking: {
                     spa: {
@@ -3495,14 +3538,36 @@
                         date: null,
                         slot: null,
                         therapistId: null,
-                        note: ''
+                        note: '',
+                        // Extended SPA state
+                        allDates: [],
+                        currentDateIndex: 0,
+                        selectedDateElement: null,
+                        selectedDate: null,
+                        dateRange: null,
+                        availableServices: [],
+                        currentServiceIndex: 0,
+                        selectedServiceElement: null,
+                        dateSlotsByService: null,
+                        availableTherapists: [],
+                        currentTherapistIndex: 0,
+                        selectedTherapistElement: null,
+                        selectedTherapistId: null,
+                        availabilityDays: [],
+                        currentAvailability: null
                     },
                     restaurant: {
                         allDates: [],
                         currentDateIndex: 0,
                         selectedDateElement: null,
                         selectedDate: null,
-                        dateRange: null
+                        dateRange: null,
+                        // Extended Restaurant state
+                        currentForReservation: null,
+                        availableRestaurants: [],
+                        currentIndex: 0,
+                        selectedRestaurantId: null,
+                        selectedRestaurantElement: null
                     }
                 }
             };
@@ -3687,6 +3752,244 @@
         Object.defineProperty(window, 'guestInfoLoaded', {
             get: () => AppState.get('auth.infoLoaded'),
             set: (val) => AppState.set('auth.infoLoaded', val)
+        });
+        
+        // Messaging system proxies
+        Object.defineProperty(window, 'messageObserver', {
+            get: () => AppState.get('messaging.observer'),
+            set: (val) => AppState.set('messaging.observer', val)
+        });
+        
+        Object.defineProperty(window, 'isLoadingOlderMessages', {
+            get: () => AppState.get('messaging.isLoadingOlder'),
+            set: (val) => AppState.set('messaging.isLoadingOlder', val)
+        });
+        
+        Object.defineProperty(window, 'oldestMessageTimestamp', {
+            get: () => AppState.get('messaging.oldestTimestamp'),
+            set: (val) => AppState.set('messaging.oldestTimestamp', val)
+        });
+        
+        // Map system proxies
+        Object.defineProperty(window, 'map', {
+            get: () => AppState.get('map.instance'),
+            set: (val) => AppState.set('map.instance', val)
+        });
+        
+        Object.defineProperty(window, 'userMarker', {
+            get: () => AppState.get('map.markers.user'),
+            set: (val) => AppState.set('map.markers.user', val)
+        });
+        
+        Object.defineProperty(window, 'hotelMarker', {
+            get: () => AppState.get('map.markers.hotel'),
+            set: (val) => AppState.set('map.markers.hotel', val)
+        });
+        
+        Object.defineProperty(window, 'otherUsersMarkers', {
+            get: () => AppState.get('map.markers.others'),
+            set: (val) => AppState.set('map.markers.others', val)
+        });
+        
+        Object.defineProperty(window, 'activityMarkers', {
+            get: () => AppState.get('map.markers.activities'),
+            set: (val) => AppState.set('map.markers.activities', val)
+        });
+        
+        Object.defineProperty(window, 'searchMarkers', {
+            get: () => AppState.get('map.markers.search'),
+            set: (val) => AppState.set('map.markers.search', val)
+        });
+        
+        Object.defineProperty(window, 'tempMarker', {
+            get: () => AppState.get('map.markers.temp'),
+            set: (val) => AppState.set('map.markers.temp', val)
+        });
+        
+        Object.defineProperty(window, 'userLocationWatchId', {
+            get: () => AppState.get('map.location.watchId'),
+            set: (val) => AppState.set('map.location.watchId', val)
+        });
+        
+        Object.defineProperty(window, 'lastLocationUpdateTime', {
+            get: () => AppState.get('map.location.lastUpdateTime'),
+            set: (val) => AppState.set('map.location.lastUpdateTime', val)
+        });
+        
+        Object.defineProperty(window, 'locationUpdateInterval', {
+            get: () => AppState.get('map.location.updateInterval'),
+            set: (val) => AppState.set('map.location.updateInterval', val)
+        });
+        
+        Object.defineProperty(window, 'permissionState', {
+            get: () => AppState.get('map.location.permissionState'),
+            set: (val) => AppState.set('map.location.permissionState', val)
+        });
+        
+        Object.defineProperty(window, 'isCreatingUserMarker', {
+            get: () => AppState.get('map.location.isCreatingUserMarker'),
+            set: (val) => AppState.set('map.location.isCreatingUserMarker', val)
+        });
+        
+        Object.defineProperty(window, 'hasPlayedCinematicAnimation', {
+            get: () => AppState.get('map.animation.hasPlayedCinematic'),
+            set: (val) => AppState.set('map.animation.hasPlayedCinematic', val)
+        });
+        
+        Object.defineProperty(window, 'mapLocationsData', {
+            get: () => AppState.get('map.data.locations'),
+            set: (val) => AppState.set('map.data.locations', val)
+        });
+        
+        Object.defineProperty(window, 'searchTimeout', {
+            get: () => AppState.get('map.data.searchTimeout'),
+            set: (val) => AppState.set('map.data.searchTimeout', val)
+        });
+        
+        const MAPBOX_TOKEN = AppState.get('map.config.token');
+        
+        // Avatar system proxies
+        Object.defineProperty(window, 'currentAvatarStyle', {
+            get: () => AppState.get('avatar.style'),
+            set: (val) => AppState.set('avatar.style', val)
+        });
+        
+        Object.defineProperty(window, 'currentAvatarSeed', {
+            get: () => AppState.get('avatar.seed'),
+            set: (val) => AppState.set('avatar.seed', val)
+        });
+        
+        // Restaurant booking proxies
+        Object.defineProperty(window, 'currentRestaurantForReservation', {
+            get: () => AppState.get('booking.restaurant.currentForReservation'),
+            set: (val) => AppState.set('booking.restaurant.currentForReservation', val)
+        });
+        
+        // SPA booking system proxies (window.spa*)
+        Object.defineProperty(window, 'spaAllDates', {
+            get: () => AppState.get('booking.spa.allDates'),
+            set: (val) => AppState.set('booking.spa.allDates', val)
+        });
+        
+        Object.defineProperty(window, 'spaCurrentDateIndex', {
+            get: () => AppState.get('booking.spa.currentDateIndex'),
+            set: (val) => AppState.set('booking.spa.currentDateIndex', val)
+        });
+        
+        Object.defineProperty(window, 'spaSelectedDateElement', {
+            get: () => AppState.get('booking.spa.selectedDateElement'),
+            set: (val) => AppState.set('booking.spa.selectedDateElement', val)
+        });
+        
+        Object.defineProperty(window, 'spaSelectedDate', {
+            get: () => AppState.get('booking.spa.selectedDate'),
+            set: (val) => AppState.set('booking.spa.selectedDate', val)
+        });
+        
+        Object.defineProperty(window, 'spaDateRange', {
+            get: () => AppState.get('booking.spa.dateRange'),
+            set: (val) => AppState.set('booking.spa.dateRange', val)
+        });
+        
+        Object.defineProperty(window, 'spaAvailableServices', {
+            get: () => AppState.get('booking.spa.availableServices'),
+            set: (val) => AppState.set('booking.spa.availableServices', val)
+        });
+        
+        Object.defineProperty(window, 'spaCurrentServiceIndex', {
+            get: () => AppState.get('booking.spa.currentServiceIndex'),
+            set: (val) => AppState.set('booking.spa.currentServiceIndex', val)
+        });
+        
+        Object.defineProperty(window, 'spaSelectedServiceElement', {
+            get: () => AppState.get('booking.spa.selectedServiceElement'),
+            set: (val) => AppState.set('booking.spa.selectedServiceElement', val)
+        });
+        
+        Object.defineProperty(window, 'spaSelectedServiceId', {
+            get: () => AppState.get('booking.spa.selectedServiceId'),
+            set: (val) => AppState.set('booking.spa.selectedServiceId', val)
+        });
+        
+        Object.defineProperty(window, 'spaDateSlotsByService', {
+            get: () => AppState.get('booking.spa.dateSlotsByService'),
+            set: (val) => AppState.set('booking.spa.dateSlotsByService', val)
+        });
+        
+        Object.defineProperty(window, 'spaAvailableTherapists', {
+            get: () => AppState.get('booking.spa.availableTherapists'),
+            set: (val) => AppState.set('booking.spa.availableTherapists', val)
+        });
+        
+        Object.defineProperty(window, 'spaCurrentTherapistIndex', {
+            get: () => AppState.get('booking.spa.currentTherapistIndex'),
+            set: (val) => AppState.set('booking.spa.currentTherapistIndex', val)
+        });
+        
+        Object.defineProperty(window, 'spaSelectedTherapistElement', {
+            get: () => AppState.get('booking.spa.selectedTherapistElement'),
+            set: (val) => AppState.set('booking.spa.selectedTherapistElement', val)
+        });
+        
+        Object.defineProperty(window, 'spaSelectedTherapistId', {
+            get: () => AppState.get('booking.spa.selectedTherapistId'),
+            set: (val) => AppState.set('booking.spa.selectedTherapistId', val)
+        });
+        
+        Object.defineProperty(window, 'spaAvailabilityDays', {
+            get: () => AppState.get('booking.spa.availabilityDays'),
+            set: (val) => AppState.set('booking.spa.availabilityDays', val)
+        });
+        
+        Object.defineProperty(window, 'spaCurrentAvailability', {
+            get: () => AppState.get('booking.spa.currentAvailability'),
+            set: (val) => AppState.set('booking.spa.currentAvailability', val)
+        });
+        
+        // Restaurant booking system proxies (window.restaurant*)
+        Object.defineProperty(window, 'restaurantAllDates', {
+            get: () => AppState.get('booking.restaurant.allDates'),
+            set: (val) => AppState.set('booking.restaurant.allDates', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantCurrentDateIndex', {
+            get: () => AppState.get('booking.restaurant.currentDateIndex'),
+            set: (val) => AppState.set('booking.restaurant.currentDateIndex', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantSelectedDateElement', {
+            get: () => AppState.get('booking.restaurant.selectedDateElement'),
+            set: (val) => AppState.set('booking.restaurant.selectedDateElement', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantSelectedDate', {
+            get: () => AppState.get('booking.restaurant.selectedDate'),
+            set: (val) => AppState.set('booking.restaurant.selectedDate', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantDateRange', {
+            get: () => AppState.get('booking.restaurant.dateRange'),
+            set: (val) => AppState.set('booking.restaurant.dateRange', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantAvailableRestaurants', {
+            get: () => AppState.get('booking.restaurant.availableRestaurants'),
+            set: (val) => AppState.set('booking.restaurant.availableRestaurants', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantCurrentIndex', {
+            get: () => AppState.get('booking.restaurant.currentIndex'),
+            set: (val) => AppState.set('booking.restaurant.currentIndex', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantSelectedRestaurantId', {
+            get: () => AppState.get('booking.restaurant.selectedRestaurantId'),
+            set: (val) => AppState.set('booking.restaurant.selectedRestaurantId', val)
+        });
+        
+        Object.defineProperty(window, 'restaurantSelectedRestaurantElement', {
+            get: () => AppState.get('booking.restaurant.selectedRestaurantElement'),
+            set: (val) => AppState.set('booking.restaurant.selectedRestaurantElement', val)
         });
 
         // Check guest authentication
@@ -4809,7 +5112,7 @@
             if (data.senderType !== senderType) {
                 console.warn('⚠️ senderType normalized:', data.senderType, '→', senderType);
             }
-            const time = formatTime(data.timestamp);
+            const time = formatMessageTime(data.timestamp);
             
             // Debug log for troubleshooting
             if (isSent) {
@@ -4884,7 +5187,7 @@
                     ${avatarHTML}
                     <div class="message-content">
                         <div class="message-bubble">
-                            <div class="message-text">${escapeHtml(data.message)}</div>
+                            <div class="message-text">${escapeMessageHtml(data.message)}</div>
                         </div>
                         <div class="message-time">${time}${statusHTML}</div>
                     </div>
@@ -5022,7 +5325,7 @@
         }
         
         // Intersection Observer for read status
-        let messageObserver = null;
+        // MOVED TO AppState.messaging.observer
         
         function initMessageObserver() {
             const chatContainer = document.getElementById('chatContainer');
@@ -5096,7 +5399,7 @@
                                 Voyage Sorgun ekibi size yardımcı olmak için burada. Nasıl yardımcı olabiliriz?
                             </div>
                         </div>
-                        <div class="message-time">${formatTime(new Date())}</div>
+                        <div class="message-time">${formatMessageTime(new Date())}</div>
                     </div>
                 </div>
             `;
@@ -5376,14 +5679,14 @@
         });
 
         // Utility functions
-        function formatTime(timestamp) {
+        function formatMessageTime(timestamp) {
             const date = new Date(timestamp);
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             return `${hours}:${minutes}`;
         }
 
-        function escapeHtml(text) {
+        function escapeMessageHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
@@ -5395,8 +5698,7 @@
         }
 
         // Load older messages when scrolling to top
-        let isLoadingOlderMessages = false;
-        let oldestMessageTimestamp = null;
+        // MOVED TO AppState.messaging.isLoadingOlder and oldestTimestamp
 
         function setupScrollListener() {
             const chatContainer = document.getElementById('chatContainer');
@@ -7351,22 +7653,11 @@
         }
 
         // Map initialization
-        let map = null;
-        let userMarker = null;
-        let hotelMarker = null;
-        let userLocationWatchId = null;
-        let otherUsersMarkers = {};
-        let activityMarkers = [];
-        let lastLocationUpdateTime = null;
-        let locationUpdateInterval = null;
-        let permissionState = null; // 'granted', 'denied', 'prompt'
-        let isCreatingUserMarker = false; // Race condition prevention flag
-
+        // MOVED TO AppState.map namespace
+        // Access via: map, userMarker, hotelMarker, etc. (proxied to AppState)
+        
         // Mapbox access token
-        const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWxpbXVyc2l0IiwiYSI6ImNtazRnYTRjZjAwa2IzZXF2cWJnaW9ocDcifQ.EL6OVUXoR22l0vrNPzVyoQ';
-
-        // Flag to prevent repeated cinematic animation
-        let hasPlayedCinematicAnimation = false;
+        // MOVED TO AppState.map.config.token (defined earlier in legacy compatibility layer)
 
         // Snapchat-style 3D view setup
         function setup3DView() {
@@ -8396,7 +8687,7 @@
                     const popupContent = `
                         <div style="text-align: center;">
                             <b>${activity.title || 'Aktivite'}</b><br>
-                            ${activity.start_time ? formatTime(activity.start_time) : ''}
+                            ${activity.start_time ? formatActivityTime(activity.start_time) : ''}
                             ${activity.location ? `<br><small>${activity.location}</small>` : ''}
                             ${activity.map_latitude && activity.map_longitude ? 
                                 `<br><button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${activity.map_latitude},${activity.map_longitude}', '_blank')" style="margin-top: 8px; padding: 4px 8px; background: #008069; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Yol Tarifi Al</button>` 
@@ -8417,7 +8708,7 @@
         }
 
         // Store locations data from database
-        let mapLocationsData = {};
+        // MOVED TO AppState.map.data.locations
 
         async function loadMapChips() {
             try {
@@ -8538,11 +8829,11 @@
                     tempEl.innerHTML = '<i data-lucide="navigation" style="color: white; width: 16px; height: 16px;"></i>';
 
                     // Remove previous temp marker if exists
-                    if (window.tempMarker) {
-                        window.tempMarker.remove();
+                    if (tempMarker) {
+                        tempMarker.remove();
                     }
 
-                    window.tempMarker = new mapboxgl.Marker(tempEl)
+                    tempMarker = new mapboxgl.Marker(tempEl)
                         .setLngLat([lng, lat])
                         .setPopup(new mapboxgl.Popup().setHTML(`<b>${locationData.name}</b>`))
                         .addTo(map)
@@ -8559,8 +8850,7 @@
         }
 
         // Map search functionality
-        let searchMarkers = [];
-        let searchTimeout = null;
+        // MOVED TO AppState.map.markers.search and map.data.searchTimeout
         
         function setupMapSearch() {
             const searchInput = document.getElementById('mapSearchInput');
@@ -9366,12 +9656,12 @@
                 }
 
                 // Store dates for navigation
-                window.spaAllDates = allDates.map(d => ({
+                spaAllDates = allDates.map(d => ({
                     date: d.toISOString().split('T')[0],
                     dateObj: new Date(d)
                 }));
-                window.spaCurrentDateIndex = 0;
-                window.spaSelectedDateElement = null; // Track selected date element
+                spaCurrentDateIndex = 0;
+                spaSelectedDateElement = null; // Track selected date element
 
                 // Date navigation controls
                 const navContainer = document.createElement('div');
@@ -9399,7 +9689,7 @@
                 container.appendChild(dateSelectSection);
 
                 // Render initial date grid
-                renderSpaDateGrid(calendarGrid, window.spaAllDates, 0);
+                renderSpaDateGrid(calendarGrid, spaAllDates, 0);
                 
                 // Service selection grid (populated after date selection)
                 const serviceSelect = document.createElement('div');
@@ -9478,7 +9768,7 @@
                 container.appendChild(slotsContainer);
                 
                 // Store date range for later use
-                window.spaDateRange = { from, to };
+                spaDateRange = { from, to };
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (error) {
@@ -9528,10 +9818,10 @@
                     serviceSelectorWrapper.style.display = 'block';
                     
                     // Store services for navigation
-                    window.spaAvailableServices = availableServices;
-                    window.spaCurrentServiceIndex = 0;
-                    window.spaSelectedServiceElement = null;
-                    window.spaSelectedServiceId = null;
+                    spaAvailableServices = availableServices;
+                    spaCurrentServiceIndex = 0;
+                    spaSelectedServiceElement = null;
+                    spaSelectedServiceId = null;
                     
                     // Render service grid
                     const serviceGrid = document.getElementById('spa-service-grid');
@@ -9541,12 +9831,12 @@
                 }
                 
                 // Store all slots for later filtering
-                window.spaDateSlotsByService = allSlotsByService;
-                window.spaSelectedDate = selectedDate;
+                spaDateSlotsByService = allSlotsByService;
+                spaSelectedDate = selectedDate;
                 
                 // Reset service and therapist selectors
-                window.spaSelectedServiceId = null;
-                window.spaSelectedTherapistId = null;
+                spaSelectedServiceId = null;
+                spaSelectedTherapistId = null;
                 if (therapistSelectorWrapper) therapistSelectorWrapper.style.display = 'none';
                 
                 // Show all available slots for all services on this date
@@ -9563,12 +9853,12 @@
         // Called when a service is selected (from grid)
         // Shows all therapists who can do this service and are available on the selected date
         async function onSpaServiceSelected(selectedServiceId) {
-            if (!selectedServiceId || !window.spaSelectedDate) return;
+            if (!selectedServiceId || !spaSelectedDate) return;
             
             const therapistSelectorWrapper = document.getElementById('spa-therapist-selector-wrapper');
             
             // Get all slots for this service on the selected date
-            const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
+            const serviceSlots = spaDateSlotsByService?.get(selectedServiceId) || [];
             
             // Collect all unique therapists who can do this service and are available on this date
             // This includes therapists from all available slots for this service
@@ -9589,37 +9879,37 @@
                 therapistSelectorWrapper.style.display = 'block';
                 
                 // Store therapists for navigation
-                window.spaAvailableTherapists = Array.from(therapists.values());
-                window.spaCurrentTherapistIndex = 0;
-                window.spaSelectedTherapistElement = null;
-                window.spaSelectedTherapistId = null;
+                spaAvailableTherapists = Array.from(therapists.values());
+                spaCurrentTherapistIndex = 0;
+                spaSelectedTherapistElement = null;
+                spaSelectedTherapistId = null;
                 
                 // Render therapist grid with all available therapists for this service
                 const therapistGrid = document.getElementById('spa-therapist-grid');
                 if (therapistGrid) {
-                    renderSpaTherapistGrid(therapistGrid, window.spaAvailableTherapists, 0);
+                    renderSpaTherapistGrid(therapistGrid, spaAvailableTherapists, 0);
                 }
             } else if (therapistSelectorWrapper) {
                 therapistSelectorWrapper.style.display = 'none';
-                window.spaSelectedTherapistId = null;
+                spaSelectedTherapistId = null;
             }
             
             // Show time slots for this service (without therapist filter initially)
-            await filterAndShowSlots(window.spaSelectedDate, selectedServiceId);
+            await filterAndShowSlots(spaSelectedDate, selectedServiceId);
         }
         
         // Called when a therapist is selected (from grid)
         async function onSpaTherapistSelected(selectedTherapistId) {
-            if (!window.spaSelectedDate || !window.spaSelectedServiceId) return;
+            if (!spaSelectedDate || !spaSelectedServiceId) return;
             
             // Show slots with therapist filter if selected, otherwise show service slots
-            await filterAndShowSlots(window.spaSelectedDate, window.spaSelectedServiceId);
+            await filterAndShowSlots(spaSelectedDate, spaSelectedServiceId);
         }
         
         // Filter and show slots based on selected service and therapist
         async function filterAndShowSlots(date, selectedServiceId) {
             const slotsContainer = document.getElementById('spa-time-slots-container');
-            const selectedTherapistId = window.spaSelectedTherapistId || null;
+            const selectedTherapistId = spaSelectedTherapistId || null;
             
             if (!slotsContainer || !date) return;
             
@@ -9632,7 +9922,7 @@
             
             if (selectedServiceId) {
                 // Filter by service
-                const serviceSlots = window.spaDateSlotsByService?.get(selectedServiceId) || [];
+                const serviceSlots = spaDateSlotsByService?.get(selectedServiceId) || [];
                 serviceSlots.forEach(slot => {
                     if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
                         // Filter by therapist if selected
@@ -9655,8 +9945,8 @@
                 });
             } else {
                 // Show all slots from all available services (no service selected)
-                if (window.spaDateSlotsByService) {
-                    window.spaDateSlotsByService.forEach((slots, serviceId) => {
+                if (spaDateSlotsByService) {
+                    spaDateSlotsByService.forEach((slots, serviceId) => {
                         slots.forEach(slot => {
                             if (slot.availability === 'AVAILABLE' && slot.therapists && slot.therapists.length > 0) {
                                 // Filter out past slots for today
@@ -9723,7 +10013,7 @@
                 const end = new Date(slot.end);
                 const timeStr = `${start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
                 
-                const selectedTherapistId = window.spaSelectedTherapistId || null;
+                const selectedTherapistId = spaSelectedTherapistId || null;
                 
                 // Get therapist info text
                 let therapistText = 'Terapist yok';
@@ -9738,8 +10028,8 @@
                 
                 // Get service name if we know which service this slot belongs to
                 let serviceInfo = '';
-                if (serviceId && window.spaAvailableServices) {
-                    const service = window.spaAvailableServices.find(s => s.id === serviceId);
+                if (serviceId && spaAvailableServices) {
+                    const service = spaAvailableServices.find(s => s.id === serviceId);
                     if (service) {
                         serviceInfo = `<div style="font-size: 11px; color: #008069; margin-top: 4px;">${service.name}</div>`;
                     }
@@ -9923,8 +10213,8 @@
             calendarGrid.style.cssText = 'display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; flex: 1; margin: 0 8px;';
             
             // Store original days for navigation
-            window.spaAvailabilityDays = filteredDays;
-            window.spaCurrentDateIndex = 0;
+            spaAvailabilityDays = filteredDays;
+            spaCurrentDateIndex = 0;
             
             renderSpaCalendarGrid(calendarGrid, filteredDays, availability, 0);
             
@@ -9934,7 +10224,7 @@
             container.appendChild(calendarSection);
             
             // Store availability for navigation
-            window.spaCurrentAvailability = availability;
+            spaCurrentAvailability = availability;
             
             // Time slots container (initially hidden)
             const slotsContainer = document.createElement('div');
@@ -10007,10 +10297,10 @@
                 }
                 
                 // Highlight selected date
-                if (dateStr === window.spaSelectedDate) {
+                if (dateStr === spaSelectedDate) {
                     dayEl.style.background = '#008069';
                     dayEl.style.color = 'white';
-                    window.spaSelectedDateElement = dayEl;
+                    spaSelectedDateElement = dayEl;
                 }
                 
                 const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
@@ -10018,21 +10308,21 @@
                 const month = date.toLocaleDateString('tr-TR', { month: 'short' });
                 
                 dayEl.innerHTML = `
-                    <div style="font-size: 11px; color: ${dateStr === window.spaSelectedDate ? 'white' : '#667781'}; margin-bottom: 4px;">${dayName}</div>
-                    <div style="font-size: 18px; font-weight: 600; color: ${dateStr === window.spaSelectedDate ? 'white' : '#111b21'};">${dayNumber}</div>
-                    <div style="font-size: 10px; color: ${dateStr === window.spaSelectedDate ? 'white' : '#667781'};">${month}</div>
-                    ${isToday && dateStr !== window.spaSelectedDate ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #008069; border-radius: 50%;"></div>' : ''}
+                    <div style="font-size: 11px; color: ${dateStr === spaSelectedDate ? 'white' : '#667781'}; margin-bottom: 4px;">${dayName}</div>
+                    <div style="font-size: 18px; font-weight: 600; color: ${dateStr === spaSelectedDate ? 'white' : '#111b21'};">${dayNumber}</div>
+                    <div style="font-size: 10px; color: ${dateStr === spaSelectedDate ? 'white' : '#667781'};">${month}</div>
+                    ${isToday && dateStr !== spaSelectedDate ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #008069; border-radius: 50%;"></div>' : ''}
                 `;
                 
                 dayEl.onclick = () => {
                     // Remove previous selection highlight
-                    if (window.spaSelectedDateElement) {
-                        const prevDate = new Date(window.spaSelectedDate);
+                    if (spaSelectedDateElement) {
+                        const prevDate = new Date(spaSelectedDate);
                         const prevIsToday = prevDate.toDateString() === new Date().toDateString();
-                        window.spaSelectedDateElement.style.background = 'white';
-                        window.spaSelectedDateElement.style.color = '';
-                        window.spaSelectedDateElement.style.borderColor = prevIsToday ? '#008069' : '#e4e6e9';
-                        window.spaSelectedDateElement.style.borderWidth = prevIsToday ? '2px' : '1px';
+                        spaSelectedDateElement.style.background = 'white';
+                        spaSelectedDateElement.style.color = '';
+                        spaSelectedDateElement.style.borderColor = prevIsToday ? '#008069' : '#e4e6e9';
+                        spaSelectedDateElement.style.borderWidth = prevIsToday ? '2px' : '1px';
                     }
                     
                     // Highlight new selection
@@ -10040,24 +10330,24 @@
                     dayEl.style.color = 'white';
                     dayEl.style.borderColor = '#008069';
                     dayEl.style.borderWidth = '2px';
-                    window.spaSelectedDateElement = dayEl;
+                    spaSelectedDateElement = dayEl;
                     
                     // Update selected date
-                    window.spaSelectedDate = dateStr;
+                    spaSelectedDate = dateStr;
                     
                     // Trigger date selection
                     onSpaDateSelected(dateStr);
                 };
                 
                 dayEl.onmouseenter = () => {
-                    if (dateStr !== window.spaSelectedDate) {
+                    if (dateStr !== spaSelectedDate) {
                         dayEl.style.background = '#f0f2f5';
                         dayEl.style.borderColor = '#c1c7cd';
                     }
                 };
                 
                 dayEl.onmouseleave = () => {
-                    if (dateStr !== window.spaSelectedDate) {
+                    if (dateStr !== spaSelectedDate) {
                         dayEl.style.background = isToday ? 'white' : 'white';
                         dayEl.style.borderColor = isToday ? '#008069' : '#e4e6e9';
                     }
@@ -10082,35 +10372,35 @@
                 serviceEl.style.cssText = 'position: relative; min-width: 100px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected service
-                if (service.id === window.spaSelectedServiceId) {
+                if (service.id === spaSelectedServiceId) {
                     serviceEl.style.background = '#008069';
                     serviceEl.style.borderColor = '#008069';
                     serviceEl.style.color = 'white';
-                    window.spaSelectedServiceElement = serviceEl;
+                    spaSelectedServiceElement = serviceEl;
                 }
                 
                 serviceEl.innerHTML = `
-                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 5px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#111b21'};">
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 5px; color: ${service.id === spaSelectedServiceId ? 'white' : '#111b21'};">
                         ${service.name || 'Hizmet'}
                     </div>
-                    <div style="font-size: 10px; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#667781'}; margin-bottom: 3px;">
+                    <div style="font-size: 10px; color: ${service.id === spaSelectedServiceId ? 'white' : '#667781'}; margin-bottom: 3px;">
                         ${service.durationMin || 0} dakika
                     </div>
-                    <div style="font-size: 11px; font-weight: 600; color: ${service.id === window.spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
+                    <div style="font-size: 11px; font-weight: 600; color: ${service.id === spaSelectedServiceId ? 'white' : '#008069'}; margin-top: auto;">
                         ${service.price || 0} ${service.currency || 'EUR'}
                     </div>
                 `;
                 
                 serviceEl.onclick = () => {
                     // Remove previous selection highlight
-                    if (window.spaSelectedServiceElement) {
-                        window.spaSelectedServiceElement.style.background = 'white';
-                        window.spaSelectedServiceElement.style.borderColor = '#e4e6e9';
-                        window.spaSelectedServiceElement.style.color = '';
+                    if (spaSelectedServiceElement) {
+                        spaSelectedServiceElement.style.background = 'white';
+                        spaSelectedServiceElement.style.borderColor = '#e4e6e9';
+                        spaSelectedServiceElement.style.color = '';
                         // Update previous element's innerHTML with unselected colors
-                        const prevService = window.spaAvailableServices?.find(s => s.id === window.spaSelectedServiceId);
-                        if (prevService && window.spaSelectedServiceElement) {
-                            window.spaSelectedServiceElement.innerHTML = `
+                        const prevService = spaAvailableServices?.find(s => s.id === spaSelectedServiceId);
+                        if (prevService && spaSelectedServiceElement) {
+                            spaSelectedServiceElement.innerHTML = `
                                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
                                     ${prevService.name || 'Hizmet'}
                                 </div>
@@ -10128,7 +10418,7 @@
                     serviceEl.style.background = '#008069';
                     serviceEl.style.borderColor = '#008069';
                     serviceEl.style.color = 'white';
-                    window.spaSelectedServiceElement = serviceEl;
+                    spaSelectedServiceElement = serviceEl;
                     
                     // Update innerHTML with white colors
                     serviceEl.innerHTML = `
@@ -10144,21 +10434,21 @@
                     `;
                     
                     // Update selected service
-                    window.spaSelectedServiceId = service.id;
+                    spaSelectedServiceId = service.id;
                     
                     // Trigger service selection
                     onSpaServiceSelected(service.id);
                 };
                 
                 serviceEl.onmouseenter = () => {
-                    if (service.id !== window.spaSelectedServiceId) {
+                    if (service.id !== spaSelectedServiceId) {
                         serviceEl.style.background = '#f0f2f5';
                         serviceEl.style.borderColor = '#c1c7cd';
                     }
                 };
                 
                 serviceEl.onmouseleave = () => {
-                    if (service.id !== window.spaSelectedServiceId) {
+                    if (service.id !== spaSelectedServiceId) {
                         serviceEl.style.background = 'white';
                         serviceEl.style.borderColor = '#e4e6e9';
                     }
@@ -10172,25 +10462,25 @@
         
         // Navigate service grid
         function navigateSpaServiceGrid(direction) {
-            if (!window.spaAvailableServices || window.spaAvailableServices.length === 0) return;
+            if (!spaAvailableServices || spaAvailableServices.length === 0) return;
             
             const itemsPerPage = 2;
-            let currentIndex = window.spaCurrentServiceIndex || 0;
+            let currentIndex = spaCurrentServiceIndex || 0;
             
             if (direction === 'prev') {
                 currentIndex = Math.max(0, currentIndex - itemsPerPage);
             } else if (direction === 'next') {
                 currentIndex = Math.min(
-                    window.spaAvailableServices.length - itemsPerPage,
+                    spaAvailableServices.length - itemsPerPage,
                     currentIndex + itemsPerPage
                 );
             }
             
-            window.spaCurrentServiceIndex = currentIndex;
+            spaCurrentServiceIndex = currentIndex;
             
             const serviceGrid = document.getElementById('spa-service-grid');
             if (serviceGrid) {
-                renderSpaServiceGrid(serviceGrid, window.spaAvailableServices, currentIndex);
+                renderSpaServiceGrid(serviceGrid, spaAvailableServices, currentIndex);
             }
         }
         
@@ -10207,34 +10497,34 @@
                 therapistEl.style.cssText = 'position: relative; min-width: 100px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected therapist
-                if (therapist.id === window.spaSelectedTherapistId) {
+                if (therapist.id === spaSelectedTherapistId) {
                     therapistEl.style.background = '#008069';
                     therapistEl.style.borderColor = '#008069';
                     therapistEl.style.color = 'white';
-                    window.spaSelectedTherapistElement = therapistEl;
+                    spaSelectedTherapistElement = therapistEl;
                 }
                 
                 // Therapist photo or placeholder
                 const photoUrl = therapist.photoUrl || therapist.avatar || therapist.photo || null;
                 const photoHTML = photoUrl 
-                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#dee2e6'}; margin-bottom: 6px;">`
-                    : `<div style="width: 48px; height: 48px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#dee2e6'}; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; font-size: 19px;">👤</div>`;
+                    ? `<img src="${photoUrl}" alt="${therapist.displayName || 'Terapist'}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${therapist.id === spaSelectedTherapistId ? 'white' : '#dee2e6'}; margin-bottom: 6px;">`
+                    : `<div style="width: 48px; height: 48px; border-radius: 50%; background: #f0f2f5; border: 2px solid ${therapist.id === spaSelectedTherapistId ? 'white' : '#dee2e6'}; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; font-size: 19px;">👤</div>`;
                 
                 therapistEl.innerHTML = `
                     ${photoHTML}
-                    <div style="font-size: 11px; font-weight: 600; text-align: center; color: ${therapist.id === window.spaSelectedTherapistId ? 'white' : '#111b21'};">
+                    <div style="font-size: 11px; font-weight: 600; text-align: center; color: ${therapist.id === spaSelectedTherapistId ? 'white' : '#111b21'};">
                         ${therapist.displayName || `Terapist ${therapist.id}`}
                     </div>
                 `;
                 
                 therapistEl.onclick = () => {
                     // Remove previous selection highlight
-                    if (window.spaSelectedTherapistElement) {
-                        window.spaSelectedTherapistElement.style.background = 'white';
-                        window.spaSelectedTherapistElement.style.borderColor = '#e4e6e9';
-                        window.spaSelectedTherapistElement.style.color = '';
+                    if (spaSelectedTherapistElement) {
+                        spaSelectedTherapistElement.style.background = 'white';
+                        spaSelectedTherapistElement.style.borderColor = '#e4e6e9';
+                        spaSelectedTherapistElement.style.color = '';
                         // Reset photo border
-                        const prevPhoto = window.spaSelectedTherapistElement.querySelector('img, div');
+                        const prevPhoto = spaSelectedTherapistElement.querySelector('img, div');
                         if (prevPhoto) {
                             prevPhoto.style.borderColor = '#e4e6e9';
                         }
@@ -10244,7 +10534,7 @@
                     therapistEl.style.background = '#008069';
                     therapistEl.style.borderColor = '#008069';
                     therapistEl.style.color = 'white';
-                    window.spaSelectedTherapistElement = therapistEl;
+                    spaSelectedTherapistElement = therapistEl;
                     
                     // Update photo border
                     const photo = therapistEl.querySelector('img, div');
@@ -10253,23 +10543,23 @@
                     }
                     
                     // Update selected therapist (allow deselect if clicking same)
-                    if (window.spaSelectedTherapistId === therapist.id) {
-                        window.spaSelectedTherapistId = null;
+                    if (spaSelectedTherapistId === therapist.id) {
+                        spaSelectedTherapistId = null;
                         therapistEl.style.background = 'white';
                         therapistEl.style.borderColor = '#e4e6e9';
                         therapistEl.style.color = '';
                         if (photo) photo.style.borderColor = '#e4e6e9';
-                        window.spaSelectedTherapistElement = null;
+                        spaSelectedTherapistElement = null;
                     } else {
-                        window.spaSelectedTherapistId = therapist.id;
+                        spaSelectedTherapistId = therapist.id;
                     }
                     
                     // Trigger therapist selection (or deselection)
-                    onSpaTherapistSelected(window.spaSelectedTherapistId);
+                    onSpaTherapistSelected(spaSelectedTherapistId);
                 };
                 
                 therapistEl.onmouseenter = () => {
-                    if (therapist.id !== window.spaSelectedTherapistId) {
+                    if (therapist.id !== spaSelectedTherapistId) {
                         therapistEl.style.background = '#f0f2f5';
                         therapistEl.style.borderColor = '#c1c7cd';
                         const photo = therapistEl.querySelector('img, div');
@@ -10278,7 +10568,7 @@
                 };
                 
                 therapistEl.onmouseleave = () => {
-                    if (therapist.id !== window.spaSelectedTherapistId) {
+                    if (therapist.id !== spaSelectedTherapistId) {
                         therapistEl.style.background = 'white';
                         therapistEl.style.borderColor = '#e4e6e9';
                         const photo = therapistEl.querySelector('img, div');
@@ -10294,80 +10584,80 @@
         
         // Navigate therapist grid
         function navigateSpaTherapistGrid(direction) {
-            if (!window.spaAvailableTherapists || window.spaAvailableTherapists.length === 0) return;
+            if (!spaAvailableTherapists || spaAvailableTherapists.length === 0) return;
             
             const itemsPerPage = 2;
-            let currentIndex = window.spaCurrentTherapistIndex || 0;
+            let currentIndex = spaCurrentTherapistIndex || 0;
             
             if (direction === 'prev') {
                 currentIndex = Math.max(0, currentIndex - itemsPerPage);
             } else if (direction === 'next') {
                 currentIndex = Math.min(
-                    window.spaAvailableTherapists.length - itemsPerPage,
+                    spaAvailableTherapists.length - itemsPerPage,
                     currentIndex + itemsPerPage
                 );
             }
             
-            window.spaCurrentTherapistIndex = currentIndex;
+            spaCurrentTherapistIndex = currentIndex;
             
             const therapistGrid = document.getElementById('spa-therapist-grid');
             if (therapistGrid) {
-                renderSpaTherapistGrid(therapistGrid, window.spaAvailableTherapists, currentIndex);
+                renderSpaTherapistGrid(therapistGrid, spaAvailableTherapists, currentIndex);
             }
         }
         
         // Navigate date grid
         function navigateSpaDateGrid(direction) {
-            if (!window.spaAllDates || window.spaAllDates.length === 0) return;
+            if (!spaAllDates || spaAllDates.length === 0) return;
             
             const daysPerPage = 3;
-            let currentIndex = window.spaCurrentDateIndex || 0;
+            let currentIndex = spaCurrentDateIndex || 0;
             
             if (direction === 'prev') {
                 currentIndex = Math.max(0, currentIndex - daysPerPage);
             } else if (direction === 'next') {
                 currentIndex = Math.min(
-                    window.spaAllDates.length - daysPerPage,
+                    spaAllDates.length - daysPerPage,
                     currentIndex + daysPerPage
                 );
             }
             
-            window.spaCurrentDateIndex = currentIndex;
+            spaCurrentDateIndex = currentIndex;
             
             const calendarGrid = document.getElementById('spa-date-calendar-grid');
             if (calendarGrid) {
-                renderSpaDateGrid(calendarGrid, window.spaAllDates, currentIndex);
+                renderSpaDateGrid(calendarGrid, spaAllDates, currentIndex);
             }
         }
         
         // Navigate calendar dates
         function navigateSpaCalendar(direction, availability) {
-            if (!window.spaAvailabilityDays) return;
+            if (!spaAvailabilityDays) return;
             
             const daysPerPage = 7;
-            let currentIndex = window.spaCurrentDateIndex || 0;
+            let currentIndex = spaCurrentDateIndex || 0;
             
             if (direction === 'prev') {
                 currentIndex = Math.max(0, currentIndex - daysPerPage);
             } else if (direction === 'next') {
                 currentIndex = Math.min(
-                    window.spaAvailabilityDays.length - daysPerPage,
+                    spaAvailabilityDays.length - daysPerPage,
                     currentIndex + daysPerPage
                 );
             }
             
-            window.spaCurrentDateIndex = currentIndex;
+            spaCurrentDateIndex = currentIndex;
             
             const calendarGrid = document.getElementById('spa-calendar-grid');
             if (calendarGrid) {
-                renderSpaCalendarGrid(calendarGrid, window.spaAvailabilityDays, availability, currentIndex);
+                renderSpaCalendarGrid(calendarGrid, spaAvailabilityDays, availability, currentIndex);
             }
         }
         
         // Show available slots sorted by time (for all days)
         function showAvailableSlotsSorted(days, container) {
             // Get selected therapist filter
-            const selectedTherapistId = window.spaSelectedTherapistId || null;
+            const selectedTherapistId = spaSelectedTherapistId || null;
             
             // Collect all available slots from all days, sorted by time
             const allSlots = [];
@@ -10506,7 +10796,7 @@
             }
             
             // Get selected therapist filter
-            const selectedTherapistId = window.spaSelectedTherapistId || null;
+            const selectedTherapistId = spaSelectedTherapistId || null;
             
             // Filter out past slots for today
             const today = new Date();
@@ -10692,8 +10982,8 @@
             }
             // If serviceId provided, use it; otherwise try to get from selector
             else if (serviceId) {
-                if (window.spaAvailableServices) {
-                    selectedService = window.spaAvailableServices.find(s => s.id === serviceId);
+                if (spaAvailableServices) {
+                    selectedService = spaAvailableServices.find(s => s.id === serviceId);
                 }
                 if (!selectedService) {
                     const serviceList = await spaApi.getServices();
@@ -10703,8 +10993,8 @@
                 const serviceSelector = document.getElementById('spa-service-selector');
                 if (serviceSelector && serviceSelector.value) {
                     // Check if we have it in available services first
-                    if (window.spaAvailableServices) {
-                        selectedService = window.spaAvailableServices.find(s => s.id === serviceSelector.value);
+                    if (spaAvailableServices) {
+                        selectedService = spaAvailableServices.find(s => s.id === serviceSelector.value);
                     }
                     if (!selectedService) {
                         const serviceList = await spaApi.getServices();
@@ -10721,8 +11011,8 @@
             try {
                 // Check if a therapist is already selected from the grid
                 let selectedTherapist = null;
-                if (window.spaSelectedTherapistId && slot.therapists) {
-                    selectedTherapist = slot.therapists.find(t => t.id === window.spaSelectedTherapistId);
+                if (spaSelectedTherapistId && slot.therapists) {
+                    selectedTherapist = slot.therapists.find(t => t.id === spaSelectedTherapistId);
                 }
                 
                 // Set booking state
@@ -10839,13 +11129,13 @@
                 }
                 
                 // Store dates for navigation
-                window.restaurantAllDates = allDates.map(d => ({
+                restaurantAllDates = allDates.map(d => ({
                     date: d.toISOString().split('T')[0],
                     dateObj: new Date(d)
                 }));
-                window.restaurantCurrentDateIndex = 0;
-                window.restaurantSelectedDateElement = null; // Track selected date element
-                window.restaurantSelectedDate = null;
+                restaurantCurrentDateIndex = 0;
+                restaurantSelectedDateElement = null; // Track selected date element
+                restaurantSelectedDate = null;
                 
                 // Date navigation controls
                 const navContainer = document.createElement('div');
@@ -10873,7 +11163,7 @@
                 container.appendChild(dateSelectSection);
                 
                 // Render initial date grid
-                renderRestaurantDateGrid(calendarGrid, window.restaurantAllDates, 0);
+                renderRestaurantDateGrid(calendarGrid, restaurantAllDates, 0);
                 
                 // Restaurant selection grid (populated after date selection)
                 const restaurantSelect = document.createElement('div');
@@ -10929,7 +11219,7 @@
                 await loadExistingRestaurantReservations(existingReservationsContainer);
                 
                 // Store date range for later use
-                window.restaurantDateRange = { from, to };
+                restaurantDateRange = { from, to };
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             } catch (error) {
@@ -11188,10 +11478,10 @@
                 }
                 
                 // Highlight selected date
-                if (dateStr === window.restaurantSelectedDate) {
+                if (dateStr === restaurantSelectedDate) {
                     dayEl.style.background = '#1A4D6D';
                     dayEl.style.color = 'white';
-                    window.restaurantSelectedDateElement = dayEl;
+                    restaurantSelectedDateElement = dayEl;
                 }
                 
                 const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
@@ -11199,21 +11489,21 @@
                 const month = date.toLocaleDateString('tr-TR', { month: 'short' });
                 
                 dayEl.innerHTML = `
-                    <div style="font-size: 11px; color: ${dateStr === window.restaurantSelectedDate ? 'white' : '#667781'}; margin-bottom: 4px;">${dayName}</div>
-                    <div style="font-size: 18px; font-weight: 600; color: ${dateStr === window.restaurantSelectedDate ? 'white' : '#111b21'};">${dayNumber}</div>
-                    <div style="font-size: 10px; color: ${dateStr === window.restaurantSelectedDate ? 'white' : '#667781'};">${month}</div>
-                    ${isToday && dateStr !== window.restaurantSelectedDate ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #1A4D6D; border-radius: 50%;"></div>' : ''}
+                    <div style="font-size: 11px; color: ${dateStr === restaurantSelectedDate ? 'white' : '#667781'}; margin-bottom: 4px;">${dayName}</div>
+                    <div style="font-size: 18px; font-weight: 600; color: ${dateStr === restaurantSelectedDate ? 'white' : '#111b21'};">${dayNumber}</div>
+                    <div style="font-size: 10px; color: ${dateStr === restaurantSelectedDate ? 'white' : '#667781'};">${month}</div>
+                    ${isToday && dateStr !== restaurantSelectedDate ? '<div style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: #1A4D6D; border-radius: 50%;"></div>' : ''}
                 `;
                 
                 dayEl.onclick = () => {
                     // Remove previous selection highlight
-                    if (window.restaurantSelectedDateElement) {
-                        const prevDate = new Date(window.restaurantSelectedDate);
+                    if (restaurantSelectedDateElement) {
+                        const prevDate = new Date(restaurantSelectedDate);
                         const prevIsToday = prevDate.toDateString() === new Date().toDateString();
-                        window.restaurantSelectedDateElement.style.background = 'white';
-                        window.restaurantSelectedDateElement.style.color = '';
-                        window.restaurantSelectedDateElement.style.borderColor = prevIsToday ? '#1A4D6D' : '#e4e6e9';
-                        window.restaurantSelectedDateElement.style.borderWidth = prevIsToday ? '2px' : '1px';
+                        restaurantSelectedDateElement.style.background = 'white';
+                        restaurantSelectedDateElement.style.color = '';
+                        restaurantSelectedDateElement.style.borderColor = prevIsToday ? '#1A4D6D' : '#e4e6e9';
+                        restaurantSelectedDateElement.style.borderWidth = prevIsToday ? '2px' : '1px';
                     }
                     
                     // Highlight new selection
@@ -11221,24 +11511,24 @@
                     dayEl.style.color = 'white';
                     dayEl.style.borderColor = '#1A4D6D';
                     dayEl.style.borderWidth = '2px';
-                    window.restaurantSelectedDateElement = dayEl;
+                    restaurantSelectedDateElement = dayEl;
                     
                     // Update selected date
-                    window.restaurantSelectedDate = dateStr;
+                    restaurantSelectedDate = dateStr;
                     
                     // Trigger date selection
                     onRestaurantDateSelected(dateStr);
                 };
                 
                 dayEl.onmouseenter = () => {
-                    if (dateStr !== window.restaurantSelectedDate) {
+                    if (dateStr !== restaurantSelectedDate) {
                         dayEl.style.background = '#f0f2f5';
                         dayEl.style.borderColor = '#c1c7cd';
                     }
                 };
                 
                 dayEl.onmouseleave = () => {
-                    if (dateStr !== window.restaurantSelectedDate) {
+                    if (dateStr !== restaurantSelectedDate) {
                         dayEl.style.background = isToday ? 'white' : 'white';
                         dayEl.style.borderColor = isToday ? '#1A4D6D' : '#e4e6e9';
                     }
@@ -11252,25 +11542,25 @@
         
         // Navigate restaurant date grid
         function navigateRestaurantDateGrid(direction) {
-            if (!window.restaurantAllDates || window.restaurantAllDates.length === 0) return;
+            if (!restaurantAllDates || restaurantAllDates.length === 0) return;
             
             const daysPerPage = 3;
-            let currentIndex = window.restaurantCurrentDateIndex || 0;
+            let currentIndex = restaurantCurrentDateIndex || 0;
             
             if (direction === 'prev') {
                 currentIndex = Math.max(0, currentIndex - daysPerPage);
             } else if (direction === 'next') {
                 currentIndex = Math.min(
-                    window.restaurantAllDates.length - daysPerPage,
+                    restaurantAllDates.length - daysPerPage,
                     currentIndex + daysPerPage
                 );
             }
             
-            window.restaurantCurrentDateIndex = currentIndex;
+            restaurantCurrentDateIndex = currentIndex;
             
             const calendarGrid = document.getElementById('restaurant-date-calendar-grid');
             if (calendarGrid) {
-                renderRestaurantDateGrid(calendarGrid, window.restaurantAllDates, currentIndex);
+                renderRestaurantDateGrid(calendarGrid, restaurantAllDates, currentIndex);
             }
         }
         
@@ -11360,10 +11650,10 @@
                 }
                 
                 // Store restaurants for navigation
-                window.restaurantAvailableRestaurants = availableRestaurants;
-                window.restaurantCurrentIndex = 0;
-                window.restaurantSelectedRestaurantId = null;
-                window.restaurantSelectedRestaurantElement = null;
+                restaurantAvailableRestaurants = availableRestaurants;
+                restaurantCurrentIndex = 0;
+                restaurantSelectedRestaurantId = null;
+                restaurantSelectedRestaurantElement = null;
                 
                 // Render restaurant grid
                 renderRestaurantGrid(restaurantGrid, availableRestaurants, 0);
@@ -11380,12 +11670,12 @@
         
         // Render restaurant grid
         function renderRestaurantGrid(container, restaurants, startIndex) {
-            if (!container || !window.restaurantAvailableRestaurants || window.restaurantAvailableRestaurants.length === 0) return;
+            if (!container || !restaurantAvailableRestaurants || restaurantAvailableRestaurants.length === 0) return;
             
             container.innerHTML = '';
             const itemsPerPage = 2;
-            const endIndex = Math.min(startIndex + itemsPerPage, window.restaurantAvailableRestaurants.length);
-            const visibleRestaurants = window.restaurantAvailableRestaurants.slice(startIndex, endIndex);
+            const endIndex = Math.min(startIndex + itemsPerPage, restaurantAvailableRestaurants.length);
+            const visibleRestaurants = restaurantAvailableRestaurants.slice(startIndex, endIndex);
             
             visibleRestaurants.forEach((restaurant, idx) => {
                 const restaurantEl = document.createElement('div');
@@ -11393,12 +11683,12 @@
                 restaurantEl.style.cssText = 'position: relative; min-width: 100px; flex: 1; display: flex; flex-direction: column; padding: 10px; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; background: white; transition: all 0.2s;';
                 
                 // Highlight selected restaurant
-                const isSelected = restaurant.id === window.restaurantSelectedRestaurantId;
+                const isSelected = restaurant.id === restaurantSelectedRestaurantId;
                 if (isSelected) {
                     restaurantEl.style.background = '#1A4D6D';
                     restaurantEl.style.borderColor = '#1A4D6D';
                     restaurantEl.style.color = 'white';
-                    window.restaurantSelectedRestaurantElement = restaurantEl;
+                    restaurantSelectedRestaurantElement = restaurantEl;
                 }
                 
                 const restaurantName = (restaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -11407,7 +11697,7 @@
                 const workingHoursText = openingHour && closingHour ? `${openingHour} - ${closingHour}` : '';
                 const pricePerPerson = restaurant.price_per_person || 0;
                 const currency = restaurant.currency || 'EUR';
-                const selectedDate = window.restaurantSelectedDate;
+                const selectedDate = restaurantSelectedDate;
                 
                 restaurantEl.innerHTML = `
                     <div style="font-size: 11px; font-weight: 600; margin-bottom: 5px; color: ${isSelected ? 'white' : '#111b21'};">
@@ -11421,16 +11711,16 @@
                 
                 restaurantEl.onclick = () => {
                     // Remove previous selection highlight
-                    if (window.restaurantSelectedRestaurantElement && window.restaurantSelectedRestaurantElement !== restaurantEl) {
-                        const prevRestaurantId = window.restaurantSelectedRestaurantId;
-                        const prevRestaurant = window.restaurantAvailableRestaurants?.find(r => r.id === prevRestaurantId);
+                    if (restaurantSelectedRestaurantElement && restaurantSelectedRestaurantElement !== restaurantEl) {
+                        const prevRestaurantId = restaurantSelectedRestaurantId;
+                        const prevRestaurant = restaurantAvailableRestaurants?.find(r => r.id === prevRestaurantId);
                         
-                        window.restaurantSelectedRestaurantElement.style.background = 'white';
-                        window.restaurantSelectedRestaurantElement.style.borderColor = '#dee2e6';
-                        window.restaurantSelectedRestaurantElement.style.color = '';
+                        restaurantSelectedRestaurantElement.style.background = 'white';
+                        restaurantSelectedRestaurantElement.style.borderColor = '#dee2e6';
+                        restaurantSelectedRestaurantElement.style.color = '';
                         
                         // Update previous element's innerHTML with unselected colors
-                        if (prevRestaurant && window.restaurantSelectedRestaurantElement) {
+                        if (prevRestaurant && restaurantSelectedRestaurantElement) {
                             const prevName = (prevRestaurant.name || 'Restoran').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                             const prevOpeningHour = prevRestaurant.opening_hour || '';
                             const prevClosingHour = prevRestaurant.closing_hour || '';
@@ -11438,7 +11728,7 @@
                             const prevPrice = prevRestaurant.price_per_person || 0;
                             const prevCurrency = prevRestaurant.currency || 'EUR';
                             
-                            window.restaurantSelectedRestaurantElement.innerHTML = `
+                            restaurantSelectedRestaurantElement.innerHTML = `
                                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111b21;">
                                     ${prevName}
                                 </div>
@@ -11454,7 +11744,7 @@
                     restaurantEl.style.background = '#1A4D6D';
                     restaurantEl.style.borderColor = '#1A4D6D';
                     restaurantEl.style.color = 'white';
-                    window.restaurantSelectedRestaurantElement = restaurantEl;
+                    restaurantSelectedRestaurantElement = restaurantEl;
                     
                     // Update innerHTML with white colors
                     restaurantEl.innerHTML = `
@@ -11468,21 +11758,21 @@
                     `;
                     
                     // Update selected restaurant
-                    window.restaurantSelectedRestaurantId = restaurant.id;
+                    restaurantSelectedRestaurantId = restaurant.id;
                     
                     // Open reservation modal
                     openRestaurantReservationModal(restaurant.id, restaurant.name, selectedDate);
                 };
                 
                 restaurantEl.onmouseenter = () => {
-                    if (restaurant.id !== window.restaurantSelectedRestaurantId) {
+                    if (restaurant.id !== restaurantSelectedRestaurantId) {
                         restaurantEl.style.background = '#f0f2f5';
                         restaurantEl.style.borderColor = '#c1c7cd';
                     }
                 };
                 
                 restaurantEl.onmouseleave = () => {
-                    if (restaurant.id !== window.restaurantSelectedRestaurantId) {
+                    if (restaurant.id !== restaurantSelectedRestaurantId) {
                         restaurantEl.style.background = 'white';
                         restaurantEl.style.borderColor = '#e4e6e9';
                     }
@@ -11496,30 +11786,30 @@
         
         // Navigate restaurant grid
         function navigateRestaurantGrid(direction) {
-            if (!window.restaurantAvailableRestaurants || window.restaurantAvailableRestaurants.length === 0) return;
+            if (!restaurantAvailableRestaurants || restaurantAvailableRestaurants.length === 0) return;
             
             const itemsPerPage = 2;
-            let currentIndex = window.restaurantCurrentIndex || 0;
+            let currentIndex = restaurantCurrentIndex || 0;
             
             if (direction === 'prev') {
                 currentIndex = Math.max(0, currentIndex - itemsPerPage);
             } else if (direction === 'next') {
                 currentIndex = Math.min(
-                    window.restaurantAvailableRestaurants.length - itemsPerPage,
+                    restaurantAvailableRestaurants.length - itemsPerPage,
                     currentIndex + itemsPerPage
                 );
             }
             
-            window.restaurantCurrentIndex = currentIndex;
+            restaurantCurrentIndex = currentIndex;
             
             const restaurantGrid = document.getElementById('restaurant-grid');
             if (restaurantGrid) {
-                renderRestaurantGrid(restaurantGrid, window.restaurantAvailableRestaurants, currentIndex);
+                renderRestaurantGrid(restaurantGrid, restaurantAvailableRestaurants, currentIndex);
             }
         }
         
         // Open restaurant reservation modal
-        let currentRestaurantForReservation = null;
+        // MOVED TO AppState.booking.restaurant.currentForReservation
         function openRestaurantReservationModal(restaurantId, restaurantName, selectedDate) {
             // If no date provided, default to today
             const reservationDate = selectedDate || new Date().toISOString().split('T')[0];
@@ -12143,8 +12433,7 @@
         // Avatar Selection Functions
         // ============================================
 
-        let currentAvatarStyle = 'avataaars'; // Always use avataaars style
-        let currentAvatarSeed = null;
+        // MOVED TO AppState.avatar.style and avatar.seed
 
         // Load avatar selection
         async function loadAvatarSelection() {
@@ -12453,7 +12742,8 @@
             set: (val) => AppState.set('localization.currentLanguage', val)
         });
         
-        const translations = {
+        // Initialize translations in AppState
+        AppState.set('localization.translations', {
             tr: {
                 // Navigation
                 'info': 'Info',
@@ -13066,11 +13356,196 @@
                 'likes': 'лайков',
                 'likesLoading': 'Загрузка лайков...'
             }
-        };
+        });
         
-        function t(key) {
-            return translations[currentLanguage][key] || translations['tr'][key] || key;
+        // Main translation function with unique name to avoid namespace collisions
+        function voyageT(key) {
+            const translations = AppState.get('localization.translations');
+            const lang = AppState.get('localization.currentLanguage');
+            return translations[lang]?.[key] || translations['tr']?.[key] || key;
         }
+        
+        // Backward compatibility alias (can be removed after migrating all usages to voyageT)
+        const t = voyageT;
+        
+        // ============================================
+        // VOYAGE NAMESPACE - Centralized Function Organization
+        // ============================================
+        const Voyage = {
+            // State management reference
+            state: AppState,
+            
+            // Internationalization
+            i18n: {
+                t: voyageT,
+                apply: null,  // Will be set below
+                changeLanguage: null,
+                openSelector: null,
+                closeSelector: null
+            },
+            
+            // Guest management
+            guest: {
+                updateHeader: null,
+                updateTeamAvatar: null,
+                updateProfilePhoto: null,
+                continueAsGuest: null,
+                requireAuth: null,
+                updateProfileInfo: null
+            },
+            
+            // Messaging system
+            messaging: {
+                display: null,
+                updateStatus: null,
+                fixAlignment: null,
+                initObserver: null,
+                addWelcome: null,
+                scrollToBottom: null,
+                format: {
+                    time: null,
+                    escapeHtml: null
+                }
+            },
+            
+            // Map functionality
+            map: {
+                init: null,
+                addLocationButton: null,
+                showPermissionModal: null,
+                focusOnUser: null,
+                stopTracking: null,
+                updateUserAvatar: null,
+                setupChips: null,
+                setupSearch: null,
+                clearSearchMarkers: null,
+                getUserLocation: null,
+                setup3DView: null
+            },
+            
+            // SPA booking system
+            spa: {
+                closeWizard: null,
+                showStep: null,
+                selectService: null,
+                renderCalendar: null,
+                selectEarliestSlot: null,
+                selectDate: null,
+                selectTimeSlot: null,
+                renderTherapists: null,
+                selectTherapist: null,
+                renderConfirm: null,
+                renderTimeSlots: null,
+                renderCalendarInline: null,
+                renderCalendarGrid: null,
+                renderDateGrid: null,
+                renderServiceGrid: null,
+                navigateServiceGrid: null,
+                renderTherapistGrid: null,
+                navigateTherapistGrid: null,
+                navigateDateGrid: null,
+                navigateCalendar: null,
+                showAvailableSlotsSorted: null,
+                showDaySlotsWithTherapistFilter: null,
+                showDaySlots: null,
+                showRequestDetails: null,
+                scheduleReminder: null
+            },
+            
+            // Restaurant booking system
+            restaurant: {
+                renderDateGrid: null,
+                navigateDateGrid: null,
+                renderGrid: null,
+                navigateGrid: null,
+                openReservationModal: null,
+                closeReservationModal: null,
+                addAdditionalRoom: null,
+                removeAdditionalRoom: null,
+                calculateTotalPax: null,
+                selectTablePreference: null,
+                scheduleReminder: null
+            },
+            
+            // Activities & Timeline
+            activities: {
+                open: null,
+                closeStory: null,
+                renderTimeline: null,
+                updateNowPlaying: null,
+                switchDate: null,
+                filterByCategory: null,
+                startCountdownTimers: null,
+                toggleFavorite: null,
+                showOnMap: null,
+                format: {
+                    time: null,
+                    date: null,
+                    escapeHtml: null
+                },
+                dailyProgram: {
+                    remove: null,
+                    scheduleReminder: null
+                }
+            },
+            
+            // Notifications
+            notifications: {
+                play: null,
+                send: null,
+                toggle: null,
+                updateToggle: null
+            },
+            
+            // UI utilities
+            ui: {
+                showPhotoModal: null,
+                closePhotoModal: null,
+                takePhoto: null,
+                selectFromGallery: null,
+                resizeImage: null,
+                showWelcomePopup: null,
+                updateNavigationVisibility: null,
+                switchSection: null,
+                openLocationSettingsGuide: null,
+                setupPostActions: null,
+                generateAvatars: null,
+                switchAvatarStyle: null,
+                updateAvatarPreview: null,
+                toggleGhostMode: null
+            },
+            
+            // General utilities
+            utils: {
+                isIOS: null,
+                isStandalone: null,
+                toAbsoluteUrl: null,
+                getCookie: null,
+                timeAgo: null,
+                simpleHash: null,
+                getStoredArray: null,
+                getStoredObject: null,
+                parseTimeToMinutes: null,
+                formatTimeFromDate: null,
+                getDateKey: null,
+                buildDateTime: null,
+                buildTimelineEventId: null
+            },
+            
+            // PWA functionality
+            pwa: {
+                setupFullscreen: null,
+                setupScrollListener: null,
+                refreshSafeArea: null,
+                setupKeyboardHandling: null,
+                setupSafeAreaRefresh: null
+            },
+            
+            // Reservations
+            reservations: {
+                updateInfo: null
+            }
+        };
         
         function applyTranslations() {
             // Tüm data-i18n attribute'larına sahip elementleri bul ve çevir
@@ -13162,7 +13637,7 @@
         });
 
         // Format time
-        function formatTime(timeString) {
+        function formatActivityTime(timeString) {
             if (!timeString) return '';
             const [hours, minutes] = timeString.split(':');
             return `${hours}:${minutes}`;
@@ -13290,8 +13765,8 @@
                     <div class="time-period">
                         <div class="time-period-header" data-i18n="${categoryMap[cat]}">${cat.toUpperCase()}</div>
                         ${grouped[cat].map(activity => {
-                            const startTime = formatTime(activity.start_time);
-                            const endTime = formatTime(activity.end_time);
+                            const startTime = formatActivityTime(activity.start_time);
+                            const endTime = formatActivityTime(activity.end_time);
                             const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
                             
                             // Check if activity is past, current, or upcoming
@@ -13404,7 +13879,7 @@
             }
         }
 
-        function escapeHtml(value) {
+        function escapeActivityHtml(value) {
             return String(value || '')
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
@@ -13495,8 +13970,8 @@
                 .forEach(activity => {
                     if (getDateKey(activity.activity_date) !== dateStr) return;
                     if (!activity.start_time) return;
-                    const startTime = formatTime(activity.start_time);
-                    const endTime = formatTime(activity.end_time);
+                    const startTime = formatActivityTime(activity.start_time);
+                    const endTime = formatActivityTime(activity.end_time);
                     const eventId = buildTimelineEventId('activity', activity.id);
                     if (hiddenIds.has(eventId)) return;
                     events.push({
@@ -13567,8 +14042,8 @@
                     type: 'show',
                     title: show.title || t('dailyProgramShow'),
                     location: show.location || '',
-                    startTime: formatTime(show.start_time || show.startTime || ''),
-                    endTime: formatTime(show.end_time || show.endTime || ''),
+                    startTime: formatActivityTime(show.start_time || show.startTime || ''),
+                    endTime: formatActivityTime(show.end_time || show.endTime || ''),
                     dateStr
                 });
             });
@@ -13650,11 +14125,11 @@
                     <div class="daily-program-event type-${event.type}" style="left: ${left}px; width: ${width}px; top: ${top}px;" data-event-id="${event.id}">
                         <button class="daily-program-remove-btn" onclick="removeDailyProgramEvent('${event.id}')" title="${t('dailyProgramRemove')}" aria-label="${t('dailyProgramRemove')}">&times;</button>
                         <div class="daily-program-event-time">${timeRange}</div>
-                        <div class="daily-program-event-title">${escapeHtml(event.title)}</div>
+                        <div class="daily-program-event-title">${escapeActivityHtml(event.title)}</div>
                         ${event.location ? `
                             <div class="daily-program-event-location">
                                 <i data-lucide="map-pin" class="icon icon-sm"></i>
-                                <span>${escapeHtml(event.location)}</span>
+                                <span>${escapeActivityHtml(event.location)}</span>
                             </div>
                         ` : ''}
                         <div class="daily-program-event-actions">
@@ -13829,8 +14304,8 @@
                 banner.classList.add('active');
                 titleEl.textContent = currentActivity.title || '';
                 const timeRange = currentActivity.end_time 
-                    ? `${formatTime(currentActivity.start_time)} - ${formatTime(currentActivity.end_time)}`
-                    : formatTime(currentActivity.start_time);
+                    ? `${formatActivityTime(currentActivity.start_time)} - ${formatActivityTime(currentActivity.end_time)}`
+                    : formatActivityTime(currentActivity.start_time);
                 timeEl.textContent = timeRange;
             } else {
                 banner.classList.remove('active');
@@ -14519,6 +14994,156 @@
             
             console.log('🔍 PWA Display Mode Kontrolü Tamamlandı');
         })();
+        
+        // ============================================
+        // VOYAGE NAMESPACE - Function Assignments
+        // Link all global functions to Voyage namespace for organized access
+        // Note: Global functions are kept for backward compatibility
+        // ============================================
+        
+        // I18N Functions
+        Voyage.i18n.apply = applyTranslations;
+        Voyage.i18n.changeLanguage = changeLanguage;
+        Voyage.i18n.openSelector = openLanguageSelector;
+        Voyage.i18n.closeSelector = closeLanguageSelector;
+        
+        // Guest Management
+        Voyage.guest.updateHeader = updateGuestHeader;
+        Voyage.guest.updateTeamAvatar = updateTeamAvatarDisplay;
+        Voyage.guest.updateProfilePhoto = updateProfilePhotoDisplay;
+        Voyage.guest.continueAsGuest = continueAsGuest;
+        Voyage.guest.requireAuth = requireAuth;
+        Voyage.guest.updateProfileInfo = updateProfileInfo;
+        
+        // Messaging
+        Voyage.messaging.display = displayMessage;
+        Voyage.messaging.updateStatus = updateMessageStatus;
+        Voyage.messaging.fixAlignment = fixMessageAlignment;
+        Voyage.messaging.initObserver = initMessageObserver;
+        Voyage.messaging.addWelcome = addWelcomeMessage;
+        Voyage.messaging.scrollToBottom = scrollToBottom;
+        Voyage.messaging.format.time = formatMessageTime;
+        Voyage.messaging.format.escapeHtml = escapeMessageHtml;
+        
+        // Map
+        Voyage.map.init = initMap;
+        Voyage.map.addLocationButton = addLocationButton;
+        Voyage.map.showPermissionModal = showLocationPermissionModal;
+        Voyage.map.focusOnUser = focusOnUserLocation;
+        Voyage.map.stopTracking = stopLocationTracking;
+        Voyage.map.updateUserAvatar = updateUserMarkerAvatar;
+        Voyage.map.setupChips = setupMapChips;
+        Voyage.map.setupSearch = setupMapSearch;
+        Voyage.map.clearSearchMarkers = clearSearchMarkers;
+        Voyage.map.getUserLocation = getUserLocation;
+        Voyage.map.setup3DView = setup3DView;
+        
+        // SPA Booking
+        Voyage.spa.closeWizard = closeSpaBookingWizard;
+        Voyage.spa.showStep = showSpaBookingStep;
+        Voyage.spa.selectService = selectSpaService;
+        Voyage.spa.renderCalendar = renderSpaCalendar;
+        Voyage.spa.selectEarliestSlot = selectEarliestAvailableSlot;
+        Voyage.spa.selectDate = selectSpaDate;
+        Voyage.spa.selectTimeSlot = selectSpaTimeSlot;
+        Voyage.spa.renderTherapists = renderSpaTherapists;
+        Voyage.spa.selectTherapist = selectSpaTherapist;
+        Voyage.spa.renderConfirm = renderSpaConfirmStep;
+        Voyage.spa.renderTimeSlots = renderTimeSlots;
+        Voyage.spa.renderCalendarInline = renderSpaCalendarInline;
+        Voyage.spa.renderCalendarGrid = renderSpaCalendarGrid;
+        Voyage.spa.renderDateGrid = renderSpaDateGrid;
+        Voyage.spa.renderServiceGrid = renderSpaServiceGrid;
+        Voyage.spa.navigateServiceGrid = navigateSpaServiceGrid;
+        Voyage.spa.renderTherapistGrid = renderSpaTherapistGrid;
+        Voyage.spa.navigateTherapistGrid = navigateSpaTherapistGrid;
+        Voyage.spa.navigateDateGrid = navigateSpaDateGrid;
+        Voyage.spa.navigateCalendar = navigateSpaCalendar;
+        Voyage.spa.showAvailableSlotsSorted = showAvailableSlotsSorted;
+        Voyage.spa.showDaySlotsWithTherapistFilter = showDaySlotsWithTherapistFilter;
+        Voyage.spa.showDaySlots = showDaySlots;
+        Voyage.spa.showRequestDetails = showSpaRequestDetails;
+        Voyage.spa.scheduleReminder = scheduleSpaReminder;
+        
+        // Restaurant Booking
+        Voyage.restaurant.renderDateGrid = renderRestaurantDateGrid;
+        Voyage.restaurant.navigateDateGrid = navigateRestaurantDateGrid;
+        Voyage.restaurant.renderGrid = renderRestaurantGrid;
+        Voyage.restaurant.navigateGrid = navigateRestaurantGrid;
+        Voyage.restaurant.openReservationModal = openRestaurantReservationModal;
+        Voyage.restaurant.closeReservationModal = closeRestaurantReservationModal;
+        Voyage.restaurant.addAdditionalRoom = addAdditionalRoom;
+        Voyage.restaurant.removeAdditionalRoom = removeAdditionalRoom;
+        Voyage.restaurant.calculateTotalPax = calculateTotalPax;
+        Voyage.restaurant.selectTablePreference = selectTablePreference;
+        Voyage.restaurant.scheduleReminder = scheduleRestaurantReminder;
+        
+        // Activities
+        Voyage.activities.open = openActivityStory;
+        Voyage.activities.closeStory = closeStoryViewer;
+        Voyage.activities.renderTimeline = renderActivitiesTimeline;
+        Voyage.activities.updateNowPlaying = updateNowPlayingBanner;
+        Voyage.activities.switchDate = switchActivityDate;
+        Voyage.activities.filterByCategory = filterByCategory;
+        Voyage.activities.startCountdownTimers = startCountdownTimers;
+        Voyage.activities.toggleFavorite = toggleFavorite;
+        Voyage.activities.showOnMap = showActivityOnMap;
+        Voyage.activities.format.time = formatActivityTime;
+        Voyage.activities.format.date = formatActivityDate;
+        Voyage.activities.format.escapeHtml = escapeActivityHtml;
+        Voyage.activities.dailyProgram.remove = removeDailyProgramEvent;
+        Voyage.activities.dailyProgram.scheduleReminder = scheduleDailyProgramReminder;
+        
+        // Notifications
+        Voyage.notifications.play = playNotificationSound;
+        Voyage.notifications.send = sendNotification;
+        Voyage.notifications.toggle = toggleNotifications;
+        Voyage.notifications.updateToggle = updateNotificationToggle;
+        
+        // UI
+        Voyage.ui.showPhotoModal = showPhotoModal;
+        Voyage.ui.closePhotoModal = closePhotoModal;
+        Voyage.ui.takePhoto = takePhoto;
+        Voyage.ui.selectFromGallery = selectFromGallery;
+        Voyage.ui.resizeImage = resizeImage;
+        Voyage.ui.showWelcomePopup = showWelcomePopup;
+        Voyage.ui.updateNavigationVisibility = updateNavigationVisibility;
+        Voyage.ui.switchSection = switchSection;
+        Voyage.ui.openLocationSettingsGuide = openLocationSettingsGuide;
+        Voyage.ui.setupPostActions = setupPostActions;
+        Voyage.ui.generateAvatars = generateAvatars;
+        Voyage.ui.switchAvatarStyle = switchAvatarStyle;
+        Voyage.ui.updateAvatarPreview = updateAvatarPreview;
+        Voyage.ui.toggleGhostMode = toggleGhostMode;
+        
+        // Utils
+        Voyage.utils.isIOS = isIOS;
+        Voyage.utils.isStandalone = isStandalone;
+        Voyage.utils.toAbsoluteUrl = toAbsoluteUrl;
+        Voyage.utils.getCookie = getCookie;
+        Voyage.utils.getStoredArray = getStoredArray;
+        Voyage.utils.getStoredObject = getStoredObject;
+        Voyage.utils.parseTimeToMinutes = parseTimeToMinutes;
+        Voyage.utils.formatTimeFromDate = formatTimeFromDate;
+        Voyage.utils.getDateKey = getDateKey;
+        Voyage.utils.buildDateTime = buildDateTime;
+        Voyage.utils.buildTimelineEventId = buildTimelineEventId;
+        
+        // PWA
+        Voyage.pwa.setupFullscreen = setupPWAFullscreen;
+        Voyage.pwa.setupScrollListener = setupScrollListener;
+        Voyage.pwa.refreshSafeArea = refreshSafeAreaCalculations;
+        Voyage.pwa.setupKeyboardHandling = setupKeyboardHandling;
+        Voyage.pwa.setupSafeAreaRefresh = setupPWASafeAreaRefresh;
+        
+        // Reservations
+        Voyage.reservations.updateInfo = updateReservationsInfo;
+        
+        // Make Voyage globally accessible
+        window.Voyage = Voyage;
+        
+        console.log('✅ Voyage namespace initialized with', Object.keys(Voyage).length, 'modules');
+        
     </script>
 </body>
 </html>
