@@ -5097,7 +5097,19 @@
                 title.textContent = 'Restoran Düzenle';
                 // Load restaurant data
                 try {
-                    const response = await fetch(`/admin/restaurants/${restaurantId}`);
+                    console.log('🚀 FETCHING restaurant ID:', restaurantId);
+                    const url = `/admin/restaurants/${restaurantId}`;
+                    console.log('🌐 Request URL:', url);
+                    
+                    const response = await fetch(url, {
+                        cache: 'no-cache',
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+                    
+                    console.log('📡 Response received, status:', response.status);
                     
                     if (!response.ok) {
                         if (response.status === 404) {
