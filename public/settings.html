@@ -167,6 +167,286 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
+        .ala-carte-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .dashboard-top-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #ffffff 0%, #f6f9fb 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .dashboard-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: var(--voyage-navy);
+            font-size: 18px;
+        }
+
+        .dashboard-date-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .dashboard-date-info {
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .restaurant-dashboard-card {
+            position: relative;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+            padding: 18px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .restaurant-dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 24px rgba(16, 24, 40, 0.12);
+        }
+
+        .restaurant-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .restaurant-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: var(--text-dark);
+            font-size: 16px;
+        }
+
+        .restaurant-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background: var(--card-color, var(--voyage-blue));
+            box-shadow: 0 6px 12px rgba(44, 110, 143, 0.25);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .status-low {
+            background: #2f9e44;
+        }
+
+        .status-medium {
+            background: #f59f00;
+        }
+
+        .status-high {
+            background: #e03131;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4d4f;
+            animation: pulse 1.4s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 77, 79, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
+        }
+
+        .restaurant-card-body {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .progress-ring {
+            width: 110px;
+            height: 110px;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring .progress-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .progress-ring .progress-value span {
+            font-size: 22px;
+        }
+
+        .progress-ring .progress-value small {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .capacity-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .capacity-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .capacity-row strong {
+            color: var(--text-dark);
+        }
+
+        .table-distribution {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .table-distribution-card {
+            background: var(--card-color-light, #f4f7f9);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .table-distribution-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+        }
+
+        .table-progress-bar {
+            height: 6px;
+            border-radius: 999px;
+            background: #e9ecef;
+            overflow: hidden;
+        }
+
+        .table-progress-bar span {
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--card-color, #2c6e8f), #9cc6da);
+            transition: width 0.3s ease;
+        }
+
+        .theme-blue {
+            --card-color: #2c6e8f;
+            --card-color-light: rgba(44, 110, 143, 0.12);
+        }
+
+        .theme-purple {
+            --card-color: #6a4c93;
+            --card-color-light: rgba(106, 76, 147, 0.12);
+        }
+
+        .theme-green {
+            --card-color: #2f9e44;
+            --card-color-light: rgba(47, 158, 68, 0.12);
+        }
+
+        .theme-orange {
+            --card-color: #f76707;
+            --card-color-light: rgba(247, 103, 7, 0.12);
+        }
+
+        .theme-red {
+            --card-color: #e03131;
+            --card-color-light: rgba(224, 49, 49, 0.12);
+        }
+
+        .theme-teal {
+            --card-color: #1098ad;
+            --card-color-light: rgba(16, 152, 173, 0.12);
+        }
+
+        .theme-gold {
+            --card-color: #c9a961;
+            --card-color-light: rgba(201, 169, 97, 0.12);
+        }
+
+        @media (max-width: 640px) {
+            .restaurant-card-body {
+                grid-template-columns: 1fr;
+                justify-items: center;
+                text-align: center;
+            }
+
+            .capacity-info {
+                align-items: center;
+            }
+
+            .capacity-row {
+                width: 100%;
+            }
+        }
+
         .card-header {
             display: flex;
             justify-content: space-between;
@@ -193,6 +473,10 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
         }
 
         .btn-primary {
@@ -623,6 +907,7 @@
             <button class="tab" onclick="switchTab('activities-calendar')"><i data-lucide="calendar" class="icon icon-md"></i> Aktiviteler Takvimi</button>
             <button class="tab" onclick="switchTab('posts')"><i data-lucide="image" class="icon icon-md"></i> Postlar</button>
             <button class="tab" onclick="switchTab('restaurants')"><i data-lucide="utensils-crossed" class="icon icon-md"></i> A'la Carte Rezervasyonlar</button>
+            <button class="tab" onclick="switchTab('ala-carte-dashboard')"><i data-lucide="layout-dashboard" class="icon icon-md"></i> A'la Carte Dashboard</button>
             <button class="tab" onclick="switchTab('spa')"><i data-lucide="sparkles" class="icon icon-md"></i> SPA Ayarları</button>
         </div>
 
@@ -750,6 +1035,26 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- A'la Carte Dashboard Tab -->
+        <div id="ala-carte-dashboard-tab" class="tab-content">
+            <div class="card ala-carte-dashboard">
+                <div class="dashboard-top-bar">
+                    <div class="dashboard-title">
+                        <i data-lucide="layout-dashboard" class="icon icon-md"></i>
+                        A'la Carte Dashboard
+                    </div>
+                    <div class="dashboard-date-controls">
+                        <input type="date" id="ala-carte-dashboard-date" class="form-input">
+                        <button class="btn btn-secondary" id="ala-carte-dashboard-today">Bugün</button>
+                        <div class="dashboard-date-info" id="ala-carte-dashboard-date-info">Bugün</div>
+                    </div>
+                </div>
+                <div id="ala-carte-dashboard-grid" class="dashboard-grid">
+                    <div class="loading">Yükleniyor...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1405,6 +1710,9 @@
         let currentTeamId = null;
         let currentActivityId = null;
         let currentPostId = null;
+        let alaCarteDashboardInitialized = false;
+        let alaCarteDashboardInterval = null;
+        let alaCarteDashboardRestaurants = [];
 
         // Tab switching
         function switchTab(tabName) {
@@ -1435,6 +1743,13 @@
             if (tabName === 'posts') loadPosts();
             if (tabName === 'restaurants') {
                 loadRestaurants();
+            }
+            if (tabName === 'ala-carte-dashboard') {
+                initAlaCarteDashboard();
+            }
+            if (tabName !== 'ala-carte-dashboard' && alaCarteDashboardInterval) {
+                clearInterval(alaCarteDashboardInterval);
+                alaCarteDashboardInterval = null;
             }
         }
 
@@ -4659,6 +4974,284 @@
 
         let currentRestaurantId = null;
         let currentSessionTemplateId = null;
+
+        function formatDateInput(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function isSameDate(dateStr, compareDate) {
+            return dateStr === formatDateInput(compareDate);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text ?? '';
+            return div.innerHTML;
+        }
+
+        function getDashboardStatus(percentage) {
+            if (percentage >= 80) {
+                return { label: 'Yüksek', className: 'status-high' };
+            }
+            if (percentage >= 55) {
+                return { label: 'Orta', className: 'status-medium' };
+            }
+            return { label: 'Düşük', className: 'status-low' };
+        }
+
+        function getDashboardTheme(index) {
+            const themes = [
+                'theme-blue',
+                'theme-purple',
+                'theme-green',
+                'theme-orange',
+                'theme-red',
+                'theme-teal',
+                'theme-gold'
+            ];
+            return themes[index % themes.length];
+        }
+
+        function calculateTotalCapacity(tableSetup) {
+            if (!Array.isArray(tableSetup)) return 0;
+            return tableSetup.reduce((total, table) => {
+                const capacity = parseInt(table.capacity, 10) || 0;
+                const count = parseInt(table.count, 10) || 0;
+                return total + (capacity * count);
+            }, 0);
+        }
+
+        function calculateTableBreakdown(tableSetup, totalPax) {
+            if (!Array.isArray(tableSetup)) return [];
+            const validTables = tableSetup
+                .map(table => ({
+                    capacity: parseInt(table.capacity, 10) || 0,
+                    count: parseInt(table.count, 10) || 0
+                }))
+                .filter(table => table.capacity > 0 && table.count > 0);
+
+            const totalCapacity = calculateTotalCapacity(validTables);
+            if (totalCapacity === 0) return [];
+
+            return validTables.map(table => {
+                const tableCapacity = table.capacity * table.count;
+                const allocated = Math.round((tableCapacity / totalCapacity) * totalPax);
+                const occupancy = Math.min(100, Math.round((allocated / tableCapacity) * 100));
+                return {
+                    label: `${table.count}x ${table.capacity} kişilik`,
+                    occupancy,
+                    allocated,
+                    tableCapacity
+                };
+            });
+        }
+
+        function getSimulatedPercentage(dateStr, restaurantId) {
+            const seed = `${dateStr}-${restaurantId}`;
+            let hash = 0;
+            for (let i = 0; i < seed.length; i++) {
+                hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+                hash |= 0;
+            }
+            const normalized = Math.abs(hash) % 76;
+            return 20 + normalized;
+        }
+
+        function updateDashboardDateInfo(dateStr) {
+            const infoEl = document.getElementById('ala-carte-dashboard-date-info');
+            if (!infoEl || !dateStr) return;
+
+            const today = new Date();
+            const selectedDate = new Date(dateStr);
+            const diffMs = selectedDate.setHours(0, 0, 0, 0) - today.setHours(0, 0, 0, 0);
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) {
+                infoEl.textContent = 'Bugün';
+            } else if (diffDays > 0) {
+                infoEl.textContent = `${diffDays} gün sonra`;
+            } else {
+                infoEl.textContent = `${Math.abs(diffDays)} gün önce`;
+            }
+        }
+
+        async function fetchDashboardRestaurants() {
+            const cacheBuster = new Date().getTime();
+            const response = await fetch(`/admin/restaurants?_t=${cacheBuster}`, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error('Restoranlar yüklenemedi');
+            }
+            const result = await response.json();
+            let restaurants = [];
+            if (result && result.success) {
+                restaurants = Array.isArray(result.data) ? result.data : [];
+            } else if (Array.isArray(result)) {
+                restaurants = result;
+            }
+            return restaurants.filter(restaurant => restaurant && restaurant.id && restaurant.name);
+        }
+
+        async function fetchDashboardAvailability(dateStr, restaurants) {
+            const restaurantIds = restaurants.map(r => r.id).join(',');
+            if (!restaurantIds) return {};
+            const response = await fetch(`/api/restaurants/check-availability?date=${dateStr}&restaurant_ids=${restaurantIds}`);
+            if (!response.ok) {
+                throw new Error('Doluluk verileri yüklenemedi');
+            }
+            const result = await response.json();
+            return result && result.success ? result.data : {};
+        }
+
+        async function renderAlaCarteDashboard(dateStr) {
+            const gridEl = document.getElementById('ala-carte-dashboard-grid');
+            if (!gridEl) return;
+
+            gridEl.innerHTML = `<div class="loading">Yükleniyor...</div>`;
+            const restaurants = await fetchDashboardRestaurants();
+            const isToday = isSameDate(dateStr, new Date());
+            const availability = isToday ? await fetchDashboardAvailability(dateStr, restaurants) : {};
+
+            if (!restaurants.length) {
+                gridEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🍽️</div>
+                        <p>Henüz restoran eklenmemiş</p>
+                    </div>
+                `;
+                return;
+            }
+
+            gridEl.innerHTML = restaurants.map((restaurant, index) => {
+                const rules = restaurant.rules_json || {};
+                const tableSetup = rules.table_setup || [];
+                const totalCapacity = calculateTotalCapacity(tableSetup);
+                const simulatedPercentage = getSimulatedPercentage(dateStr, restaurant.id);
+                const totalPax = isToday
+                    ? (availability[restaurant.id]?.reserved_pax || 0)
+                    : Math.round((simulatedPercentage / 100) * totalCapacity);
+                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
+                const status = getDashboardStatus(percentage);
+                const breakdown = calculateTableBreakdown(tableSetup, totalPax);
+                const available = Math.max(0, totalCapacity - totalPax);
+                const themeClass = getDashboardTheme(index);
+
+                return `
+                    <div class="restaurant-dashboard-card ${themeClass}">
+                        <div class="restaurant-card-header">
+                            <div class="restaurant-card-title">
+                                <div class="restaurant-icon">
+                                    <i data-lucide="utensils-crossed" class="icon icon-md"></i>
+                                </div>
+                                <span>${escapeHtml(restaurant.name)}</span>
+                            </div>
+                            <span class="status-badge ${status.className}">${status.label}</span>
+                        </div>
+                        <div class="restaurant-card-body">
+                            <div class="progress-ring">
+                                <svg width="110" height="110">
+                                    <circle cx="55" cy="55" r="46" stroke="#edf2f6" stroke-width="10" fill="none"></circle>
+                                    <circle cx="55" cy="55" r="46" stroke="var(--card-color, #2c6e8f)" stroke-width="10" fill="none"
+                                        stroke-linecap="round"
+                                        stroke-dasharray="${2 * Math.PI * 46}"
+                                        stroke-dashoffset="${(2 * Math.PI * 46) - (percentage / 100) * (2 * Math.PI * 46)}"
+                                        style="transition: stroke-dashoffset 1s ease;">
+                                    </circle>
+                                </svg>
+                                <div class="progress-value">
+                                    <span>%${percentage}</span>
+                                    <small>Doluluk</small>
+                                </div>
+                            </div>
+                            <div class="capacity-info">
+                                <div class="capacity-row">
+                                    <span>Toplam Kapasite</span>
+                                    <strong>${totalCapacity}</strong>
+                                </div>
+                                <div class="capacity-row">
+                                    <span>Rezerve</span>
+                                    <strong>${totalPax}</strong>
+                                </div>
+                                <div class="capacity-row">
+                                    <span>Boş</span>
+                                    <strong>${available}</strong>
+                                </div>
+                                ${isToday ? `
+                                    <div class="live-indicator">
+                                        <span class="live-dot"></span>
+                                        Live
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="table-distribution">
+                            ${breakdown.length ? breakdown.map(item => `
+                                <div class="table-distribution-card">
+                                    <div class="table-distribution-header">
+                                        <span>${item.label}</span>
+                                        <span>%${item.occupancy}</span>
+                                    </div>
+                                    <div class="table-progress-bar">
+                                        <span style="width: ${item.occupancy}%"></span>
+                                    </div>
+                                </div>
+                            `).join('') : `
+                                <div class="table-distribution-card">
+                                    <div class="table-distribution-header">
+                                        <span>Masa kurulumu yok</span>
+                                        <span>%0</span>
+                                    </div>
+                                    <div class="table-progress-bar">
+                                        <span style="width: 0%"></span>
+                                    </div>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function initAlaCarteDashboard() {
+            const dateInput = document.getElementById('ala-carte-dashboard-date');
+            const todayBtn = document.getElementById('ala-carte-dashboard-today');
+            if (!dateInput || !todayBtn) return;
+
+            if (!alaCarteDashboardInitialized) {
+                dateInput.addEventListener('change', () => {
+                    updateDashboardDateInfo(dateInput.value);
+                    renderAlaCarteDashboard(dateInput.value);
+                    manageDashboardInterval(dateInput.value);
+                });
+                todayBtn.addEventListener('click', () => {
+                    dateInput.value = formatDateInput(new Date());
+                    updateDashboardDateInfo(dateInput.value);
+                    renderAlaCarteDashboard(dateInput.value);
+                    manageDashboardInterval(dateInput.value);
+                });
+                alaCarteDashboardInitialized = true;
+            }
+
+            if (!dateInput.value) {
+                dateInput.value = formatDateInput(new Date());
+            }
+            updateDashboardDateInfo(dateInput.value);
+            renderAlaCarteDashboard(dateInput.value);
+            manageDashboardInterval(dateInput.value);
+        }
+
+        function manageDashboardInterval(dateStr) {
+            if (alaCarteDashboardInterval) {
+                clearInterval(alaCarteDashboardInterval);
+                alaCarteDashboardInterval = null;
+            }
+            if (isSameDate(dateStr, new Date())) {
+                alaCarteDashboardInterval = setInterval(() => {
+                    renderAlaCarteDashboard(dateStr);
+                }, 5000);
+            }
+        }
 
         // Load restaurants list
         async function loadRestaurants() {
