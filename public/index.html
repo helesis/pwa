@@ -2629,7 +2629,7 @@
             padding: 20px;
             max-width: 620px;
             width: min(92vw, 620px);
-            max-height: 85vh;
+            max-height: 78vh;
             overflow-y: auto;
             box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         }
@@ -15008,14 +15008,13 @@
     <!-- SPA Booking Wizard Modal -->
     <div id="spaBookingModal" class="spa-booking-modal" onclick="if(event.target === this) closeSpaBookingWizard()" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
         <div class="spa-booking-modal-content" onclick="event.stopPropagation()">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #E8F1F5;">
-                <h3 style="font-size: 20px; font-weight: 600; color: #1A4D6D; margin: 0;">SPA Rezervasyon Talebi</h3>
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px;">
                 <button onclick="closeSpaBookingWizard()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6C757D; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
             
             <!-- Step 1: Service Selection -->
             <div id="spa-booking-step-service" class="spa-booking-step" style="display: block;">
-                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Hizmet Seçin</h4>
+                <h4 style="font-size: 15px; font-weight: 600; color: #111b21; margin-bottom: 10px;">Hizmet Seçin</h4>
                 <div id="spa-services-list" style="max-height: 400px; overflow-y: auto;">
                     <!-- Services will be loaded here -->
                 </div>
@@ -15023,9 +15022,9 @@
             
             <!-- Step 2: Date Selection -->
             <div id="spa-booking-step-date" class="spa-booking-step" style="display: none;">
-                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Tarih Seçin</h4>
-                <div id="spa-availability-last-update" style="font-size: 12px; color: #667781; margin-bottom: 8px; text-align: center;"></div>
-                <div id="spa-availability-warning" style="display: none; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 16px; text-align: center;"></div>
+                <h4 style="font-size: 15px; font-weight: 600; color: #111b21; margin-bottom: 10px;">Tarih Seçin</h4>
+                <div id="spa-availability-last-update" style="font-size: 12px; color: #667781; margin-bottom: 6px; text-align: center;"></div>
+                <div id="spa-availability-warning" style="display: none; background: #fff3cd; color: #856404; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin-bottom: 10px; text-align: center;"></div>
                 <div id="spa-availability-calendar" style="display: flex; gap: 8px; flex-wrap: wrap; max-height: 400px; overflow-y: auto; justify-content: center;">
                     <!-- Calendar will be rendered here -->
                 </div>
@@ -15034,7 +15033,7 @@
             
             <!-- Step 3: Time Slot Selection -->
             <div id="spa-booking-step-time" class="spa-booking-step" style="display: none;">
-                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Saat Seçin</h4>
+                <h4 style="font-size: 15px; font-weight: 600; color: #111b21; margin-bottom: 10px;">Saat Seçin</h4>
                 <div id="spa-time-slots-list" style="max-height: 400px; overflow-y: auto;">
                     <!-- Time slots will be rendered here -->
                 </div>
@@ -15043,7 +15042,7 @@
             
             <!-- Step 4: Therapist Selection -->
             <div id="spa-booking-step-therapist" class="spa-booking-step" style="display: none;">
-                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Terapist Seçin</h4>
+                <h4 style="font-size: 15px; font-weight: 600; color: #111b21; margin-bottom: 10px;">Terapist Seçin</h4>
                 <div id="spa-therapists-list" style="max-height: 400px; overflow-y: auto;">
                     <!-- Therapists will be rendered here -->
                 </div>
@@ -15052,42 +15051,42 @@
             
             <!-- Step 5: Confirmation -->
             <div id="spa-booking-step-confirm" class="spa-booking-step" style="display: none;">
-                <h4 style="font-size: 16px; font-weight: 600; color: #111b21; margin-bottom: 16px;">Talebi Onaylayın</h4>
-                <div style="background: #E8F1F5; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Hizmet</div>
+                <h4 style="font-size: 15px; font-weight: 600; color: #111b21; margin-bottom: 10px;">Talebi Onaylayın</h4>
+                <div style="background: #E8F1F5; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 3px;">Hizmet</div>
                         <div style="font-weight: 600; color: #111b21;" id="spa-confirm-service">-</div>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Tarih</div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 3px;">Tarih</div>
                         <div style="font-weight: 600; color: #111b21;" id="spa-confirm-date">-</div>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Saat</div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 3px;">Saat</div>
                         <div style="font-weight: 600; color: #111b21;" id="spa-confirm-time">-</div>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Terapist</div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 3px;">Terapist</div>
                         <div style="font-weight: 600; color: #111b21;" id="spa-confirm-therapist">-</div>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 12px; color: #667781; margin-bottom: 4px;">Fiyat</div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; color: #667781; margin-bottom: 3px;">Fiyat</div>
                         <div style="font-weight: 600; color: #111b21;" id="spa-confirm-price">-</div>
                     </div>
                 </div>
                 
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-size: 14px; font-weight: 500; color: #2C3E50; margin-bottom: 8px;">Not (Opsiyonel)</label>
-                    <textarea id="spa-confirm-note" rows="3" style="width: 100%; padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;"></textarea>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 13px; font-weight: 500; color: #2C3E50; margin-bottom: 6px;">Not (Opsiyonel)</label>
+                    <textarea id="spa-confirm-note" rows="2" style="width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 13px; resize: vertical; font-family: inherit;"></textarea>
                 </div>
                 
-                <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 12px; color: #856404; line-height: 1.5;">
+                <div style="background: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 12px; color: #856404; line-height: 1.4;">
                     ⚠️ Bu bir taleptir. SPA ekibi onayladıktan sonra kesinleşir.
                 </div>
                 
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="showSpaBookingStep('therapist')" style="flex: 1; padding: 12px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Geri</button>
-                    <button id="spa-submit-request-btn" onclick="submitSpaRequest()" style="flex: 1; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Talebi Gönder</button>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="showSpaBookingStep('therapist')" style="flex: 1; padding: 10px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">Geri</button>
+                    <button id="spa-submit-request-btn" onclick="submitSpaRequest()" style="flex: 1; padding: 10px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">Talebi Gönder</button>
                 </div>
             </div>
         </div>
