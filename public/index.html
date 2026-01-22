@@ -9194,13 +9194,13 @@
         // ============================================
         async function openSpaBookingWizard() {
             // Reset state
-            spaBookingState = {
+            Object.assign(spaBookingState, {
                 selectedService: null,
                 selectedDate: null,
                 selectedSlot: null,
                 selectedTherapist: null,
                 note: ''
-            };
+            });
             
             // Show modal and start with service selection
             document.getElementById('spaBookingModal').style.display = 'flex';
@@ -9210,13 +9210,13 @@
 
         function closeSpaBookingWizard() {
             document.getElementById('spaBookingModal').style.display = 'none';
-            spaBookingState = {
+            Object.assign(spaBookingState, {
                 selectedService: null,
                 selectedDate: null,
                 selectedSlot: null,
                 selectedTherapist: null,
                 note: ''
-            };
+            });
         }
 
         function showSpaBookingStep(step) {
