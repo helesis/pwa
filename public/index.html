@@ -11367,8 +11367,11 @@
                         
                         // Cancel action (right side - swipe left reveals)
                         const cancelAction = document.createElement('div');
-                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                        cancelAction.textContent = t('cancelReservation');
+                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; gap: 8px;';
+                        cancelAction.innerHTML = `
+                            <i data-lucide="trash-2" class="icon icon-md"></i>
+                            <span>${t('cancelReservation')}</span>
+                        `;
                         actionsBg.appendChild(cancelAction);
                         
                         swipeWrapper.appendChild(actionsBg);
@@ -12135,8 +12138,11 @@
                     
                     // Cancel action (right side - swipe left reveals)
                     const cancelAction = document.createElement('div');
-                    cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                    cancelAction.textContent = t('cancelReservation');
+                    cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; gap: 8px;';
+                    cancelAction.innerHTML = `
+                        <i data-lucide="trash-2" class="icon icon-md"></i>
+                        <span>${t('cancelReservation')}</span>
+                    `;
                     actionsBg.appendChild(cancelAction);
                     
                     swipeWrapper.appendChild(actionsBg);
