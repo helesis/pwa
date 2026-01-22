@@ -459,6 +459,7 @@ async function initializeDatabase() {
         reservation_date DATE NOT NULL DEFAULT CURRENT_DATE,
         pax_adult INTEGER NOT NULL DEFAULT 0,
         pax_child INTEGER NOT NULL DEFAULT 0,
+        tables_json JSONB DEFAULT '[]'::jsonb,
         total_price DECIMAL(10, 2) NOT NULL,
         currency VARCHAR(3) NOT NULL DEFAULT 'TRY',
         status VARCHAR(20) DEFAULT 'confirmed',
@@ -1246,6 +1247,7 @@ async function addNewTablesIfNeeded() {
             reservation_date DATE NOT NULL DEFAULT CURRENT_DATE,
             pax_adult INTEGER NOT NULL DEFAULT 0,
             pax_child INTEGER NOT NULL DEFAULT 0,
+            tables_json JSONB DEFAULT '[]'::jsonb,
             total_price DECIMAL(10, 2) NOT NULL,
             currency VARCHAR(3) NOT NULL DEFAULT 'TRY',
             status VARCHAR(20) DEFAULT 'confirmed',
@@ -1332,6 +1334,18 @@ async function addNewTablesIfNeeded() {
           // Continue with other tables even if this fails - table might already exist
         }
       } else {
+        const tablesJsonCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'restaurant_reservations'
+              AND column_name = 'tables_json'
+          );
+        `);
+        if (!tablesJsonCheck.rows[0].exists) {
+          await pool.query(`ALTER TABLE restaurant_reservations ADD COLUMN tables_json JSONB DEFAULT '[]'::jsonb;`);
+          logDebug('Added tables_json column to restaurant_reservations table');
+        }
         logDebug('restaurant_reservations table already exists');
       }
     }
@@ -6508,16 +6522,15 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
       return res.json({ success: true, data: {} });
     }
     
-    // Get all reservations for the given date and restaurants
+    // Get all reservations for the given date and restaurants (table usage)
     const reservationsResult = await pool.query(`
       SELECT 
         restaurant_id,
-        SUM(pax_adult + pax_child) as total_pax
+        tables_json
       FROM restaurant_reservations
       WHERE reservation_date = $1
         AND restaurant_id = ANY($2::int[])
         AND status != 'cancelled'
-      GROUP BY restaurant_id
     `, [date, restaurantIdsArray]);
     
     // Get restaurant capacity info
@@ -6543,15 +6556,23 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
         totalCapacity += capacity * count;
       });
       
-      // Get current reservations
-      const reservation = reservationsResult.rows.find(r => r.restaurant_id === restaurant.id);
-      const currentPax = reservation ? parseInt(reservation.total_pax) : 0;
+      // Get current reservations (use tables_json to calculate reserved capacity)
+      const reservationRows = reservationsResult.rows.filter(r => r.restaurant_id === restaurant.id);
+      let reservedCapacity = 0;
+      reservationRows.forEach(row => {
+        const tables = Array.isArray(row.tables_json) ? row.tables_json : [];
+        tables.forEach(table => {
+          const capacity = parseInt(table.capacity, 10) || 0;
+          const count = parseInt(table.count, 10) || 0;
+          reservedCapacity += capacity * count;
+        });
+      });
       
       availabilityMap[restaurant.id] = {
         total_capacity: totalCapacity,
-        reserved_pax: currentPax,
-        available_capacity: totalCapacity - currentPax,
-        is_full: currentPax >= totalCapacity
+        reserved_pax: reservedCapacity,
+        available_capacity: totalCapacity - reservedCapacity,
+        is_full: reservedCapacity >= totalCapacity
       };
     });
     
@@ -6587,6 +6608,111 @@ app.get('/api/guest-info', async (req, res) => {
     res.status(500).json({ success: false, error: 'Database error' });
   }
 });
+
+function normalizeTableSetup(tableSetup) {
+  if (!Array.isArray(tableSetup)) return [];
+  return tableSetup
+    .map(table => ({
+      capacity: parseInt(table.capacity, 10) || 0,
+      count: parseInt(table.count, 10) || 0
+    }))
+    .filter(table => table.capacity > 0 && table.count > 0);
+}
+
+function buildAvailableTables(tableSetup, reservationRows) {
+  const availableMap = new Map();
+  tableSetup.forEach(table => {
+    availableMap.set(table.capacity, table.count);
+  });
+
+  reservationRows.forEach(row => {
+    const tablesJson = row.tables_json;
+    const tables = Array.isArray(tablesJson) ? tablesJson : [];
+    tables.forEach(table => {
+      const capacity = parseInt(table.capacity, 10) || 0;
+      const count = parseInt(table.count, 10) || 0;
+      if (!availableMap.has(capacity)) return;
+      const remaining = (availableMap.get(capacity) || 0) - count;
+      availableMap.set(capacity, Math.max(0, remaining));
+    });
+  });
+
+  return Array.from(availableMap.entries())
+    .map(([capacity, count]) => ({ capacity, count }))
+    .filter(table => table.count > 0);
+}
+
+function findBestTableCombination(pax, tables, allowMixTable = true) {
+  if (!Number.isFinite(pax) || pax <= 0) return null;
+  const sortedTables = tables
+    .map(table => ({
+      capacity: parseInt(table.capacity, 10) || 0,
+      count: parseInt(table.count, 10) || 0
+    }))
+    .filter(table => table.capacity > 0 && table.count > 0)
+    .sort((a, b) => a.capacity - b.capacity);
+
+  if (sortedTables.length === 0) return null;
+
+  if (!allowMixTable) {
+    const singleTable = sortedTables.find(table => table.capacity >= pax && table.count > 0);
+    if (!singleTable) return null;
+    return {
+      tables: [{ capacity: singleTable.capacity, count: 1 }],
+      totalCapacity: singleTable.capacity,
+      totalTables: 1
+    };
+  }
+
+  const maxTables = sortedTables.reduce((sum, table) => sum + table.count, 0);
+
+  for (let targetTables = 1; targetTables <= maxTables; targetTables += 1) {
+    let best = null;
+    const counts = new Array(sortedTables.length).fill(0);
+
+    const dfs = (index, usedTables, capacitySum) => {
+      if (usedTables > targetTables) return;
+      if (index === sortedTables.length) {
+        if (usedTables === targetTables && capacitySum >= pax) {
+          const waste = capacitySum - pax;
+          if (!best || waste < best.waste) {
+            best = {
+              waste,
+              totalCapacity: capacitySum,
+              counts: [...counts]
+            };
+          }
+        }
+        return;
+      }
+
+      const { capacity, count } = sortedTables[index];
+      const remainingSlots = targetTables - usedTables;
+      const maxUse = Math.min(count, remainingSlots);
+
+      for (let use = 0; use <= maxUse; use += 1) {
+        counts[index] = use;
+        dfs(index + 1, usedTables + use, capacitySum + use * capacity);
+      }
+      counts[index] = 0;
+    };
+
+    dfs(0, 0, 0);
+
+    if (best) {
+      const tablesUsed = sortedTables
+        .map((table, idx) => (best.counts[idx] > 0 ? { capacity: table.capacity, count: best.counts[idx] } : null))
+        .filter(Boolean);
+      return {
+        tables: tablesUsed,
+        totalCapacity: best.totalCapacity,
+        totalTables: targetTables
+      };
+    }
+  }
+
+  return null;
+}
 
 // Create restaurant reservation (guest)
 app.post('/reservations', async (req, res) => {
@@ -6706,17 +6832,55 @@ app.post('/reservations', async (req, res) => {
         });
       }
     }
+
+    const totalPax = (adultCount || 0) + (childCount || 0);
+    if (totalPax <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid pax count',
+        code: 'INVALID_PAX'
+      });
+    }
+
+    const tableSetup = normalizeTableSetup(rules_json.table_setup);
+    if (tableSetup.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Restaurant table setup is missing',
+        code: 'TABLE_SETUP_MISSING'
+      });
+    }
+
+    const existingTablesResult = await pool.query(`
+      SELECT tables_json
+      FROM restaurant_reservations
+      WHERE restaurant_id = $1
+        AND reservation_date = $2
+        AND status != 'cancelled'
+    `, [restaurant_id, resDate]);
+
+    const availableTables = buildAvailableTables(tableSetup, existingTablesResult.rows);
+    const allowMixTable = rules_json.allow_mix_table !== false;
+    const tableAllocation = findBestTableCombination(totalPax, availableTables, allowMixTable);
+
+    if (!tableAllocation) {
+      return res.status(409).json({
+        success: false,
+        error: 'No available tables for this reservation',
+        code: 'NO_TABLES_AVAILABLE'
+      });
+    }
     
     // Create reservation
     const result = await pool.query(`
       INSERT INTO restaurant_reservations (
         restaurant_id, guest_unique_id, reservation_date,
-        pax_adult, pax_child, total_price, currency, status, special_requests
+        pax_adult, pax_child, tables_json, total_price, currency, status, special_requests
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', $9)
       RETURNING 
         id, restaurant_id, guest_unique_id, reservation_date,
-        pax_adult, pax_child, total_price, currency, status,
+        pax_adult, pax_child, tables_json, total_price, currency, status,
         special_requests, created_at
     `, [
       restaurant_id,
@@ -6724,6 +6888,7 @@ app.post('/reservations', async (req, res) => {
       resDate,
       adultCount,
       childCount,
+      JSON.stringify(tableAllocation.tables),
       totalPrice,
       restaurant.currency,
       special_requests || null
