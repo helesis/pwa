@@ -6517,7 +6517,6 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
       WHERE reservation_date = $1
         AND restaurant_id = ANY($2::int[])
         AND status != 'cancelled'
-        AND deleted_at IS NULL
       GROUP BY restaurant_id
     `, [date, restaurantIdsArray]);
     

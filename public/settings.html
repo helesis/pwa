@@ -1712,7 +1712,6 @@
         let currentPostId = null;
         let alaCarteDashboardInitialized = false;
         let alaCarteDashboardInterval = null;
-        let alaCarteDashboardRestaurants = [];
 
         // Tab switching
         function switchTab(tabName) {
@@ -5021,6 +5020,14 @@
             }, 0);
         }
 
+        function getRestaurantCapacity(rules, tableSetup) {
+            const explicitCapacity = parseInt(rules?.total_capacity ?? rules?.capacity, 10);
+            if (Number.isFinite(explicitCapacity) && explicitCapacity > 0) {
+                return explicitCapacity;
+            }
+            return calculateTotalCapacity(tableSetup);
+        }
+
         function calculateTableBreakdown(tableSetup, totalPax) {
             if (!Array.isArray(tableSetup)) return [];
             const validTables = tableSetup
@@ -5044,17 +5051,6 @@
                     tableCapacity
                 };
             });
-        }
-
-        function getSimulatedPercentage(dateStr, restaurantId) {
-            const seed = `${dateStr}-${restaurantId}`;
-            let hash = 0;
-            for (let i = 0; i < seed.length; i++) {
-                hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-                hash |= 0;
-            }
-            const normalized = Math.abs(hash) % 76;
-            return 20 + normalized;
         }
 
         function updateDashboardDateInfo(dateStr) {
@@ -5107,9 +5103,16 @@
             if (!gridEl) return;
 
             gridEl.innerHTML = `<div class="loading">Yükleniyor...</div>`;
-            const restaurants = await fetchDashboardRestaurants();
+            let restaurants = [];
+            let availability = {};
+            try {
+                restaurants = await fetchDashboardRestaurants();
+                availability = await fetchDashboardAvailability(dateStr, restaurants);
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+                availability = {};
+            }
             const isToday = isSameDate(dateStr, new Date());
-            const availability = isToday ? await fetchDashboardAvailability(dateStr, restaurants) : {};
 
             if (!restaurants.length) {
                 gridEl.innerHTML = `
@@ -5124,11 +5127,8 @@
             gridEl.innerHTML = restaurants.map((restaurant, index) => {
                 const rules = restaurant.rules_json || {};
                 const tableSetup = rules.table_setup || [];
-                const totalCapacity = calculateTotalCapacity(tableSetup);
-                const simulatedPercentage = getSimulatedPercentage(dateStr, restaurant.id);
-                const totalPax = isToday
-                    ? (availability[restaurant.id]?.reserved_pax || 0)
-                    : Math.round((simulatedPercentage / 100) * totalCapacity);
+                const totalCapacity = getRestaurantCapacity(rules, tableSetup);
+                const totalPax = availability[restaurant.id]?.reserved_pax || 0;
                 const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
                 const status = getDashboardStatus(percentage);
                 const breakdown = calculateTableBreakdown(tableSetup, totalPax);
