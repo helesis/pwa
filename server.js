@@ -6546,33 +6546,54 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
     
     restaurantsResult.rows.forEach(restaurant => {
       const rules = restaurant.rules_json || {};
-      const tableSetup = rules.table_setup || [];
+      const tableSetup = Array.isArray(rules.table_setup) ? rules.table_setup : [];
       
       // Calculate total capacity
       let totalCapacity = 0;
+      const totalTableCounts = new Map();
       tableSetup.forEach(table => {
-        const capacity = table.capacity || 0;
-        const count = table.count || 0;
+        const capacity = parseInt(table.capacity, 10) || 0;
+        const count = parseInt(table.count, 10) || 0;
+        if (capacity <= 0 || count <= 0) return;
         totalCapacity += capacity * count;
+        totalTableCounts.set(capacity, count);
       });
       
       // Get current reservations (use tables_json to calculate reserved capacity)
       const reservationRows = reservationsResult.rows.filter(r => r.restaurant_id === restaurant.id);
       let reservedCapacity = 0;
+      const usedTableCounts = new Map();
       reservationRows.forEach(row => {
         const tables = Array.isArray(row.tables_json) ? row.tables_json : [];
         tables.forEach(table => {
           const capacity = parseInt(table.capacity, 10) || 0;
           const count = parseInt(table.count, 10) || 0;
+          if (capacity <= 0 || count <= 0) return;
           reservedCapacity += capacity * count;
+          usedTableCounts.set(capacity, (usedTableCounts.get(capacity) || 0) + count);
         });
       });
+
+      const tableUsage = Array.from(totalTableCounts.entries())
+        .map(([capacity, totalCount]) => {
+          const usedCount = usedTableCounts.get(capacity) || 0;
+          const remainingCount = Math.max(0, totalCount - usedCount);
+          return {
+            capacity,
+            total_tables: totalCount,
+            used_tables: usedCount,
+            remaining_tables: remainingCount,
+            remaining_capacity: remainingCount * capacity
+          };
+        })
+        .sort((a, b) => a.capacity - b.capacity);
       
       availabilityMap[restaurant.id] = {
         total_capacity: totalCapacity,
         reserved_pax: reservedCapacity,
         available_capacity: totalCapacity - reservedCapacity,
-        is_full: reservedCapacity >= totalCapacity
+        is_full: reservedCapacity >= totalCapacity,
+        table_usage: tableUsage
       };
     });
     

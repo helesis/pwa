@@ -5028,8 +5028,11 @@
             return calculateTotalCapacity(tableSetup);
         }
 
-        function calculateTableBreakdown(tableSetup, totalPax) {
+        function calculateTableBreakdown(tableSetup, tableUsage) {
             if (!Array.isArray(tableSetup)) return [];
+            const usageMap = new Map(
+                (Array.isArray(tableUsage) ? tableUsage : []).map(item => [item.capacity, item])
+            );
             const validTables = tableSetup
                 .map(table => ({
                     capacity: parseInt(table.capacity, 10) || 0,
@@ -5037,18 +5040,19 @@
                 }))
                 .filter(table => table.capacity > 0 && table.count > 0);
 
-            const totalCapacity = calculateTotalCapacity(validTables);
-            if (totalCapacity === 0) return [];
-
             return validTables.map(table => {
-                const tableCapacity = table.capacity * table.count;
-                const allocated = Math.round((tableCapacity / totalCapacity) * totalPax);
-                const occupancy = Math.min(100, Math.round((allocated / tableCapacity) * 100));
+                const usage = usageMap.get(table.capacity);
+                const usedTables = usage ? parseInt(usage.used_tables, 10) || 0 : 0;
+                const totalTables = table.count;
+                const remainingTables = Math.max(0, totalTables - usedTables);
+                const occupancy = totalTables > 0 ? Math.min(100, Math.round((usedTables / totalTables) * 100)) : 0;
                 return {
-                    label: `${table.count}x ${table.capacity} kişilik`,
+                    label: `${table.capacity} kişilik`,
                     occupancy,
-                    allocated,
-                    tableCapacity
+                    usedTables,
+                    totalTables,
+                    remainingTables,
+                    remainingCapacity: remainingTables * table.capacity
                 };
             });
         }
@@ -5125,14 +5129,19 @@
             }
 
             gridEl.innerHTML = restaurants.map((restaurant, index) => {
+                const availabilityInfo = availability[restaurant.id] || {};
                 const rules = restaurant.rules_json || {};
                 const tableSetup = rules.table_setup || [];
-                const totalCapacity = getRestaurantCapacity(rules, tableSetup);
-                const totalPax = availability[restaurant.id]?.reserved_pax || 0;
+                const totalCapacity = Number.isFinite(availabilityInfo.total_capacity)
+                    ? availabilityInfo.total_capacity
+                    : getRestaurantCapacity(rules, tableSetup);
+                const totalPax = availabilityInfo.reserved_pax || 0;
+                const availableCapacity = Number.isFinite(availabilityInfo.available_capacity)
+                    ? availabilityInfo.available_capacity
+                    : Math.max(0, totalCapacity - totalPax);
                 const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
                 const status = getDashboardStatus(percentage);
-                const breakdown = calculateTableBreakdown(tableSetup, totalPax);
-                const available = Math.max(0, totalCapacity - totalPax);
+                const breakdown = calculateTableBreakdown(tableSetup, availabilityInfo.table_usage);
                 const themeClass = getDashboardTheme(index);
                 const circumference = 2 * Math.PI * 46;
                 const dashOffset = circumference - (percentage / 100) * circumference;
@@ -5176,8 +5185,8 @@
                                     <strong data-role="reserved">${totalPax}</strong>
                                 </div>
                                 <div class="capacity-row">
-                                    <span>Boş</span>
-                                    <strong data-role="available">${available}</strong>
+                                    <span>Kalan Kapasite</span>
+                                    <strong data-role="available">${availableCapacity}</strong>
                                 </div>
                                 ${isToday ? `
                                     <div class="live-indicator">
@@ -5192,10 +5201,14 @@
                                 <div class="table-distribution-card" data-role="table-card" data-table-index="${tableIndex}">
                                     <div class="table-distribution-header">
                                         <span data-role="table-label">${item.label}</span>
-                                        <span data-role="table-percent">%${item.occupancy}</span>
+                                        <span data-role="table-percent">${item.usedTables}/${item.totalTables}</span>
                                     </div>
                                     <div class="table-progress-bar">
                                         <span data-role="table-progress" style="width: ${item.occupancy}%"></span>
+                                    </div>
+                                    <div class="capacity-row" style="margin-top: 6px;">
+                                        <span>Kalan kapasite</span>
+                                        <strong data-role="table-remaining">${item.remainingCapacity}</strong>
                                     </div>
                                 </div>
                             `).join('') : `
@@ -5238,14 +5251,19 @@
                     return;
                 }
 
+                const availabilityInfo = availability[restaurant.id] || {};
                 const rules = restaurant.rules_json || {};
                 const tableSetup = rules.table_setup || [];
-                const totalCapacity = getRestaurantCapacity(rules, tableSetup);
-                const totalPax = availability[restaurant.id]?.reserved_pax || 0;
+                const totalCapacity = Number.isFinite(availabilityInfo.total_capacity)
+                    ? availabilityInfo.total_capacity
+                    : getRestaurantCapacity(rules, tableSetup);
+                const totalPax = availabilityInfo.reserved_pax || 0;
+                const availableCapacity = Number.isFinite(availabilityInfo.available_capacity)
+                    ? availabilityInfo.available_capacity
+                    : Math.max(0, totalCapacity - totalPax);
                 const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
                 const status = getDashboardStatus(percentage);
-                const available = Math.max(0, totalCapacity - totalPax);
-                const breakdown = calculateTableBreakdown(tableSetup, totalPax);
+                const breakdown = calculateTableBreakdown(tableSetup, availabilityInfo.table_usage);
 
                 const statusEl = card.querySelector('[data-role="status"]');
                 if (statusEl) {
@@ -5266,7 +5284,7 @@
                 if (reservedEl) reservedEl.textContent = totalPax;
 
                 const availableEl = card.querySelector('[data-role="available"]');
-                if (availableEl) availableEl.textContent = available;
+                if (availableEl) availableEl.textContent = availableCapacity;
 
                 const ring = card.querySelector('[data-role="progress-ring"]');
                 if (ring) {
@@ -5287,9 +5305,11 @@
                     const labelEl = tableCard.querySelector('[data-role="table-label"]');
                     const percentValueEl = tableCard.querySelector('[data-role="table-percent"]');
                     const barEl = tableCard.querySelector('[data-role="table-progress"]');
+                    const remainingEl = tableCard.querySelector('[data-role="table-remaining"]');
                     if (labelEl) labelEl.textContent = item.label;
-                    if (percentValueEl) percentValueEl.textContent = `%${item.occupancy}`;
+                    if (percentValueEl) percentValueEl.textContent = `${item.usedTables}/${item.totalTables}`;
                     if (barEl) barEl.style.width = `${item.occupancy}%`;
+                    if (remainingEl) remainingEl.textContent = item.remainingCapacity;
                 });
             }
         }
