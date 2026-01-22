@@ -14771,7 +14771,7 @@
     </div>
 
     <!-- SPA Booking Wizard Modal -->
-    <div id="spaBookingModal" class="spa-booking-modal" onclick="if(event.target === this) closeSpaBookingWizard()" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div id="spaBookingModal" class="spa-booking-modal" onclick="if(event.target === this) closeSpaBookingWizard()" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10003; align-items: center; justify-content: center;">
         <div class="spa-booking-modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #E8F1F5;">
                 <h3 style="font-size: 20px; font-weight: 600; color: #1A4D6D; margin: 0;">SPA Rezervasyon Talebi</h3>
@@ -14803,7 +14803,7 @@
                 <div id="spa-availability-calendar" style="display: flex; gap: 8px; flex-wrap: wrap; max-height: 400px; overflow-y: auto; justify-content: center;">
                     <!-- Calendar will be rendered here -->
                 </div>
-                <button onclick="showSpaBookingStep('service')" style="margin-top: 16px; padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; cursor: pointer;">Geri</button>
+                <button onclick="closeSpaBookingWizard()" style="margin-top: 16px; padding: 8px 16px; background: #6C757D; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">İptal</button>
             </div>
             
             <!-- Step 3: Time Slot Selection -->
@@ -14812,7 +14812,7 @@
                 <div id="spa-time-slots-list" style="max-height: 400px; overflow-y: auto;">
                     <!-- Time slots will be rendered here -->
                 </div>
-                <button onclick="showSpaBookingStep('date')" style="margin-top: 16px; padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; cursor: pointer;">Geri</button>
+                <button onclick="closeSpaBookingWizard()" style="margin-top: 16px; padding: 8px 16px; background: #6C757D; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">İptal</button>
             </div>
             
             <!-- Step 4: Therapist Selection -->
@@ -14821,7 +14821,7 @@
                 <div id="spa-therapists-list" style="max-height: 400px; overflow-y: auto;">
                     <!-- Therapists will be rendered here -->
                 </div>
-                <button onclick="showSpaBookingStep('time')" style="margin-top: 16px; padding: 8px 16px; background: #E8F1F5; color: #1A4D6D; border: 1px solid #1A4D6D; border-radius: 6px; font-size: 14px; cursor: pointer;">Geri</button>
+                <button onclick="closeSpaBookingWizard()" style="margin-top: 16px; padding: 8px 16px; background: #6C757D; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">İptal</button>
             </div>
             
             <!-- Step 5: Confirmation -->
@@ -14860,7 +14860,7 @@
                 </div>
                 
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="showSpaBookingStep('therapist')" style="flex: 1; padding: 12px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Geri</button>
+                    <button onclick="closeSpaBookingWizard()" style="flex: 1; padding: 12px; background: #6C757D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">İptal</button>
                     <button id="spa-submit-request-btn" onclick="submitSpaRequest()" style="flex: 1; padding: 12px; background: #1A4D6D; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">Talebi Gönder</button>
                 </div>
             </div>
