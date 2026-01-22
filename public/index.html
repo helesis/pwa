@@ -9816,6 +9816,13 @@
         async function loadSpaReservations() {
             const container = document.getElementById('spaReservations');
             if (!container) return;
+
+            const formatLocalDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
             
             try {
                 console.log('[SPA Inline] Reservations section opened');
@@ -9861,7 +9868,7 @@
 
                 // Store dates for navigation
                 spaAllDates = allDates.map(d => ({
-                    date: d.toISOString().split('T')[0],
+                    date: formatLocalDate(d),
                     dateObj: new Date(d)
                 }));
                 spaCurrentDateIndex = 0;
