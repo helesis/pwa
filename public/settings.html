@@ -5134,9 +5134,11 @@
                 const breakdown = calculateTableBreakdown(tableSetup, totalPax);
                 const available = Math.max(0, totalCapacity - totalPax);
                 const themeClass = getDashboardTheme(index);
+                const circumference = 2 * Math.PI * 46;
+                const dashOffset = circumference - (percentage / 100) * circumference;
 
                 return `
-                    <div class="restaurant-dashboard-card ${themeClass}">
+                    <div class="restaurant-dashboard-card ${themeClass}" data-restaurant-id="${restaurant.id}">
                         <div class="restaurant-card-header">
                             <div class="restaurant-card-title">
                                 <div class="restaurant-icon">
@@ -5144,7 +5146,7 @@
                                 </div>
                                 <span>${escapeHtml(restaurant.name)}</span>
                             </div>
-                            <span class="status-badge ${status.className}">${status.label}</span>
+                            <span class="status-badge ${status.className}" data-role="status">${status.label}</span>
                         </div>
                         <div class="restaurant-card-body">
                             <div class="progress-ring">
@@ -5152,28 +5154,30 @@
                                     <circle cx="55" cy="55" r="46" stroke="#edf2f6" stroke-width="10" fill="none"></circle>
                                     <circle cx="55" cy="55" r="46" stroke="var(--card-color, #2c6e8f)" stroke-width="10" fill="none"
                                         stroke-linecap="round"
-                                        stroke-dasharray="${2 * Math.PI * 46}"
-                                        stroke-dashoffset="${(2 * Math.PI * 46) - (percentage / 100) * (2 * Math.PI * 46)}"
+                                        stroke-dasharray="${circumference}"
+                                        stroke-dashoffset="${dashOffset}"
+                                        data-role="progress-ring"
+                                        data-circumference="${circumference}"
                                         style="transition: stroke-dashoffset 1s ease;">
                                     </circle>
                                 </svg>
                                 <div class="progress-value">
-                                    <span>%${percentage}</span>
+                                    <span data-role="percent">%${percentage}</span>
                                     <small>Doluluk</small>
                                 </div>
                             </div>
                             <div class="capacity-info">
                                 <div class="capacity-row">
                                     <span>Toplam Kapasite</span>
-                                    <strong>${totalCapacity}</strong>
+                                    <strong data-role="total-capacity">${totalCapacity}</strong>
                                 </div>
                                 <div class="capacity-row">
                                     <span>Rezerve</span>
-                                    <strong>${totalPax}</strong>
+                                    <strong data-role="reserved">${totalPax}</strong>
                                 </div>
                                 <div class="capacity-row">
                                     <span>Boş</span>
-                                    <strong>${available}</strong>
+                                    <strong data-role="available">${available}</strong>
                                 </div>
                                 ${isToday ? `
                                     <div class="live-indicator">
@@ -5184,18 +5188,18 @@
                             </div>
                         </div>
                         <div class="table-distribution">
-                            ${breakdown.length ? breakdown.map(item => `
-                                <div class="table-distribution-card">
+                            ${breakdown.length ? breakdown.map((item, tableIndex) => `
+                                <div class="table-distribution-card" data-role="table-card" data-table-index="${tableIndex}">
                                     <div class="table-distribution-header">
-                                        <span>${item.label}</span>
-                                        <span>%${item.occupancy}</span>
+                                        <span data-role="table-label">${item.label}</span>
+                                        <span data-role="table-percent">%${item.occupancy}</span>
                                     </div>
                                     <div class="table-progress-bar">
-                                        <span style="width: ${item.occupancy}%"></span>
+                                        <span data-role="table-progress" style="width: ${item.occupancy}%"></span>
                                     </div>
                                 </div>
                             `).join('') : `
-                                <div class="table-distribution-card">
+                                <div class="table-distribution-card" data-role="table-empty">
                                     <div class="table-distribution-header">
                                         <span>Masa kurulumu yok</span>
                                         <span>%0</span>
@@ -5211,6 +5215,83 @@
             }).join('');
 
             lucide.createIcons();
+        }
+
+        async function updateAlaCarteDashboardStats(dateStr) {
+            const gridEl = document.getElementById('ala-carte-dashboard-grid');
+            if (!gridEl) return;
+
+            let restaurants = [];
+            let availability = {};
+            try {
+                restaurants = await fetchDashboardRestaurants();
+                availability = await fetchDashboardAvailability(dateStr, restaurants);
+            } catch (error) {
+                console.error('Dashboard update error:', error);
+                return;
+            }
+
+            for (const restaurant of restaurants) {
+                const card = gridEl.querySelector(`[data-restaurant-id="${restaurant.id}"]`);
+                if (!card) {
+                    await renderAlaCarteDashboard(dateStr);
+                    return;
+                }
+
+                const rules = restaurant.rules_json || {};
+                const tableSetup = rules.table_setup || [];
+                const totalCapacity = getRestaurantCapacity(rules, tableSetup);
+                const totalPax = availability[restaurant.id]?.reserved_pax || 0;
+                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
+                const status = getDashboardStatus(percentage);
+                const available = Math.max(0, totalCapacity - totalPax);
+                const breakdown = calculateTableBreakdown(tableSetup, totalPax);
+
+                const statusEl = card.querySelector('[data-role="status"]');
+                if (statusEl) {
+                    statusEl.textContent = status.label;
+                    statusEl.classList.remove('status-low', 'status-medium', 'status-high');
+                    statusEl.classList.add(status.className);
+                }
+
+                const percentEl = card.querySelector('[data-role="percent"]');
+                if (percentEl) {
+                    percentEl.textContent = `%${percentage}`;
+                }
+
+                const totalEl = card.querySelector('[data-role="total-capacity"]');
+                if (totalEl) totalEl.textContent = totalCapacity;
+
+                const reservedEl = card.querySelector('[data-role="reserved"]');
+                if (reservedEl) reservedEl.textContent = totalPax;
+
+                const availableEl = card.querySelector('[data-role="available"]');
+                if (availableEl) availableEl.textContent = available;
+
+                const ring = card.querySelector('[data-role="progress-ring"]');
+                if (ring) {
+                    const circumference = parseFloat(ring.dataset.circumference) || (2 * Math.PI * 46);
+                    const dashOffset = circumference - (percentage / 100) * circumference;
+                    ring.style.strokeDashoffset = dashOffset;
+                }
+
+                const tableCards = card.querySelectorAll('[data-role="table-card"]');
+                if (tableCards.length !== breakdown.length) {
+                    await renderAlaCarteDashboard(dateStr);
+                    return;
+                }
+
+                breakdown.forEach((item, idx) => {
+                    const tableCard = tableCards[idx];
+                    if (!tableCard) return;
+                    const labelEl = tableCard.querySelector('[data-role="table-label"]');
+                    const percentValueEl = tableCard.querySelector('[data-role="table-percent"]');
+                    const barEl = tableCard.querySelector('[data-role="table-progress"]');
+                    if (labelEl) labelEl.textContent = item.label;
+                    if (percentValueEl) percentValueEl.textContent = `%${item.occupancy}`;
+                    if (barEl) barEl.style.width = `${item.occupancy}%`;
+                });
+            }
         }
 
         function initAlaCarteDashboard() {
@@ -5248,8 +5329,8 @@
             }
             if (isSameDate(dateStr, new Date())) {
                 alaCarteDashboardInterval = setInterval(() => {
-                    renderAlaCarteDashboard(dateStr);
-                }, 5000);
+                    updateAlaCarteDashboardStats(dateStr);
+                }, 60000);
             }
         }
 
