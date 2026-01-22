@@ -6526,7 +6526,9 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
     const reservationsResult = await pool.query(`
       SELECT 
         restaurant_id,
-        tables_json
+        tables_json,
+        pax_adult,
+        pax_child
       FROM restaurant_reservations
       WHERE reservation_date = $1
         AND restaurant_id = ANY($2::int[])
@@ -6562,8 +6564,12 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
       // Get current reservations (use tables_json to calculate reserved capacity)
       const reservationRows = reservationsResult.rows.filter(r => r.restaurant_id === restaurant.id);
       let reservedCapacity = 0;
+      let guestPaxTotal = 0;
       const usedTableCounts = new Map();
       reservationRows.forEach(row => {
+        const paxAdult = parseInt(row.pax_adult, 10) || 0;
+        const paxChild = parseInt(row.pax_child, 10) || 0;
+        guestPaxTotal += paxAdult + paxChild;
         const tables = Array.isArray(row.tables_json) ? row.tables_json : [];
         tables.forEach(table => {
           const capacity = parseInt(table.capacity, 10) || 0;
@@ -6591,6 +6597,7 @@ app.get('/api/restaurants/check-availability', async (req, res) => {
       availabilityMap[restaurant.id] = {
         total_capacity: totalCapacity,
         reserved_pax: reservedCapacity,
+        guest_pax: guestPaxTotal,
         available_capacity: totalCapacity - reservedCapacity,
         is_full: reservedCapacity >= totalCapacity,
         table_usage: tableUsage

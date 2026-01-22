@@ -5135,11 +5135,12 @@
                 const totalCapacity = Number.isFinite(availabilityInfo.total_capacity)
                     ? availabilityInfo.total_capacity
                     : getRestaurantCapacity(rules, tableSetup);
-                const totalPax = availabilityInfo.reserved_pax || 0;
+                const guestPax = availabilityInfo.guest_pax || 0;
+                const reservedCapacity = availabilityInfo.reserved_pax || 0;
                 const availableCapacity = Number.isFinite(availabilityInfo.available_capacity)
                     ? availabilityInfo.available_capacity
-                    : Math.max(0, totalCapacity - totalPax);
-                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
+                    : Math.max(0, totalCapacity - reservedCapacity);
+                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((reservedCapacity / totalCapacity) * 100)) : 0;
                 const status = getDashboardStatus(percentage);
                 const breakdown = calculateTableBreakdown(tableSetup, availabilityInfo.table_usage);
                 const themeClass = getDashboardTheme(index);
@@ -5182,7 +5183,7 @@
                                 </div>
                                 <div class="capacity-row">
                                     <span>Rezerve</span>
-                                    <strong data-role="reserved">${totalPax}</strong>
+                                    <strong data-role="reserved">${guestPax}/${reservedCapacity}</strong>
                                 </div>
                                 <div class="capacity-row">
                                     <span>Kalan Kapasite</span>
@@ -5257,11 +5258,12 @@
                 const totalCapacity = Number.isFinite(availabilityInfo.total_capacity)
                     ? availabilityInfo.total_capacity
                     : getRestaurantCapacity(rules, tableSetup);
-                const totalPax = availabilityInfo.reserved_pax || 0;
+                const guestPax = availabilityInfo.guest_pax || 0;
+                const reservedCapacity = availabilityInfo.reserved_pax || 0;
                 const availableCapacity = Number.isFinite(availabilityInfo.available_capacity)
                     ? availabilityInfo.available_capacity
-                    : Math.max(0, totalCapacity - totalPax);
-                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
+                    : Math.max(0, totalCapacity - reservedCapacity);
+                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((reservedCapacity / totalCapacity) * 100)) : 0;
                 const status = getDashboardStatus(percentage);
                 const breakdown = calculateTableBreakdown(tableSetup, availabilityInfo.table_usage);
 
@@ -5281,7 +5283,7 @@
                 if (totalEl) totalEl.textContent = totalCapacity;
 
                 const reservedEl = card.querySelector('[data-role="reserved"]');
-                if (reservedEl) reservedEl.textContent = totalPax;
+                if (reservedEl) reservedEl.textContent = `${guestPax}/${reservedCapacity}`;
 
                 const availableEl = card.querySelector('[data-role="available"]');
                 if (availableEl) availableEl.textContent = availableCapacity;
