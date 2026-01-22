@@ -2626,10 +2626,10 @@
         .spa-booking-modal-content {
             background: white;
             border-radius: 12px;
-            padding: 24px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
+            padding: 20px;
+            max-width: 620px;
+            width: min(92vw, 620px);
+            max-height: 85vh;
             overflow-y: auto;
             box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         }
@@ -15011,15 +15011,6 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #E8F1F5;">
                 <h3 style="font-size: 20px; font-weight: 600; color: #1A4D6D; margin: 0;">SPA Rezervasyon Talebi</h3>
                 <button onclick="closeSpaBookingWizard()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6C757D; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
-            </div>
-            
-            <!-- Progress Indicator -->
-            <div class="spa-booking-progress" style="display: flex; justify-content: space-between; margin-bottom: 24px; padding: 0 20px;">
-                <div class="spa-booking-progress-dot active"></div>
-                <div class="spa-booking-progress-dot"></div>
-                <div class="spa-booking-progress-dot"></div>
-                <div class="spa-booking-progress-dot"></div>
-                <div class="spa-booking-progress-dot"></div>
             </div>
             
             <!-- Step 1: Service Selection -->
