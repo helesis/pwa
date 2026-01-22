@@ -9313,7 +9313,9 @@
             container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
 
             try {
+                console.log('[SPA] Date selected:', date);
                 const services = await spaApi.getAvailableServices(date);
+                console.log('[SPA] Available services response:', services);
                 if (!services || services.length === 0) {
                     container.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Bu tarihte uygun hizmet bulunmamaktadır.</div>';
                     return;
@@ -9343,6 +9345,7 @@
 
         function selectSpaService(service) {
             spaBookingState.selectedService = service;
+            console.log('[SPA] Service selected:', service?.id, service);
             if (!spaBookingState.selectedDate) {
                 showSpaBookingStep('date');
                 return;
@@ -9475,11 +9478,17 @@
             }
 
             try {
+                console.log('[SPA] Fetch availability:', {
+                    serviceId: spaBookingState.selectedService?.id,
+                    from: dateStr,
+                    to: dateStr
+                });
                 const availability = await spaApi.getAvailability(
                     spaBookingState.selectedService.id,
                     dateStr,
                     dateStr
                 );
+                console.log('[SPA] Availability response:', availability);
                 selectSpaDate(dateStr, availability);
             } catch (error) {
                 if (container) {
@@ -11206,13 +11215,13 @@
                 }
                 
                 // Set booking state
-                spaBookingState = {
+                Object.assign(spaBookingState, {
                     selectedService: selectedService,
                     selectedDate: date,
                     selectedSlot: slot,
                     selectedTherapist: selectedTherapist,
                     note: ''
-                };
+                });
                 
                 // If therapist already selected from grid and available in this slot, go directly to confirm
                 if (selectedTherapist) {
