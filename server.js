@@ -7273,6 +7273,7 @@ app.get('/api/spa/availability', async (req, res) => {
       FROM spa_availability
       WHERE service_id = $1 
         AND date BETWEEN $2::date AND $3::date
+        AND start_time > CURRENT_TIMESTAMP
         AND availability_status IN ('AVAILABLE', 'LIMITED', 'FULL')
       ORDER BY date ASC, start_time ASC, therapist_id ASC
     `, [serviceId, from, to]);
