@@ -9818,6 +9818,7 @@
             if (!container) return;
             
             try {
+                console.log('[SPA Inline] Reservations section opened');
                 // Calculate date range
                 if (!CHECKIN_DATE || !CHECKOUT_DATE) {
                     container.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc3545;">Giriş ve çıkış tarihleri bulunamadı.</div>';
@@ -9834,6 +9835,10 @@
                 // Start from today, include checkout date
                 const from = today;
                 const to = new Date(checkout);
+                console.log('[SPA Inline] Date range:', {
+                    from: from.toISOString().split('T')[0],
+                    to: to.toISOString().split('T')[0]
+                });
                 
                 container.innerHTML = '';
                 
@@ -9888,6 +9893,7 @@
                 container.appendChild(dateSelectSection);
 
                 // Render initial date grid
+                console.log('[SPA Inline] Render date grid:', spaAllDates.length, 'dates');
                 renderSpaDateGrid(calendarGrid, spaAllDates, 0);
                 
                 // Service selection grid (populated after date selection)
@@ -9983,8 +9989,10 @@
             const slotsContainer = document.getElementById('spa-time-slots-container');
             
             try {
+                console.log('[SPA Inline] Date selected:', selectedDate);
                 // Get all services
                 const allServices = await spaApi.getServices();
+                console.log('[SPA Inline] Services response:', allServices);
                 if (!allServices || allServices.length === 0) {
                     if (slotsContainer) {
                         slotsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Henüz SPA hizmeti bulunmamaktadır.</div>';
@@ -9998,7 +10006,13 @@
                 
                 for (const service of allServices) {
                     try {
+                        console.log('[SPA Inline] Fetch availability:', {
+                            serviceId: service.id,
+                            from: selectedDate,
+                            to: selectedDate
+                        });
                         const availability = await spaApi.getAvailability(service.id, selectedDate, selectedDate);
+                        console.log('[SPA Inline] Availability response:', service.id, availability);
                         if (availability.days && availability.days.length > 0) {
                             const day = availability.days[0];
                             // Show service if it has at least one available slot with at least one therapist (even if just 1 therapist)
@@ -10011,6 +10025,7 @@
                         console.error(`Error checking availability for service ${service.id}:`, error);
                     }
                 }
+                console.log('[SPA Inline] Available services:', availableServices.length);
                 
                 // Populate service grid
                 if (availableServices.length > 0 && serviceSelectorWrapper) {
@@ -10118,6 +10133,12 @@
             const dateObj = new Date(date);
             dateObj.setHours(0, 0, 0, 0);
             const isToday = dateObj.getTime() === today.getTime();
+            console.log('[SPA Inline] Filter slots:', {
+                date,
+                selectedServiceId,
+                selectedTherapistId,
+                isToday
+            });
             
             if (selectedServiceId) {
                 // Filter by service
@@ -10170,6 +10191,7 @@
                 const timeB = new Date(b.slot.start);
                 return timeA.getTime() - timeB.getTime();
             });
+            console.log('[SPA Inline] Slots to show:', slotsToShow.length);
             
             // Show container and render slots
             slotsContainer.style.display = 'block';
