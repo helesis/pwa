@@ -7241,6 +7241,111 @@ app.get('/api/spa/services', async (req, res) => {
   }
 });
 
+// Get SPA available dates (any service)
+app.get('/api/spa/available-dates', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: 'from and to are required' });
+    }
+
+    const snapshotResult = await pool.query(`
+      SELECT MAX(last_updated_at) as last_updated_at
+      FROM spa_availability
+      WHERE date BETWEEN $1::date AND $2::date
+    `, [from, to]);
+
+    const lastUpdatedAt = snapshotResult.rows[0]?.last_updated_at || new Date().toISOString();
+
+    const datesResult = await pool.query(`
+      SELECT 
+        date,
+        COUNT(*) FILTER (WHERE availability_status = 'AVAILABLE') AS available_count,
+        COUNT(*) FILTER (WHERE availability_status = 'LIMITED') AS limited_count,
+        COUNT(*) FILTER (WHERE availability_status = 'FULL') AS full_count
+      FROM spa_availability
+      WHERE date BETWEEN $1::date AND $2::date
+        AND start_time > CURRENT_TIMESTAMP
+        AND availability_status IN ('AVAILABLE', 'LIMITED', 'FULL')
+      GROUP BY date
+      HAVING COUNT(*) FILTER (WHERE availability_status IN ('AVAILABLE', 'LIMITED')) > 0
+      ORDER BY date ASC
+    `, [from, to]);
+
+    const days = datesResult.rows.map(row => {
+      const availableCount = parseInt(row.available_count, 10) || 0;
+      const limitedCount = parseInt(row.limited_count, 10) || 0;
+      const fullCount = parseInt(row.full_count, 10) || 0;
+      const totalSlots = availableCount + limitedCount + fullCount;
+      const availableRatio = totalSlots > 0 ? availableCount / totalSlots : 0;
+
+      let heat = 'GREEN';
+      if (availableRatio < 0.3) {
+        heat = 'RED';
+      } else if (availableRatio < 0.6) {
+        heat = 'YELLOW';
+      }
+
+      return {
+        date: row.date.toISOString().split('T')[0],
+        availableCount,
+        limitedCount,
+        fullCount,
+        heat
+      };
+    });
+
+    res.json({
+      from,
+      to,
+      lastUpdatedAt: new Date(lastUpdatedAt).toISOString(),
+      days
+    });
+  } catch (error) {
+    console.error('Error fetching SPA available dates:', error);
+    res.status(500).json({ error: 'Failed to fetch available dates' });
+  }
+});
+
+// Get SPA available services for a date
+app.get('/api/spa/available-services', async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ error: 'date is required' });
+    }
+
+    const result = await pool.query(`
+      SELECT DISTINCT 
+        s.id, s.name, s.duration_min, s.price, s.currency, s.category, 
+        s.short_description, s.description, s.display_order
+      FROM spa_services s
+      INNER JOIN spa_availability a ON a.service_id = s.id
+      WHERE a.date = $1::date
+        AND a.start_time > CURRENT_TIMESTAMP
+        AND a.availability_status IN ('AVAILABLE', 'LIMITED')
+        AND s.is_active = true
+      ORDER BY s.display_order ASC, s.name ASC
+    `, [date]);
+
+    const services = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      durationMin: row.duration_min,
+      price: parseFloat(row.price),
+      currency: row.currency,
+      category: row.category,
+      shortDescription: row.short_description,
+      description: row.description
+    }));
+
+    res.json(services);
+  } catch (error) {
+    console.error('Error fetching SPA available services:', error);
+    res.status(500).json({ error: 'Failed to fetch services' });
+  }
+});
+
 // Get SPA availability for date range
 app.get('/api/spa/availability', async (req, res) => {
   try {
