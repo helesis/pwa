@@ -4736,6 +4736,9 @@
                 } else {
                     console.log('ℹ️ Already joined room, skipping duplicate join');
                 }
+                
+                // Log socket listeners for debugging
+                console.log('📡 Registered socket listeners:', Object.keys(socket._callbacks || {}).map(key => key.replace('$', '')));
             });
 
             // Connection attempt started
@@ -5006,10 +5009,15 @@
 
             // SPA request confirmed event
             socket.on('spa-request-confirmed', (data) => {
-                console.log('✅ SPA request confirmed:', data);
+                console.log('✅ ========== SPA REQUEST CONFIRMED EVENT ==========');
+                console.log('✅ Event data:', data);
+                console.log('✅ Current GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
+                console.log('✅ Event guestUniqueId:', data.guestUniqueId);
+                console.log('✅ Match:', data.guestUniqueId === GUEST_UNIQUE_ID);
                 
                 // Check if this is for current user
                 if (data.guestUniqueId === GUEST_UNIQUE_ID) {
+                    console.log('✅ Event is for current user, processing...');
                     // Update UI if on reservations section
                     const reservationsSection = document.getElementById('reservationsSection');
                     if (reservationsSection && reservationsSection.classList.contains('active')) {
@@ -5044,12 +5052,19 @@
                     if (!document.hidden) {
                         alert(notificationMessage);
                     }
+                    
+                    console.log('✅ SPA request confirmed processing complete');
+                } else {
+                    console.log('ℹ️ Event is for different user, ignoring');
                 }
             });
 
             // SPA request rejected event
             socket.on('spa-request-rejected', (data) => {
-                console.log('❌ SPA request rejected:', data);
+                console.log('❌ ========== SPA REQUEST REJECTED EVENT ==========');
+                console.log('❌ Event data:', data);
+                console.log('❌ Current GUEST_UNIQUE_ID:', GUEST_UNIQUE_ID);
+                console.log('❌ Match:', data.guestUniqueId === GUEST_UNIQUE_ID);
                 
                 // Check if this is for current user
                 if (data.guestUniqueId === GUEST_UNIQUE_ID) {
@@ -5076,6 +5091,10 @@
                     if (!document.hidden) {
                         alert(notificationMessage);
                     }
+                    
+                    console.log('❌ SPA request rejected processing complete');
+                } else {
+                    console.log('ℹ️ Event is for different user, ignoring');
                 }
             });
 

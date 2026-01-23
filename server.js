@@ -7510,21 +7510,29 @@ app.patch('/api/spa/requests/:requestId', async (req, res) => {
     
     // Emit socket event for real-time update
     if (status === 'CONFIRMED' && oldStatus !== 'CONFIRMED') {
-      io.emit('spa-request-confirmed', {
+      const eventData = {
         requestId,
         guestUniqueId,
         status,
         serviceName: request.service_name,
         start: request.start,
         end: request.end
-      });
+      };
+      console.log('✅ [SPA] Emitting spa-request-confirmed event:', eventData);
+      io.emit('spa-request-confirmed', eventData);
+      console.log('✅ [SPA] Event emitted to all clients');
     } else if (status === 'REJECTED' && oldStatus !== 'REJECTED') {
-      io.emit('spa-request-rejected', {
+      const eventData = {
         requestId,
         guestUniqueId,
         status,
         serviceName: request.service_name
-      });
+      };
+      console.log('❌ [SPA] Emitting spa-request-rejected event:', eventData);
+      io.emit('spa-request-rejected', eventData);
+      console.log('❌ [SPA] Event emitted to all clients');
+    } else {
+      console.log('ℹ️ [SPA] Status update but no event needed. Old:', oldStatus, 'New:', status);
     }
     
     res.json({ success: true, requestId: result.rows[0].request_id, status: result.rows[0].status });
