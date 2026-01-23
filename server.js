@@ -7482,16 +7482,22 @@ app.patch('/api/spa/requests/:requestId', async (req, res) => {
       return res.status(400).json({ error: 'Invalid status. Must be PENDING, CONFIRMED, REJECTED, or CANCELLED' });
     }
     
-    // Check if request exists
+    // Check if request exists and get guest info
     const checkResult = await pool.query(`
-      SELECT request_id, status 
-      FROM spa_requests 
-      WHERE request_id = $1
+      SELECT sr.request_id, sr.status, sr.guest_unique_id, sr.service_id, sr.start, sr.end,
+             s.name as service_name
+      FROM spa_requests sr
+      LEFT JOIN spa_services s ON sr.service_id = s.id
+      WHERE sr.request_id = $1
     `, [requestId]);
     
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Request not found' });
     }
+    
+    const request = checkResult.rows[0];
+    const oldStatus = request.status;
+    const guestUniqueId = request.guest_unique_id;
     
     // Update request status
     const result = await pool.query(`
@@ -7501,6 +7507,25 @@ app.patch('/api/spa/requests/:requestId', async (req, res) => {
       WHERE request_id = $2
       RETURNING request_id, status
     `, [status, requestId]);
+    
+    // Emit socket event for real-time update
+    if (status === 'CONFIRMED' && oldStatus !== 'CONFIRMED') {
+      io.emit('spa-request-confirmed', {
+        requestId,
+        guestUniqueId,
+        status,
+        serviceName: request.service_name,
+        start: request.start,
+        end: request.end
+      });
+    } else if (status === 'REJECTED' && oldStatus !== 'REJECTED') {
+      io.emit('spa-request-rejected', {
+        requestId,
+        guestUniqueId,
+        status,
+        serviceName: request.service_name
+      });
+    }
     
     res.json({ success: true, requestId: result.rows[0].request_id, status: result.rows[0].status });
   } catch (error) {

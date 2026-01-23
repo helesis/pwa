@@ -5004,6 +5004,81 @@
                 indicator.classList.remove('active');
             });
 
+            // SPA request confirmed event
+            socket.on('spa-request-confirmed', (data) => {
+                console.log('✅ SPA request confirmed:', data);
+                
+                // Check if this is for current user
+                if (data.guestUniqueId === GUEST_UNIQUE_ID) {
+                    // Update UI if on reservations section
+                    const reservationsSection = document.getElementById('reservationsSection');
+                    if (reservationsSection && reservationsSection.classList.contains('active')) {
+                        loadMySpaReservations();
+                    }
+                    
+                    // Show notification
+                    const startDate = new Date(data.start);
+                    const formattedDate = startDate.toLocaleDateString('tr-TR', { 
+                        day: 'numeric', 
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const notificationMessage = `${data.serviceName} rezervasyonunuz onaylandı! Tarih: ${formattedDate}`;
+                    
+                    // Show browser notification if permission granted
+                    if (Notification.permission === 'granted') {
+                        new Notification('SPA Rezervasyonu Onaylandı', {
+                            body: notificationMessage,
+                            icon: '/icon-192.png',
+                            badge: '/icon-192.png',
+                            tag: 'spa-confirmed-' + data.requestId
+                        });
+                    }
+                    
+                    // Play notification sound
+                    playNotificationSound();
+                    
+                    // Show in-app alert if page is visible
+                    if (!document.hidden) {
+                        alert(notificationMessage);
+                    }
+                }
+            });
+
+            // SPA request rejected event
+            socket.on('spa-request-rejected', (data) => {
+                console.log('❌ SPA request rejected:', data);
+                
+                // Check if this is for current user
+                if (data.guestUniqueId === GUEST_UNIQUE_ID) {
+                    // Update UI if on reservations section
+                    const reservationsSection = document.getElementById('reservationsSection');
+                    if (reservationsSection && reservationsSection.classList.contains('active')) {
+                        loadMySpaReservations();
+                    }
+                    
+                    // Show notification
+                    const notificationMessage = `${data.serviceName} rezervasyon talebiniz reddedildi.`;
+                    
+                    // Show browser notification if permission granted
+                    if (Notification.permission === 'granted') {
+                        new Notification('SPA Rezervasyon Talebi Reddedildi', {
+                            body: notificationMessage,
+                            icon: '/icon-192.png',
+                            badge: '/icon-192.png',
+                            tag: 'spa-rejected-' + data.requestId
+                        });
+                    }
+                    
+                    // Show in-app alert if page is visible
+                    if (!document.hidden) {
+                        alert(notificationMessage);
+                    }
+                }
+            });
+
             // Handle older messages from server
             socket.on('older_messages', (messages) => {
                 console.log('📜 ========== OLDER MESSAGES RECEIVED ==========');
