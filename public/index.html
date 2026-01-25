@@ -1244,10 +1244,10 @@
             min-height: 0; /* Flex container'da scroll için gerekli */
         }
 
-        /* Map Section - Info card sağ ve sol padding kaldırıldı */
+        /* Map Section - Info card padding adjusted */
         #mapSection .info-card {
-            padding-left: 0;
-            padding-right: 0;
+            padding-left: 16px;
+            padding-right: 16px;
         }
 
         .map-search {
@@ -3223,20 +3223,7 @@
                     </div>
                 </div>
                 
-                <div class="settings-item" onclick="toggleGhostMode()">
-                    <div class="settings-item-left">
-                        <div class="settings-item-icon"><i data-lucide="ghost" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label" data-i18n="ghostMode">Hayalet Modu</div>
-                    </div>
-                    <div class="settings-item-right">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="ghostModeToggle" onchange="handleGhostModeToggle()">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Konum Durumu Kartı -->
+                                <!-- Konum Durumu Kartı -->
                 <div class="info-card" style="margin-top: 16px;">
                     <div class="info-card-title" data-i18n="location">Konum</div>
                     <div class="info-card-content">
@@ -8371,38 +8358,21 @@
         async function updateUserLocation(lat, lng, accuracy) {
             if (!map) return;
 
-            // Check ghost mode - only send to backend if not in ghost mode
+            // Send location to backend
             try {
-                const response = await fetch('/api/guest/me', { credentials: 'include' });
-                if (response.ok) {
-                    const data = await response.json();
-                    const isGhostMode = data.success && data.guest && data.guest.ghost_mode === true;
-                    
-                    // Only send location to backend if not in ghost mode
-                    if (!isGhostMode) {
-                        try {
-                            await fetch('/api/location/update', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({ latitude: lat, longitude: lng, accuracy })
-                            });
-                            lastLocationUpdateTime = Date.now();
-                            updateLocationPermissionStatus(); // Update last update time
-                        } catch (error) {
-                            console.error('Error updating location:', error);
-                        }
-                    } else {
-                        // Still update lastLocationUpdateTime for display, but don't send to backend
-                        lastLocationUpdateTime = Date.now();
-                        updateLocationPermissionStatus();
-                    }
-                }
+                await fetch('/api/location/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ latitude: lat, longitude: lng, accuracy })
+                });
+                lastLocationUpdateTime = Date.now();
+                updateLocationPermissionStatus();
             } catch (error) {
-                console.error('Error checking ghost mode:', error);
+                console.error('Error updating location:', error);
             }
 
-            // Always update marker on own map (even in ghost mode)
+            // Update marker on own map
 
             // Update or create user marker
             // Prevent race condition: check if marker creation is already in progress
@@ -12736,65 +12706,8 @@
         }
 
         // ============================================
-        // Ghost Mode Functions
+        // Safe Area Calculations (PWA)
         // ============================================
-
-        // Toggle ghost mode
-        function toggleGhostMode() {
-            const toggle = document.getElementById('ghostModeToggle');
-            if (toggle) {
-                toggle.checked = !toggle.checked;
-                handleGhostModeToggle();
-            }
-        }
-
-        // Handle ghost mode toggle
-        async function handleGhostModeToggle() {
-            const toggle = document.getElementById('ghostModeToggle');
-            if (!toggle) return;
-            
-            const enabled = toggle.checked;
-            
-            try {
-                const response = await fetch('/api/guest/ghost-mode', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ enabled })
-                });
-                
-                if (!response.ok) throw new Error('Failed to update ghost mode');
-                
-                // Show feedback
-                if (enabled) {
-                    console.log('Ghost mode enabled - location sharing disabled');
-                } else {
-                    console.log('Ghost mode disabled - location sharing enabled');
-                }
-            } catch (error) {
-                console.error('Error updating ghost mode:', error);
-                toggle.checked = !enabled; // Revert on error
-            }
-        }
-
-        // Update ghost mode toggle state
-        async function updateGhostModeToggle() {
-            const toggle = document.getElementById('ghostModeToggle');
-            if (!toggle) return;
-            
-            try {
-                const response = await fetch('/api/guest/me', { credentials: 'include' });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.guest) {
-                        // TODO: Get ghost_mode from guest data
-                        // toggle.checked = data.guest.ghost_mode || false;
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading ghost mode state:', error);
-            }
-        }
 
         // Safe area hesaplamalarını güncelle (PWA ana ekrana eklendiğinde)
         function refreshSafeAreaCalculations() {
