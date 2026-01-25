@@ -1,12 +1,14 @@
 // Service Worker for Voyage Sorgun Chat PWA
 // Version: 2.0.0 - Auto-update enabled
 // Cache version updates when service worker file changes
-const CACHE_VERSION = 'voyage-chat-v4.2';
+const CACHE_VERSION = 'voyage-chat-v4.3';
 const CACHE_NAME = CACHE_VERSION;
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 // Install event - cache resources
