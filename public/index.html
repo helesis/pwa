@@ -374,6 +374,7 @@
             display: flex;
             flex-direction: column;
             min-height: 0; /* Allow flex shrinking */
+            max-height: 100%; /* Ensure scroll works */
             box-sizing: border-box;
             transition: padding-bottom 0.3s ease; /* Smooth keyboard animation */
         }
@@ -1161,6 +1162,7 @@
             position: relative;
             flex: 1;
             min-height: 0;
+            height: 100%; /* Ensure full height for proper scroll */
         }
         
         /* Ensure bottom-nav stays visible when chat section is active */
@@ -12894,18 +12896,25 @@
             
             // Scroll helper function with aggressive logging
             const scrollToBottom = (reason, delay = 0) => {
+                console.log(`📜 ============================================`);
                 console.log(`📜 SCROLL REQUESTED: ${reason}, delay: ${delay}ms`);
                 console.log('  - Current scrollTop:', chatContainer.scrollTop);
                 console.log('  - Current scrollHeight:', chatContainer.scrollHeight);
                 console.log('  - Container clientHeight:', chatContainer.clientHeight);
+                console.log('  - Container offsetHeight:', chatContainer.offsetHeight);
+                console.log('  - Can scroll?', chatContainer.scrollHeight > chatContainer.clientHeight ? '✅ YES' : '❌ NO');
+                console.log('  - Overflow-Y:', window.getComputedStyle(chatContainer).overflowY);
+                console.log(`📜 ============================================`);
                 
                 setTimeout(() => {
                     const beforeScroll = chatContainer.scrollTop;
                     const targetScroll = chatContainer.scrollHeight;
+                    const maxScroll = chatContainer.scrollHeight - chatContainer.clientHeight;
                     
                     console.log(`📜 EXECUTING SCROLL (${reason}):`);
                     console.log('  - Before:', beforeScroll);
                     console.log('  - Target:', targetScroll);
+                    console.log('  - Max possible scroll:', maxScroll);
                     
                     // Method 1: Direct assignment
                     chatContainer.scrollTop = targetScroll;
@@ -12922,8 +12931,21 @@
                         // Method 3: Force with another frame
                         requestAnimationFrame(() => {
                             chatContainer.scrollTop = chatContainer.scrollHeight;
-                            console.log('  - After RAF force:', chatContainer.scrollTop);
-                            console.log(`📜 SCROLL ${chatContainer.scrollTop === chatContainer.scrollHeight ? '✅ SUCCESS' : '❌ FAILED'}`);
+                            const finalScroll = chatContainer.scrollTop;
+                            console.log('  - After RAF force:', finalScroll);
+                            console.log('  - Final scrollHeight:', chatContainer.scrollHeight);
+                            
+                            const success = finalScroll > beforeScroll || finalScroll >= maxScroll - 5;
+                            console.log(`📜 SCROLL ${success ? '✅ SUCCESS' : '❌ FAILED'}`);
+                            
+                            if (!success) {
+                                console.error('❌ SCROLL FAILED - Diagnostics:');
+                                console.error('  - Overflow:', window.getComputedStyle(chatContainer).overflow);
+                                console.error('  - Max-height:', window.getComputedStyle(chatContainer).maxHeight);
+                                console.error('  - Height:', window.getComputedStyle(chatContainer).height);
+                                console.error('  - Parent height:', chatContainer.parentElement ? window.getComputedStyle(chatContainer.parentElement).height : 'N/A');
+                            }
+                            console.log(`📜 ============================================`);
                         });
                     });
                 }, delay);
@@ -12984,11 +13006,20 @@
                         }
                         
                         // Input container'ı klavyenin hemen üzerine yerleştir
+                        // Bottom nav artık gizli, bu yüzden bottom: 0'dan başlayıp klavye yüksekliği kadar yukarı çıkacak
+                        const bottomNavHeight = bottomNav ? bottomNav.offsetHeight : 0;
                         console.log('  ⬆️  MOVING INPUT CONTAINER:');
+                        console.log('    - Bottom nav height:', bottomNavHeight, 'px (will be hidden)');
                         console.log('    - BEFORE bottom:', inputContainer.style.bottom || '0px');
+                        
+                        // Input container klavyenin üstünde olmalı
+                        // Klavye KAPALI: bottom = 0 (bottom nav üzerinde zaten)
+                        // Klavye AÇIK: bottom = keyboardHeight (viewport altından klavye yüksekliği kadar yukarıda)
                         inputContainer.style.bottom = `${keyboardHeight}px`;
                         inputContainer.style.transition = 'bottom 0.3s ease';
+                        
                         console.log('    - AFTER bottom:', inputContainer.style.bottom);
+                        console.log('    - Calculated from viewport bottom:', keyboardHeight, 'px');
                         console.log('    - Input container ✅ MOVED');
                         
                         // Chat container'ın alt padding'ini input + klavye yüksekliği kadar artır
