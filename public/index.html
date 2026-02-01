@@ -127,15 +127,16 @@
             padding: 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-top: 0;
+            padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 16px);
             padding-bottom: 16px;
-            position: sticky;
-            top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 4px);
+            position: fixed; /* sticky yerine fixed - scroll'dan bağımsız */
+            top: 0;
+            left: 0;
+            right: 0;
             z-index: 10002; /* body::before'un üstünde olmalı */
             width: 100%;
             flex-shrink: 0;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            margin-top: -10px; /* 10px yukarı kaydır */
         }
 
         .section-header-title {
@@ -366,7 +367,7 @@
             padding: 16px 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-top: 16px;
+            padding-top: calc(80px + 16px); /* Header height (80px) + spacing */
             padding-bottom: calc(16px + 143px); /* Space for input container */
             background: white;
             scroll-behavior: smooth;
@@ -12912,7 +12913,7 @@
                                 display: bottomNav.style.display || 'default',
                                 computed: window.getComputedStyle(bottomNav).display
                             });
-                            bottomNav.style.display = 'none';
+                            bottomNav.style.setProperty('display', 'none', 'important');
                             console.log('  - Bottom nav AFTER:', {
                                 display: bottomNav.style.display,
                                 computed: window.getComputedStyle(bottomNav).display
@@ -12945,7 +12946,7 @@
                         setTimeout(() => {
                             chatContainer.scrollTop = chatContainer.scrollHeight;
                             console.log('  - Scrolled to bottom:', chatContainer.scrollTop, '/', chatContainer.scrollHeight);
-                        }, 100);
+                        }, 350); // Animasyon ve layout tamamlansın diye artırıldı
                         
                     } else if (!isKeyboardOpen && wasKeyboardOpen) {
                         // Klavye kapandı
@@ -12956,7 +12957,7 @@
                         // Bottom navigation bar'ı tekrar göster
                         if (bottomNav) {
                             console.log('  - Bottom nav BEFORE:', bottomNav.style.display);
-                            bottomNav.style.display = 'flex';
+                            bottomNav.style.setProperty('display', 'flex', 'important');
                             console.log('  - Bottom nav AFTER:', {
                                 display: bottomNav.style.display,
                                 computed: window.getComputedStyle(bottomNav).display
@@ -13044,7 +13045,7 @@
                         // Klavye açık (fallback)
                         console.log('  - FALLBACK: Keyboard OPEN (diff > 150)');
                         if (bottomNav) {
-                            bottomNav.style.display = 'none';
+                            bottomNav.style.setProperty('display', 'none', 'important');
                             console.log('  - Bottom nav hidden (fallback)');
                         }
                         inputContainer.style.bottom = `${heightDiff * 0.6}px`;
@@ -13058,7 +13059,7 @@
                         // Klavye kapalı (fallback)
                         console.log('  - FALLBACK: Keyboard CLOSED (diff <= 50)');
                         if (bottomNav) {
-                            bottomNav.style.display = 'flex';
+                            bottomNav.style.setProperty('display', 'flex', 'important');
                             console.log('  - Bottom nav shown (fallback)');
                         }
                         inputContainer.style.bottom = '0';
