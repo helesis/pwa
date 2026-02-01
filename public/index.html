@@ -12874,17 +12874,60 @@
             const connectionStatus = document.getElementById('connectionStatus');
             
             // İlk durumu logla
-            console.log('🔧 Keyboard Handling Setup:');
-            console.log('  - Input Container:', inputContainer ? '✓' : '✗');
-            console.log('  - Bottom Nav:', bottomNav ? '✓' : '✗');
-            console.log('  - Section Header:', sectionHeader ? '✓' : '✗');
-            console.log('  - Connection Status:', connectionStatus ? '✓' : '✗');
-            console.log('  - Visual Viewport API:', window.visualViewport ? '✓' : '✗');
+            console.log('🔧 ============================================');
+            console.log('🔧 KEYBOARD HANDLING SETUP - AGRESIF MODE');
+            console.log('🔧 ============================================');
+            console.log('  ✓ Input Container:', inputContainer);
+            console.log('  ✓ Bottom Nav:', bottomNav);
+            console.log('  ✓ Section Header:', sectionHeader);
+            console.log('  ✓ Connection Status:', connectionStatus);
+            console.log('  ✓ Visual Viewport API:', window.visualViewport);
+            console.log('🔧 ============================================');
             
-            if (!inputContainer || !messageInput || !chatContainer) return;
+            if (!inputContainer || !messageInput || !chatContainer) {
+                console.error('❌ CRITICAL: Missing required elements!');
+                return;
+            }
             
             let keyboardHeight = 0;
             let isKeyboardOpen = false;
+            
+            // Scroll helper function with aggressive logging
+            const scrollToBottom = (reason, delay = 0) => {
+                console.log(`📜 SCROLL REQUESTED: ${reason}, delay: ${delay}ms`);
+                console.log('  - Current scrollTop:', chatContainer.scrollTop);
+                console.log('  - Current scrollHeight:', chatContainer.scrollHeight);
+                console.log('  - Container clientHeight:', chatContainer.clientHeight);
+                
+                setTimeout(() => {
+                    const beforeScroll = chatContainer.scrollTop;
+                    const targetScroll = chatContainer.scrollHeight;
+                    
+                    console.log(`📜 EXECUTING SCROLL (${reason}):`);
+                    console.log('  - Before:', beforeScroll);
+                    console.log('  - Target:', targetScroll);
+                    
+                    // Method 1: Direct assignment
+                    chatContainer.scrollTop = targetScroll;
+                    console.log('  - After direct assignment:', chatContainer.scrollTop);
+                    
+                    // Method 2: scrollTo (fallback)
+                    requestAnimationFrame(() => {
+                        chatContainer.scrollTo({
+                            top: targetScroll,
+                            behavior: 'auto'
+                        });
+                        console.log('  - After scrollTo:', chatContainer.scrollTop);
+                        
+                        // Method 3: Force with another frame
+                        requestAnimationFrame(() => {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                            console.log('  - After RAF force:', chatContainer.scrollTop);
+                            console.log(`📜 SCROLL ${chatContainer.scrollTop === chatContainer.scrollHeight ? '✅ SUCCESS' : '❌ FAILED'}`);
+                        });
+                    });
+                }, delay);
+            };
             
             // Visual Viewport API ile klavye yüksekliğini takip et
             if (window.visualViewport) {
@@ -12893,101 +12936,125 @@
                     const wasKeyboardOpen = isKeyboardOpen;
                     isKeyboardOpen = newKeyboardHeight > 50; // 50px threshold for keyboard detection
                     
-                    // Detaylı viewport bilgileri
-                    console.log('📐 Viewport Change:');
+                    console.log('📐 ============================================');
+                    console.log('📐 VIEWPORT CHANGE DETECTED');
+                    console.log('📐 ============================================');
                     console.log('  - Window height:', window.innerHeight);
                     console.log('  - Viewport height:', window.visualViewport.height);
                     console.log('  - Keyboard height:', newKeyboardHeight);
-                    console.log('  - Is keyboard open?', isKeyboardOpen, `(${newKeyboardHeight} > 50)`);
+                    console.log('  - Threshold check:', newKeyboardHeight, '> 50 =', isKeyboardOpen);
+                    console.log('  - Was open / Is open:', wasKeyboardOpen, '/', isKeyboardOpen);
                     
                     if (isKeyboardOpen && newKeyboardHeight !== keyboardHeight) {
                         // Klavye açıldı veya yüksekliği değişti
                         keyboardHeight = newKeyboardHeight;
                         
-                        console.log('🎹 KEYBOARD OPENED:');
-                        console.log('  - Keyboard height:', keyboardHeight, 'px');
+                        console.log('🎹 ============================================');
+                        console.log('🎹 KEYBOARD OPENED - APPLYING CHANGES');
+                        console.log('🎹 ============================================');
+                        console.log('  🔢 Keyboard height:', keyboardHeight, 'px');
                         
-                        // Bottom navigation bar'ı tamamen gizle
+                        // Bottom navigation bar'ı TAMAMEN gizle ve viewport dışına it
                         if (bottomNav) {
-                            console.log('  - Bottom nav BEFORE:', {
-                                display: bottomNav.style.display || 'default',
-                                computed: window.getComputedStyle(bottomNav).display
-                            });
+                            console.log('  🚫 HIDING BOTTOM NAV:');
+                            console.log('    - BEFORE display:', bottomNav.style.display || 'default');
+                            console.log('    - BEFORE computed:', window.getComputedStyle(bottomNav).display);
+                            console.log('    - BEFORE transform:', bottomNav.style.transform || 'none');
+                            console.log('    - BEFORE visibility:', bottomNav.style.visibility || 'default');
+                            
                             bottomNav.style.setProperty('display', 'none', 'important');
-                            console.log('  - Bottom nav AFTER:', {
-                                display: bottomNav.style.display,
-                                computed: window.getComputedStyle(bottomNav).display
-                            });
+                            bottomNav.style.setProperty('transform', 'translateY(100%)', 'important');
+                            bottomNav.style.setProperty('visibility', 'hidden', 'important');
+                            bottomNav.style.setProperty('pointer-events', 'none', 'important');
+                            
+                            console.log('    - AFTER display:', bottomNav.style.display);
+                            console.log('    - AFTER computed:', window.getComputedStyle(bottomNav).display);
+                            console.log('    - AFTER transform:', bottomNav.style.transform);
+                            console.log('    - AFTER visibility:', bottomNav.style.visibility);
+                            console.log('    - Bottom nav', window.getComputedStyle(bottomNav).display === 'none' ? '✅ HIDDEN' : '❌ STILL VISIBLE');
                         }
                         
                         // Header kontrol (KAYMASIN - sadece logla)
                         if (sectionHeader) {
-                            console.log('  - Header (should NOT move):', {
-                                position: window.getComputedStyle(sectionHeader).position,
-                                top: window.getComputedStyle(sectionHeader).top,
-                                transform: window.getComputedStyle(sectionHeader).transform
-                            });
+                            console.log('  📌 HEADER CHECK (should be FIXED):');
+                            console.log('    - position:', window.getComputedStyle(sectionHeader).position);
+                            console.log('    - top:', window.getComputedStyle(sectionHeader).top);
+                            console.log('    - transform:', window.getComputedStyle(sectionHeader).transform);
+                            console.log('    - Header', window.getComputedStyle(sectionHeader).position === 'fixed' ? '✅ FIXED' : '❌ NOT FIXED');
                         }
                         
                         // Input container'ı klavyenin hemen üzerine yerleştir
-                        console.log('  - Input container BEFORE bottom:', inputContainer.style.bottom || '0');
+                        console.log('  ⬆️  MOVING INPUT CONTAINER:');
+                        console.log('    - BEFORE bottom:', inputContainer.style.bottom || '0px');
                         inputContainer.style.bottom = `${keyboardHeight}px`;
                         inputContainer.style.transition = 'bottom 0.3s ease';
-                        console.log('  - Input container AFTER bottom:', inputContainer.style.bottom);
+                        console.log('    - AFTER bottom:', inputContainer.style.bottom);
+                        console.log('    - Input container ✅ MOVED');
                         
                         // Chat container'ın alt padding'ini input + klavye yüksekliği kadar artır
                         const inputHeight = inputContainer.offsetHeight || 60;
-                        console.log('  - Chat padding BEFORE:', chatContainer.style.paddingBottom || 'default');
-                        chatContainer.style.paddingBottom = `${inputHeight + keyboardHeight + 16}px`;
+                        const newPadding = inputHeight + keyboardHeight + 16;
+                        console.log('  📦 ADJUSTING CHAT PADDING:');
+                        console.log('    - Input height:', inputHeight);
+                        console.log('    - Keyboard height:', keyboardHeight);
+                        console.log('    - New padding:', newPadding);
+                        console.log('    - BEFORE:', chatContainer.style.paddingBottom || 'default');
+                        chatContainer.style.paddingBottom = `${newPadding}px`;
                         chatContainer.style.transition = 'padding-bottom 0.3s ease';
-                        console.log('  - Chat padding AFTER:', chatContainer.style.paddingBottom);
+                        console.log('    - AFTER:', chatContainer.style.paddingBottom);
+                        console.log('    - Padding ✅ ADJUSTED');
                         
-                        // Scroll'u en alta al
-                        setTimeout(() => {
-                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                            console.log('  - Scrolled to bottom:', chatContainer.scrollTop, '/', chatContainer.scrollHeight);
-                        }, 350); // Animasyon ve layout tamamlansın diye artırıldı
+                        console.log('🎹 ============================================');
+                        
+                        // Scroll'u en alta al - AGRESİF MODE
+                        scrollToBottom('KEYBOARD OPENED', 400);
                         
                     } else if (!isKeyboardOpen && wasKeyboardOpen) {
                         // Klavye kapandı
                         keyboardHeight = 0;
                         
-                        console.log('🎹 KEYBOARD CLOSED:');
+                        console.log('🎹 ============================================');
+                        console.log('🎹 KEYBOARD CLOSED - REVERTING CHANGES');
+                        console.log('🎹 ============================================');
                         
                         // Bottom navigation bar'ı tekrar göster
                         if (bottomNav) {
-                            console.log('  - Bottom nav BEFORE:', bottomNav.style.display);
+                            console.log('  ✅ SHOWING BOTTOM NAV:');
+                            console.log('    - BEFORE display:', bottomNav.style.display);
+                            
                             bottomNav.style.setProperty('display', 'flex', 'important');
-                            console.log('  - Bottom nav AFTER:', {
-                                display: bottomNav.style.display,
-                                computed: window.getComputedStyle(bottomNav).display
-                            });
+                            bottomNav.style.setProperty('transform', 'translateY(0)', 'important');
+                            bottomNav.style.setProperty('visibility', 'visible', 'important');
+                            bottomNav.style.setProperty('pointer-events', 'auto', 'important');
+                            
+                            console.log('    - AFTER display:', bottomNav.style.display);
+                            console.log('    - AFTER computed:', window.getComputedStyle(bottomNav).display);
+                            console.log('    - Bottom nav', window.getComputedStyle(bottomNav).display === 'flex' ? '✅ VISIBLE' : '❌ STILL HIDDEN');
                         }
                         
-                        // Header kontrol (KAYMASIN - sadece logla)
+                        // Header kontrol
                         if (sectionHeader) {
-                            console.log('  - Header (should be back):', {
-                                position: window.getComputedStyle(sectionHeader).position,
-                                top: window.getComputedStyle(sectionHeader).top,
-                                transform: window.getComputedStyle(sectionHeader).transform
-                            });
+                            console.log('  📌 HEADER CHECK (should still be FIXED):');
+                            console.log('    - position:', window.getComputedStyle(sectionHeader).position);
+                            console.log('    - Header', window.getComputedStyle(sectionHeader).position === 'fixed' ? '✅ FIXED' : '❌ NOT FIXED');
                         }
                         
-                        // Input container'ı eski pozisyonuna döndür (bottom: 0)
-                        console.log('  - Input container BEFORE bottom:', inputContainer.style.bottom);
+                        // Input container'ı eski pozisyonuna döndür
+                        console.log('  ⬇️  REVERTING INPUT CONTAINER:');
+                        console.log('    - BEFORE bottom:', inputContainer.style.bottom);
                         inputContainer.style.bottom = '0';
-                        console.log('  - Input container AFTER bottom:', inputContainer.style.bottom);
+                        console.log('    - AFTER bottom:', inputContainer.style.bottom);
                         
                         // Chat container'ın padding'ini eski haline döndür
-                        console.log('  - Chat padding BEFORE:', chatContainer.style.paddingBottom);
+                        console.log('  📦 REVERTING CHAT PADDING:');
+                        console.log('    - BEFORE:', chatContainer.style.paddingBottom);
                         chatContainer.style.paddingBottom = 'calc(16px + 143px)';
-                        console.log('  - Chat padding AFTER:', chatContainer.style.paddingBottom);
+                        console.log('    - AFTER:', chatContainer.style.paddingBottom);
+                        
+                        console.log('🎹 ============================================');
                         
                         // Scroll'u en alta al
-                        setTimeout(() => {
-                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                            console.log('  - Scrolled to bottom:', chatContainer.scrollTop, '/', chatContainer.scrollHeight);
-                        }, 350); // Animation tamamlandıktan sonra
+                        scrollToBottom('KEYBOARD CLOSED', 400);
                     }
                 };
                 
@@ -12998,28 +13065,26 @@
             
             // Input focus/blur event'leri
             messageInput.addEventListener('focus', () => {
-                console.log('🎯 Input FOCUSED');
+                console.log('🎯 ============================================');
+                console.log('🎯 INPUT FOCUSED');
                 console.log('  - Is keyboard open?', isKeyboardOpen);
                 console.log('  - Bottom nav display:', bottomNav ? bottomNav.style.display : 'N/A');
+                console.log('🎯 ============================================');
                 
-                // Focus olduğunda biraz bekle ve scroll yap
+                // Focus olduğunda scroll yap
                 setTimeout(() => {
                     if (isKeyboardOpen) {
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                        console.log('  - Auto-scrolled on focus');
+                        scrollToBottom('INPUT FOCUS', 0);
                     }
-                }, 400);
+                }, 450);
             });
             
             messageInput.addEventListener('blur', () => {
-                console.log('🎯 Input BLURRED');
-                console.log('  - Is keyboard open?', isKeyboardOpen);
+                console.log('🎯 INPUT BLURRED - keyboard open:', isKeyboardOpen);
                 
-                // Blur olduğunda da scroll'u koru
                 setTimeout(() => {
                     if (!isKeyboardOpen) {
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                        console.log('  - Auto-scrolled on blur');
+                        scrollToBottom('INPUT BLUR', 0);
                     }
                 }, 100);
             });
@@ -13036,38 +13101,31 @@
                     const heightDiff = initialHeight - currentHeight;
                     
                     console.log('↕️ WINDOW RESIZE (Fallback):');
-                    console.log('  - Initial height:', initialHeight);
-                    console.log('  - Current height:', currentHeight);
-                    console.log('  - Height diff:', heightDiff);
-                    console.log('  - Has Visual Viewport?', !!window.visualViewport);
+                    console.log('  - Height diff:', heightDiff, '- Has Visual Viewport?', !!window.visualViewport);
                     
                     if (heightDiff > 150 && !window.visualViewport) {
-                        // Klavye açık (fallback)
-                        console.log('  - FALLBACK: Keyboard OPEN (diff > 150)');
+                        console.log('  - FALLBACK: Keyboard OPEN');
                         if (bottomNav) {
                             bottomNav.style.setProperty('display', 'none', 'important');
-                            console.log('  - Bottom nav hidden (fallback)');
+                            bottomNav.style.setProperty('transform', 'translateY(100%)', 'important');
+                            bottomNav.style.setProperty('visibility', 'hidden', 'important');
                         }
                         inputContainer.style.bottom = `${heightDiff * 0.6}px`;
                         const inputHeight = inputContainer.offsetHeight || 60;
                         chatContainer.style.paddingBottom = `${inputHeight + (heightDiff * 0.6) + 16}px`;
                         
-                        setTimeout(() => {
-                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                        }, 100);
+                        scrollToBottom('FALLBACK OPEN', 100);
                     } else if (heightDiff <= 50 && !window.visualViewport) {
-                        // Klavye kapalı (fallback)
-                        console.log('  - FALLBACK: Keyboard CLOSED (diff <= 50)');
+                        console.log('  - FALLBACK: Keyboard CLOSED');
                         if (bottomNav) {
                             bottomNav.style.setProperty('display', 'flex', 'important');
-                            console.log('  - Bottom nav shown (fallback)');
+                            bottomNav.style.setProperty('transform', 'translateY(0)', 'important');
+                            bottomNav.style.setProperty('visibility', 'visible', 'important');
                         }
                         inputContainer.style.bottom = '0';
                         chatContainer.style.paddingBottom = 'calc(16px + 143px)';
                         
-                        setTimeout(() => {
-                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                        }, 350);
+                        scrollToBottom('FALLBACK CLOSED', 350);
                     }
                 }, 150);
             });
