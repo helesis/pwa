@@ -1148,7 +1148,8 @@
         .content-section {
             display: none !important; /* Force hide when not active */
             flex: 1;
-            overflow: hidden; /* Tüm section'lar için viewport'a göre sticky çalışması için */
+            overflow-x: hidden; /* Prevent horizontal scroll only */
+            overflow-y: visible; /* Allow children to control vertical scroll */
             padding: 16px;
             padding-bottom: calc(80px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Bottom nav height + safe area */
             position: relative;
@@ -13013,13 +13014,16 @@
                         console.log('    - BEFORE bottom:', inputContainer.style.bottom || '0px');
                         
                         // Input container klavyenin üstünde olmalı
-                        // Klavye KAPALI: bottom = 0 (bottom nav üzerinde zaten)
-                        // Klavye AÇIK: bottom = keyboardHeight (viewport altından klavye yüksekliği kadar yukarıda)
-                        inputContainer.style.bottom = `${keyboardHeight}px`;
+                        // Visual Viewport API kullanıldığında viewport ZATEN klavyenin üstünü gösterir
+                        // Bu yüzden input bottom: 0 olmalı (viewport'un altı = klavyenin üstü)
+                        console.log('    - Visual Viewport height:', window.visualViewport.height, 'px');
+                        console.log('    - Window height:', window.innerHeight, 'px');
+                        console.log('    - Keyboard height detected:', keyboardHeight, 'px');
+                        inputContainer.style.bottom = '0px';
                         inputContainer.style.transition = 'bottom 0.3s ease';
                         
                         console.log('    - AFTER bottom:', inputContainer.style.bottom);
-                        console.log('    - Calculated from viewport bottom:', keyboardHeight, 'px');
+                        console.log('    - Input now at viewport bottom = keyboard top ✅');
                         console.log('    - Input container ✅ MOVED');
                         
                         // Chat container'ın alt padding'ini input + klavye yüksekliği kadar artır
