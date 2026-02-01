@@ -374,6 +374,7 @@
             flex-direction: column;
             min-height: 0; /* Allow flex shrinking */
             box-sizing: border-box;
+            transition: padding-bottom 0.3s ease; /* Smooth keyboard animation */
         }
 
         .chat-container::-webkit-scrollbar {
@@ -808,6 +809,8 @@
             width: 100%;
             min-height: 143px;
             box-sizing: border-box;
+            transform: translateY(0); /* Default position for keyboard handling */
+            transition: transform 0.3s ease; /* Smooth keyboard animation */
         }
         
         /* Only show input container when chat section is active */
@@ -12869,22 +12872,105 @@
             
             if (!inputContainer || !messageInput || !chatContainer) return;
             
+            let keyboardHeight = 0;
+            let isKeyboardOpen = false;
+            
             // Visual Viewport API ile klavye yüksekliğini takip et
             if (window.visualViewport) {
-                window.visualViewport.addEventListener('resize', () => {
-                    // Input focus olduğunda scroll'u en alta al
-                    setTimeout(() => {
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }, 100);
-                });
+                const handleViewportChange = () => {
+                    const newKeyboardHeight = window.innerHeight - window.visualViewport.height;
+                    const wasKeyboardOpen = isKeyboardOpen;
+                    isKeyboardOpen = newKeyboardHeight > 50; // 50px threshold for keyboard detection
+                    
+                    if (isKeyboardOpen && newKeyboardHeight !== keyboardHeight) {
+                        // Klavye açıldı veya yüksekliği değişti
+                        keyboardHeight = newKeyboardHeight;
+                        
+                        // Input container'ı yukarı it
+                        inputContainer.style.transform = `translateY(-${keyboardHeight}px)`;
+                        inputContainer.style.transition = 'transform 0.3s ease';
+                        
+                        // Chat container'ın alt padding'ini artır
+                        chatContainer.style.paddingBottom = `calc(16px + 143px + ${keyboardHeight}px)`;
+                        chatContainer.style.transition = 'padding-bottom 0.3s ease';
+                        
+                        // Scroll'u en alta al
+                        setTimeout(() => {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }, 100);
+                        
+                        console.log('🎹 Keyboard opened, height:', keyboardHeight);
+                        
+                    } else if (!isKeyboardOpen && wasKeyboardOpen) {
+                        // Klavye kapandı
+                        keyboardHeight = 0;
+                        
+                        // Input container'ı eski pozisyonuna döndür
+                        inputContainer.style.transform = 'translateY(0)';
+                        
+                        // Chat container'ın padding'ini eski haline döndür
+                        chatContainer.style.paddingBottom = 'calc(16px + 143px)';
+                        
+                        // Scroll'u en alta al
+                        setTimeout(() => {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }, 350); // Animation tamamlandıktan sonra
+                        
+                        console.log('🎹 Keyboard closed');
+                    }
+                };
+                
+                window.visualViewport.addEventListener('resize', handleViewportChange);
+                window.visualViewport.addEventListener('scroll', handleViewportChange);
             }
             
             // Input focus/blur event'leri
             messageInput.addEventListener('focus', () => {
-                // Input focus olduğunda scroll'u en alta al
+                // Focus olduğunda biraz bekle ve scroll yap
                 setTimeout(() => {
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                }, 300);
+                    if (isKeyboardOpen) {
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+                }, 400);
+            });
+            
+            messageInput.addEventListener('blur', () => {
+                // Blur olduğunda da scroll'u koru
+                setTimeout(() => {
+                    if (!isKeyboardOpen) {
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+                }, 100);
+            });
+            
+            // Fallback: window resize event (eski cihazlar için)
+            let resizeTimeout;
+            const initialHeight = window.innerHeight;
+            
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    const currentHeight = window.innerHeight;
+                    const heightDiff = initialHeight - currentHeight;
+                    
+                    if (heightDiff > 150 && !window.visualViewport) {
+                        // Klavye açık (fallback)
+                        inputContainer.style.transform = `translateY(-${heightDiff * 0.6}px)`;
+                        chatContainer.style.paddingBottom = `calc(16px + 143px + ${heightDiff * 0.6}px)`;
+                        
+                        setTimeout(() => {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }, 100);
+                    } else if (heightDiff <= 50 && !window.visualViewport) {
+                        // Klavye kapalı (fallback)
+                        inputContainer.style.transform = 'translateY(0)';
+                        chatContainer.style.paddingBottom = 'calc(16px + 143px)';
+                        
+                        setTimeout(() => {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }, 350);
+                    }
+                }, 150);
             });
         }
 
