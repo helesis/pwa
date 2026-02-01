@@ -362,7 +362,7 @@
 
         .chat-container {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: auto !important; /* Force scroll - override any parent overflow */
             overflow-x: hidden;
             padding: 16px 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
@@ -1159,7 +1159,8 @@
             padding: 0;
             display: none; /* Hidden by default */
             flex-direction: column;
-            overflow: hidden; /* Keep overflow hidden for chat-container scroll */
+            overflow-x: hidden; /* Prevent horizontal scroll only */
+            overflow-y: visible; /* Allow vertical scroll in children */
             position: relative;
             flex: 1;
             min-height: 0;
