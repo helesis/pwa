@@ -3204,21 +3204,13 @@
                         <div style="margin-bottom: 16px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
                     </div>
                 </div>
-                <!-- Avatar & Harita Section -->
-                <div class="info-card">
-                    <div class="info-card-title">Avatar & Harita</div>
+                <!-- Avatar & Harita Section - REMOVED: Now using profile photo on map -->
+                <!-- Avatar selection removed - profile photo is now used on map instead -->
+                <div class="info-card" style="display: none;">
+                    <div class="info-card-title">Avatar & Harita (Devre Dışı)</div>
                     <div class="info-card-content">
-                        <div class="avatar-selection">
-                            <div class="avatar-preview-large">
-                                <img id="currentAvatarPreview" src="" alt="Avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 32px;" id="avatarPreviewPlaceholder">👤</div>
-                            </div>
-                            
-                            <!-- Avatar style selector removed - only avataaars style available -->
-                            
-                            <div class="avatar-grid" id="avatarGrid">
-                                <!-- Avatars will be loaded here -->
-                            </div>
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Haritada artık profil fotoğrafınız gösteriliyor.
                         </div>
                     </div>
                 </div>
@@ -3511,11 +3503,7 @@
                     }
                 },
                 
-                // Avatar System
-                avatar: {
-                    style: 'avataaars',
-                    seed: null
-                },
+                // Avatar System - REMOVED: Now using profile photo on map
                 
                 // Booking State
                 booking: {
@@ -3835,16 +3823,7 @@
         
         const MAPBOX_TOKEN = AppState.get('map.config.token');
         
-        // Avatar system proxies
-        Object.defineProperty(window, 'currentAvatarStyle', {
-            get: () => AppState.get('avatar.style'),
-            set: (val) => AppState.set('avatar.style', val)
-        });
-        
-        Object.defineProperty(window, 'currentAvatarSeed', {
-            get: () => AppState.get('avatar.seed'),
-            set: (val) => AppState.set('avatar.seed', val)
-        });
+        // Avatar system proxies - REMOVED: Now using profile photo on map
         
         // Restaurant booking proxies
         Object.defineProperty(window, 'currentRestaurantForReservation', {
@@ -4549,7 +4528,10 @@
                 lucide.createIcons();
             }
             
-            console.log('✅ Profile photo display updated with DOM cleanup');
+            // Update map marker with new profile photo
+            updateUserMarkerProfilePhoto();
+            
+            console.log('✅ Profile photo display updated with DOM cleanup and map marker');
         }
 
         // Force clear all profile photo caches and DOM elements
@@ -4560,7 +4542,7 @@
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && key.includes('guestProfilePhoto')) {
+                if (key && (key.includes('guestProfilePhoto') || key.includes('avatar'))) {
                     keysToRemove.push(key);
                 }
             }
@@ -4731,6 +4713,7 @@
                     }
                     
                     updateProfilePhotoDisplay();
+                    updateProfileInfo(); // Update settings page profile info as well
                     closePhotoModal();
                     console.log('✅ Profile photo updated');
                 } catch (error) {
@@ -6316,6 +6299,9 @@
             // COMPREHENSIVE CLEANUP: Use the force clean function
             forceCleanProfilePhotoCache();
             
+            // Update map marker to remove profile photo
+            updateUserMarkerProfilePhoto();
+            
             // Now update display with clean state
             updateProfilePhotoDisplay();
 
@@ -6552,7 +6538,7 @@
             if (section === 'settings') {
                 updateNotificationToggle();
                 updateLocationPermissionStatus();
-                loadAvatarSelection();
+                // loadAvatarSelection(); // REMOVED: Avatar system disabled
                 updateGhostModeToggle();
             }
             
@@ -8543,21 +8529,15 @@
                     z-index: 1;
                 `;
 
-                // Try to load avatar
-                try {
-                    const response = await fetch('/api/guest/me', { credentials: 'include' });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success && data.guest && data.guest.avatar_seed && data.guest.avatar_style) {
-                            const avatarUrl = `https://api.dicebear.com/7.x/${data.guest.avatar_style}/svg?seed=${data.guest.avatar_seed}`;
-                            markerEl.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar">`;
-                        } else {
-                            markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
-                        }
-                    } else {
-                        markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
-                    }
-                } catch (error) {
+                // Use profile photo instead of avatar
+                if (guestProfilePhoto) {
+                    // Add cache-busting timestamp to prevent caching issues
+                    const timestamp = Date.now();
+                    const photoSrc = guestProfilePhoto.includes('?') ? 
+                        `${guestProfilePhoto}&_t=${timestamp}` : 
+                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    markerEl.innerHTML = `<img src="${photoSrc}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Profil">`;
+                } else {
                     markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
                 }
 
@@ -8578,46 +8558,54 @@
                 isCreatingUserMarker = false; // Reset flag
             } else if (userMarker) {
                 // Marker exists - update position AND check/update avatar
-                // Check if avatar needs to be updated
+                // Check if profile photo needs to be updated
                 try {
-                    const avatarResponse = await fetch('/api/guest/me', { credentials: 'include' });
-                    if (avatarResponse.ok) {
-                        const avatarData = await avatarResponse.json();
-                        if (avatarData.success && avatarData.guest && avatarData.guest.avatar_seed && avatarData.guest.avatar_style) {
-                            // Get current marker's container element
-                            const markerElement = userMarker.getElement();
-                            if (markerElement) {
-                                // Find the marker container div
-                                const markerContainer = markerElement.querySelector('.user-marker-container');
-                                if (markerContainer) {
-                                    // Find the avatar/image element (div with border-radius)
-                                    const markerEl = markerContainer.querySelector('div[style*="border-radius: 50%"]');
-                                    if (markerEl) {
-                                        const newAvatarUrl = `https://api.dicebear.com/7.x/${avatarData.guest.avatar_style}/svg?seed=${avatarData.guest.avatar_seed}`;
-                                        const existingImg = markerEl.querySelector('img');
-                                        
-                                        // Check if avatar changed
-                                        if (existingImg) {
-                                            if (existingImg.src !== newAvatarUrl) {
-                                                // Update avatar URL
-                                                existingImg.src = newAvatarUrl;
-                                                console.log('✅ User marker avatar updated in existing marker');
-                                            }
-                                        } else {
-                                            // No img element, replace icon with avatar
-                                            markerEl.innerHTML = `<img src="${newAvatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();">`;
-                                            if (typeof lucide !== 'undefined') {
-                                                lucide.createIcons();
-                                            }
-                                            console.log('✅ User marker avatar updated (icon replaced with avatar)');
+                    // Get current marker's container element
+                    const markerElement = userMarker.getElement();
+                    if (markerElement) {
+                        // Find the marker container div
+                        const markerContainer = markerElement.querySelector('.user-marker-container');
+                        if (markerContainer) {
+                            // Find the profile photo/image element (div with border-radius)
+                            const markerEl = markerContainer.querySelector('div[style*="border-radius: 50%"]');
+                            if (markerEl) {
+                                const existingImg = markerEl.querySelector('img');
+                                
+                                if (guestProfilePhoto) {
+                                    // Add cache-busting timestamp
+                                    const timestamp = Date.now();
+                                    const photoSrc = guestProfilePhoto.includes('?') ? 
+                                        `${guestProfilePhoto}&_t=${timestamp}` : 
+                                        `${guestProfilePhoto}?_t=${timestamp}`;
+                                    
+                                    if (existingImg) {
+                                        // Update existing image src
+                                        existingImg.src = photoSrc;
+                                        existingImg.alt = 'Profil';
+                                        console.log('✅ User marker profile photo updated in existing marker');
+                                    } else {
+                                        // No img element, replace icon with profile photo
+                                        markerEl.innerHTML = `<img src="${photoSrc}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Profil" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();">`;
+                                        if (typeof lucide !== 'undefined') {
+                                            lucide.createIcons();
                                         }
+                                        console.log('✅ User marker profile photo updated (icon replaced with photo)');
+                                    }
+                                } else {
+                                    // No profile photo, show default icon
+                                    if (existingImg) {
+                                        markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                                        if (typeof lucide !== 'undefined') {
+                                            lucide.createIcons();
+                                        }
+                                        console.log('✅ User marker reverted to default icon (no profile photo)');
                                     }
                                 }
                             }
                         }
                     }
                 } catch (error) {
-                    console.error('Error updating avatar in existing marker:', error);
+                    console.error('Error updating profile photo in existing marker:', error);
                 }
 
                 // Smoothly animate marker to new position
@@ -8671,17 +8659,17 @@
             }
         }
 
-        // Update user marker avatar on map
-        function updateUserMarkerAvatar(seed, style) {
+        // Update user marker profile photo on map
+        function updateUserMarkerProfilePhoto() {
             if (!map) {
                 console.log('Map not initialized yet');
                 return;
             }
 
             if (!userMarker) {
-                // Marker doesn't exist yet - it will be created with avatar when location is set
-                // The updateUserLocation function will check for avatar on next update
-                console.log('User marker not found, will be created with avatar on next location update');
+                // Marker doesn't exist yet - it will be created with profile photo when location is set
+                // The updateUserLocation function will check for profile photo on next update
+                console.log('User marker not found, will be created with profile photo on next location update');
                 return;
             }
 
@@ -8693,34 +8681,40 @@
             const markerContainer = markerElement.querySelector('.user-marker-container');
             if (!markerContainer) return;
 
-            // Find the avatar/image element (div with border-radius)
+            // Find the profile photo/image element (div with border-radius)
             const markerEl = markerContainer.querySelector('div[style*="border-radius: 50%"]');
             if (!markerEl) return;
 
-            // Update avatar
-            if (seed && style) {
-                const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+            // Update profile photo
+            if (guestProfilePhoto) {
+                // Add cache-busting timestamp
+                const timestamp = Date.now();
+                const photoSrc = guestProfilePhoto.includes('?') ? 
+                    `${guestProfilePhoto}&_t=${timestamp}` : 
+                    `${guestProfilePhoto}?_t=${timestamp}`;
+                
                 const existingImg = markerEl.querySelector('img');
                 
                 if (existingImg) {
                     // Update existing image src
-                    existingImg.src = avatarUrl;
-                    console.log('✅ User marker avatar updated (existing image)');
+                    existingImg.src = photoSrc;
+                    existingImg.alt = 'Profil';
+                    console.log('✅ User marker profile photo updated (existing image)');
                 } else {
-                    // Replace icon with avatar
-                    markerEl.innerHTML = `<img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();">`;
+                    // Replace icon with profile photo
+                    markerEl.innerHTML = `<img src="${photoSrc}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Profil" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();">`;
                     if (typeof lucide !== 'undefined') {
                         lucide.createIcons();
                     }
-                    console.log('✅ User marker avatar updated (icon replaced with avatar)');
+                    console.log('✅ User marker profile photo updated (icon replaced with photo)');
                 }
             } else {
-                // No avatar, use default icon
+                // No profile photo, use default icon
                 markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
                 if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
                 }
-                console.log('✅ User marker updated to default icon');
+                console.log('✅ User marker reverted to default icon (no profile photo)');
             }
         }
 
@@ -12703,74 +12697,22 @@
 
         // MOVED TO AppState.avatar.style and avatar.seed
 
-        // Load avatar selection
+        // Load avatar selection - DISABLED: Now using profile photo on map
         async function loadAvatarSelection() {
-            try {
-                // Get current avatar from user data
-                const response = await fetch('/api/guest/me', { credentials: 'include' });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.guest) {
-                        // Always use avataaars style
-                        currentAvatarSeed = data.guest.avatar_seed || 'avatar-1';
-                        currentAvatarStyle = 'avataaars';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading avatar data:', error);
-            }
-            
-            // Always generate avataaars avatars
-            generateAvatars('avataaars');
-            updateAvatarPreview();
+            console.log('Avatar selection disabled - using profile photo on map instead');
+            return;
         }
 
-        // Generate avatars for a style (only avataaars, 36 unique avatars)
+        // Generate avatars for a style - DISABLED: Now using profile photo on map
         function generateAvatars(style) {
-            const grid = document.getElementById('avatarGrid');
-            if (!grid) return;
-            
-            grid.innerHTML = '';
-            
-            // Always use avataaars style
-            const avatarStyle = 'avataaars';
-            
-            // Generate 36 unique avatars with different seeds (6x6 grid)
-            // Use unique seeds for variety: user name + index + common words
-            const seeds = [
-                'avatar-1', 'avatar-2', 'avatar-3', 'avatar-4', 'avatar-5', 'avatar-6',
-                'person-1', 'person-2', 'person-3', 'person-4', 'person-5', 'person-6',
-                'user-1', 'user-2', 'user-3', 'user-4', 'user-5', 'user-6',
-                'human-1', 'human-2', 'human-3', 'human-4', 'human-5', 'human-6',
-                'character-1', 'character-2', 'character-3', 'character-4', 'character-5', 'character-6',
-                'profile-1', 'profile-2', 'profile-3', 'profile-4', 'profile-5', 'profile-6'
-            ];
-            
-            for (let i = 0; i < 36; i++) {
-                const seed = seeds[i] || `avatar-${i + 1}`;
-                const avatarUrl = `https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${seed}`;
-                
-                const avatarItem = document.createElement('div');
-                avatarItem.className = 'avatar-item';
-                if (currentAvatarSeed && seed === currentAvatarSeed) {
-                    avatarItem.classList.add('selected');
-                }
-                avatarItem.onclick = () => selectAvatar(seed, avatarStyle);
-                
-                const img = document.createElement('img');
-                img.src = avatarUrl;
-                img.alt = `Avatar ${i + 1}`;
-                avatarItem.appendChild(img);
-                
-                grid.appendChild(avatarItem);
-            }
+            console.log('Avatar generation disabled - using profile photo on map instead');
+            return;
         }
 
-        // Switch avatar style (deprecated - always use avataaars)
+        // Switch avatar style - DISABLED: Now using profile photo on map
         function switchAvatarStyle(style) {
-            // Always use avataaars style
-            currentAvatarStyle = 'avataaars';
-            generateAvatars('avataaars');
+            console.log('Avatar style switching disabled - using profile photo on map instead');
+            return;
         }
 
         // Select avatar
