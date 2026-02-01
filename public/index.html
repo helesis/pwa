@@ -4218,6 +4218,9 @@
             }
             
             try {
+                // Clean any previous user's cached photos before loading new user
+                forceCleanProfilePhotoCache();
+                
                 // Update header with guest info
                 updateGuestHeader();
                 
@@ -4263,32 +4266,57 @@
             
             // Update header profile photo: prioritize guest profile photo, fallback to team avatar
             if (headerPhoto) {
-                // Remove existing click listeners
-                const newHeaderPhoto = headerPhoto.cloneNode(true);
-                headerPhoto.parentNode.replaceChild(newHeaderPhoto, headerPhoto);
-                const updatedHeaderPhoto = document.getElementById('headerProfilePhoto');
+                // FORCE CLEAR: Remove all existing content and attributes first
+                headerPhoto.innerHTML = '';
+                headerPhoto.className = headerPhoto.className.replace(/has-photo/g, '').trim();
+                headerPhoto.removeAttribute('onclick');
+                headerPhoto.removeAttribute('title');
+                headerPhoto.style.cursor = '';
+                
+                // Clear any cached images by removing src attributes from child imgs
+                const existingImgs = headerPhoto.querySelectorAll('img');
+                existingImgs.forEach(img => {
+                    img.src = '';
+                    img.remove();
+                });
+                
+                // Force DOM refresh
+                headerPhoto.offsetHeight; // Trigger reflow
                 
                 if (guestProfilePhoto) {
-                    // Show guest's own profile photo
-                    updatedHeaderPhoto.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                    updatedHeaderPhoto.classList.add('has-photo');
-                    updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
-                    updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
-                    updatedHeaderPhoto.style.cursor = 'pointer';
+                    // Show guest's own profile photo with cache-busting timestamp
+                    const timestamp = Date.now();
+                    const photoSrc = guestProfilePhoto.includes('?') ? 
+                        `${guestProfilePhoto}&_t=${timestamp}` : 
+                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    headerPhoto.innerHTML = `<img src="${photoSrc}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    headerPhoto.classList.add('has-photo');
+                    headerPhoto.setAttribute('onclick', 'showPhotoModal()');
+                    headerPhoto.title = 'Profil fotoğrafı değiştir';
+                    headerPhoto.style.cursor = 'pointer';
                 } else if (teamAvatar) {
-                    // Fallback to team avatar if guest has no profile photo
-                    updatedHeaderPhoto.innerHTML = `<img src="${teamAvatar}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                    updatedHeaderPhoto.classList.add('has-photo');
-                    updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
-                    updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
-                    updatedHeaderPhoto.style.cursor = 'pointer';
+                    // Fallback to team avatar if guest has no profile photo with cache-busting
+                    const timestamp = Date.now();
+                    const avatarSrc = teamAvatar.includes('?') ? 
+                        `${teamAvatar}&_t=${timestamp}` : 
+                        `${teamAvatar}?_t=${timestamp}`;
+                    headerPhoto.innerHTML = `<img src="${avatarSrc}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    headerPhoto.classList.add('has-photo');
+                    headerPhoto.setAttribute('onclick', 'showPhotoModal()');
+                    headerPhoto.title = 'Profil fotoğrafı değiştir';
+                    headerPhoto.style.cursor = 'pointer';
                 } else {
-                    // Default icon
-                    updatedHeaderPhoto.innerHTML = '<i data-lucide="user" class="icon icon-md"></i>';
-                    updatedHeaderPhoto.classList.remove('has-photo');
-                    updatedHeaderPhoto.setAttribute('onclick', 'showPhotoModal()');
-                    updatedHeaderPhoto.title = 'Profil fotoğrafı değiştir';
-                    updatedHeaderPhoto.style.cursor = 'pointer';
+                    // Default icon - completely clear state
+                    headerPhoto.innerHTML = '<i data-lucide="user" class="icon icon-md"></i>';
+                    headerPhoto.classList.remove('has-photo');
+                    headerPhoto.setAttribute('onclick', 'showPhotoModal()');
+                    headerPhoto.title = 'Profil fotoğrafı değiştir';
+                    headerPhoto.style.cursor = 'pointer';
+                }
+                
+                // Recreate Lucide icons if needed
+                if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                    lucide.createIcons();
                 }
             }
         }
@@ -4464,27 +4492,113 @@
             // Update header using updateGuestHeader which handles both guest photo and team avatar
             updateGuestHeader();
             
-            // Update all sent message avatars
+            // FORCE CLEAR: Update all sent message avatars with DOM cleanup
             const sentAvatars = document.querySelectorAll('.message.sent .message-avatar');
             sentAvatars.forEach(avatar => {
+                // Clear existing content first
+                avatar.innerHTML = '';
+                const existingImgs = avatar.querySelectorAll('img');
+                existingImgs.forEach(img => {
+                    img.src = '';
+                    img.remove();
+                });
+                
+                // Force DOM refresh
+                avatar.offsetHeight;
+                
                 if (guestProfilePhoto) {
-                    avatar.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width:100%;height:100%;object-fit:cover;">`;
+                    // Add cache-busting timestamp
+                    const timestamp = Date.now();
+                    const photoSrc = guestProfilePhoto.includes('?') ? 
+                        `${guestProfilePhoto}&_t=${timestamp}` : 
+                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    avatar.innerHTML = `<img src="${photoSrc}" alt="Profil" style="width:100%;height:100%;object-fit:cover;">`;
                 } else {
                     avatar.innerHTML = '<i data-lucide="user" class="icon icon-md"></i>';
                 }
             });
             
-            // Update profile section avatar
+            // FORCE CLEAR: Update profile section avatar with DOM cleanup
             const profileAvatarLargeEl = document.getElementById('profileAvatarLarge');
             if (profileAvatarLargeEl) {
+                // Clear existing content first
+                profileAvatarLargeEl.innerHTML = '';
+                const existingImgs = profileAvatarLargeEl.querySelectorAll('img');
+                existingImgs.forEach(img => {
+                    img.src = '';
+                    img.remove();
+                });
+                
+                // Force DOM refresh
+                profileAvatarLargeEl.offsetHeight;
+                
                 if (guestProfilePhoto) {
-                    profileAvatarLargeEl.innerHTML = `<img src="${guestProfilePhoto}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    // Add cache-busting timestamp
+                    const timestamp = Date.now();
+                    const photoSrc = guestProfilePhoto.includes('?') ? 
+                        `${guestProfilePhoto}&_t=${timestamp}` : 
+                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    profileAvatarLargeEl.innerHTML = `<img src="${photoSrc}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                 } else {
                     profileAvatarLargeEl.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
                 }
             }
             
-            console.log('✅ Profile photo display updated');
+            // Recreate Lucide icons after DOM changes
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+            
+            console.log('✅ Profile photo display updated with DOM cleanup');
+        }
+
+        // Force clear all profile photo caches and DOM elements
+        function forceCleanProfilePhotoCache() {
+            console.log('🧹 Force cleaning profile photo cache...');
+            
+            // Clear all profile photo related localStorage keys
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('guestProfilePhoto')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            // Clear all profile images from DOM
+            const allProfileSelectors = [
+                '#headerProfilePhoto img',
+                '#profileAvatarLarge img', 
+                '.message-avatar img',
+                '.guest-profile-photo img',
+                'img[alt="Profil"]',
+                'img[alt="Takım"]',
+                'img[src*="data:image"]'
+            ];
+            
+            allProfileSelectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(img => {
+                    if (img.src) {
+                        img.src = '';
+                        img.remove();
+                    }
+                });
+            });
+            
+            // Force browser cache refresh by clearing image cache
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        if (name.includes('image') || name.includes('photo')) {
+                            caches.delete(name);
+                        }
+                    });
+                });
+            }
+            
+            console.log('✅ Profile photo cache force cleaned');
         }
 
         // Show photo selection modal
@@ -6195,9 +6309,14 @@
             // Also remove old global key for backward compatibility
             localStorage.removeItem('guestProfilePhoto');
 
-            // Clear avatar
+            // Clear avatar with FORCE DOM cleanup
             guestProfilePhoto = null;
             teamAvatar = null;
+            
+            // COMPREHENSIVE CLEANUP: Use the force clean function
+            forceCleanProfilePhotoCache();
+            
+            // Now update display with clean state
             updateProfilePhotoDisplay();
 
             // Clear restaurant reservations
