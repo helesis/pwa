@@ -8540,7 +8540,28 @@
                     const photoSrc = guestProfilePhoto.includes('?') ? 
                         `${guestProfilePhoto}&_t=${timestamp}` : 
                         `${guestProfilePhoto}?_t=${timestamp}`;
-                    markerEl.innerHTML = `<img src="${photoSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="Profil" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();" onload="console.log('✅ Profile photo loaded on map marker')">`;
+                    
+                    // Create img element with proper event handlers
+                    const img = document.createElement('img');
+                    img.src = photoSrc;
+                    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+                    img.alt = 'Profil';
+                    
+                    // Add error handler
+                    img.onerror = function() {
+                        markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    };
+                    
+                    // Add load handler for debugging
+                    img.onload = function() {
+                        console.log('✅ Profile photo loaded on map marker');
+                    };
+                    
+                    markerEl.innerHTML = '';
+                    markerEl.appendChild(img);
                 } else {
                     markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
                 }
@@ -8589,10 +8610,26 @@
                                         console.log('✅ User marker profile photo updated in existing marker');
                                     } else {
                                         // No img element, replace icon with profile photo
-                                        markerEl.innerHTML = `<img src="${photoSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="Profil" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();" onload="console.log('✅ Profile photo loaded in marker update')">`;
-                                        if (typeof lucide !== 'undefined') {
-                                            lucide.createIcons();
-                                        }
+                                        const img = document.createElement('img');
+                                        img.src = photoSrc;
+                                        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+                                        img.alt = 'Profil';
+                                        
+                                        // Add error handler
+                                        img.onerror = function() {
+                                            markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                                            if (typeof lucide !== 'undefined') {
+                                                lucide.createIcons();
+                                            }
+                                        };
+                                        
+                                        // Add load handler
+                                        img.onload = function() {
+                                            console.log('✅ Profile photo loaded in marker update');
+                                        };
+                                        
+                                        markerEl.innerHTML = '';
+                                        markerEl.appendChild(img);
                                         console.log('✅ User marker profile photo updated (icon replaced with photo)');
                                     }
                                 } else {
@@ -8706,10 +8743,26 @@
                     console.log('✅ User marker profile photo updated (existing image)');
                 } else {
                     // Replace icon with profile photo
-                    markerEl.innerHTML = `<img src="${photoSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="Profil" onerror="this.parentElement.innerHTML='<i data-lucide=\\"user\\" style=\\"color: white; width: 20px; height: 20px;\\"></i>'; if(typeof lucide !== \\'undefined\\') lucide.createIcons();" onload="console.log('✅ Profile photo updated on existing marker')">`;
-                    if (typeof lucide !== 'undefined') {
-                        lucide.createIcons();
-                    }
+                    const img = document.createElement('img');
+                    img.src = photoSrc;
+                    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+                    img.alt = 'Profil';
+                    
+                    // Add error handler
+                    img.onerror = function() {
+                        markerEl.innerHTML = '<i data-lucide="user" style="color: white; width: 20px; height: 20px;"></i>';
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    };
+                    
+                    // Add load handler
+                    img.onload = function() {
+                        console.log('✅ Profile photo updated on existing marker');
+                    };
+                    
+                    markerEl.innerHTML = '';
+                    markerEl.appendChild(img);
                     console.log('✅ User marker profile photo updated (icon replaced with photo)');
                 }
             } else {
