@@ -3201,22 +3201,21 @@
                         <div style="margin-bottom: 8px;"><strong data-i18n="name">Ad:</strong> <span id="profileGuestName">-</span></div>
                         <div style="margin-bottom: 8px;"><strong data-i18n="surname">Soyad:</strong> <span id="profileGuestSurname">-</span></div>
                         <div style="margin-bottom: 8px;"><strong data-i18n="room">Oda:</strong> <span id="profileRoomNumber">-</span></div>
-                        <div style="margin-bottom: 16px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+                        <div style="margin-bottom: 16px;"><strong data-i18n="checkoutDate">Çıkış Tarihi:</strong> <span id="profileCheckoutDate">-</span></div>
                     </div>
                 </div>
-                <!-- Avatar & Harita Section - REMOVED: Now using profile photo on map -->
-                <!-- Avatar selection removed - profile photo is now used on map instead -->
-                <div class="info-card" style="display: none;">
-                    <div class="info-card-title">Avatar & Harita (Devre Dışı)</div>
-                    <div class="info-card-content">
-                        <div style="text-align: center; padding: 20px; color: #667781;">
-                            Haritada artık profil fotoğrafınız gösteriliyor.
-                        </div>
+                <!-- 1. Profil Fotoğrafı Değiştir -->
+                <div class="settings-item" onclick="showPhotoModal()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="changeProfilePhoto">Profil Fotoğrafı Değiştir</div>
                     </div>
+                    <div class="settings-item-right">›</div>
                 </div>
                 
-                                <!-- Konum Durumu Kartı -->
-                <div class="info-card" style="margin-top: 16px;">
+                <!-- 2. Konum -->
+                <div class="info-card">
                     <div class="info-card-title" data-i18n="location">Konum</div>
                     <div class="info-card-content">
                         <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -3249,13 +3248,7 @@
                     </div>
                 </div>
                 
-                <div class="settings-item" onclick="showPhotoModal()">
-                    <div class="settings-item-left">
-                        <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label" data-i18n="changeProfilePhoto">Profil Fotoğrafı Değiştir</div>
-                    </div>
-                    <div class="settings-item-right">›</div>
-                </div>
+                <!-- 3. Bildirimler -->
                 <div class="settings-item" onclick="toggleNotifications()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="bell" class="icon icon-lg"></i></div>
@@ -3268,18 +3261,8 @@
                         </label>
                     </div>
                 </div>
-                <!-- Konum İzni butonu gizlendi (kafa karıştırıcı) -->
-                <!--
-                <div class="settings-item" onclick="requestLocationPermission()">
-                    <div class="settings-item-left">
-                        <div class="settings-item-icon"><i data-lucide="map-pin" class="icon icon-lg"></i></div>
-                        <div class="settings-item-label" data-i18n="locationPermission">Konum İzni</div>
-                    </div>
-                    <div class="settings-item-right">
-                        <span id="locationPermissionStatus" style="font-size: 12px; color: #667781;" data-i18n="locationPermissionStatus">İzin ver</span> ›
-                    </div>
-                </div>
-                -->
+                
+                <!-- 4. Dil -->
                 <div class="settings-item" onclick="openLanguageSelector()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="languages" class="icon icon-lg"></i></div>
@@ -3289,6 +3272,8 @@
                         <span id="currentLanguageDisplay">Türkçe</span> ›
                     </div>
                 </div>
+                
+                <!-- 5. Uygulamayı Güncelle -->
                 <div class="settings-item" onclick="forceUpdateApp()">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="refresh-cw" class="icon icon-lg"></i></div>
@@ -3296,6 +3281,8 @@
                     </div>
                     <div class="settings-item-right">›</div>
                 </div>
+                
+                <!-- 6. Çıkış Yap -->
                 <div class="settings-item" id="logoutBtn" onclick="handleLogout()" style="display: none;">
                     <div class="settings-item-left">
                         <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
@@ -4324,7 +4311,9 @@
                         // Save to localStorage with guest-specific key
                         localStorage.setItem(storageKey, guestProfilePhoto);
                         updateProfilePhotoDisplay();
-                        console.log('✅ Profile photo loaded from backend');
+                        // Update map marker with profile photo
+                        updateUserMarkerProfilePhoto();
+                        console.log('✅ Profile photo loaded from backend and map marker updated');
                         return;
                     } else {
                         console.log('ℹ️ No profile photo for this room');
@@ -4340,11 +4329,15 @@
                 if (savedPhoto) {
                     guestProfilePhoto = savedPhoto;
                     updateProfilePhotoDisplay();
-                    console.log('✅ Profile photo loaded from localStorage');
+                    // Update map marker with profile photo
+                    updateUserMarkerProfilePhoto();
+                    console.log('✅ Profile photo loaded from localStorage and map marker updated');
                 } else {
                     // Clear guestProfilePhoto variable if no photo found
                     guestProfilePhoto = null;
                     updateProfilePhotoDisplay();
+                    // Update map marker to show default icon
+                    updateUserMarkerProfilePhoto();
                 }
             } catch (error) {
                 console.warn('⚠️ Error loading profile photo (non-critical):', error.message);
@@ -4353,9 +4346,13 @@
                 if (savedPhoto) {
                     guestProfilePhoto = savedPhoto;
                     updateProfilePhotoDisplay();
+                    // Update map marker with profile photo
+                    updateUserMarkerProfilePhoto();
                 } else {
                     guestProfilePhoto = null;
                     updateProfilePhotoDisplay();
+                    // Update map marker to show default icon
+                    updateUserMarkerProfilePhoto();
                 }
             }
         }
@@ -8021,6 +8018,8 @@
                 startLocationTracking();
                 loadOtherUsers();
                 loadActivityMarkers();
+                // Ensure user marker has correct profile photo
+                updateUserMarkerProfilePhoto();
                 return;
             }
 
@@ -8158,6 +8157,11 @@
                 // Load other users and activities
                 loadOtherUsers();
                 loadActivityMarkers();
+                
+                // Ensure user marker has correct profile photo when map loads
+                if (guestProfilePhoto) {
+                    updateUserMarkerProfilePhoto();
+                }
 
                 // Poll for updates every 5 seconds
                 setInterval(() => {
@@ -12652,6 +12656,7 @@
             const profileGuestSurnameEl = document.getElementById('profileGuestSurname');
             const profileRoomNumberEl = document.getElementById('profileRoomNumber');
             const profileCheckinDateEl = document.getElementById('profileCheckinDate');
+            const profileCheckoutDateEl = document.getElementById('profileCheckoutDate');
             const profileAvatarLargeEl = document.getElementById('profileAvatarLarge');
             
             if (profileNameEl && GUEST_NAME) {
@@ -12677,6 +12682,15 @@
             if (profileCheckinDateEl && CHECKIN_DATE) {
                 const date = new Date(CHECKIN_DATE);
                 profileCheckinDateEl.textContent = date.toLocaleDateString('tr-TR', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+            }
+            
+            if (profileCheckoutDateEl && CHECKOUT_DATE) {
+                const date = new Date(CHECKOUT_DATE);
+                profileCheckoutDateEl.textContent = date.toLocaleDateString('tr-TR', { 
                     day: 'numeric', 
                     month: 'long', 
                     year: 'numeric' 
