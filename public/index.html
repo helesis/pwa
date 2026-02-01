@@ -374,7 +374,8 @@
             display: flex;
             flex-direction: column;
             min-height: 0; /* Allow flex shrinking */
-            height: 0; /* Force flex to distribute height, enables scroll */
+            max-height: calc(100vh - 80px - 84px); /* viewport - header - bottom nav */
+            max-height: calc(100dvh - 80px - 84px); /* Use dynamic viewport for mobile */
             box-sizing: border-box;
             transition: padding-bottom 0.3s ease; /* Smooth keyboard animation */
         }
@@ -1162,7 +1163,6 @@
             position: relative;
             flex: 1;
             min-height: 0;
-            height: 100dvh; /* Full viewport height for proper layout */
         }
         
         /* Ensure bottom-nav stays visible when chat section is active */
