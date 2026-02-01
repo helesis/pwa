@@ -809,8 +809,7 @@
             width: 100%;
             min-height: 143px;
             box-sizing: border-box;
-            transform: translateY(0); /* Default position for keyboard handling */
-            transition: transform 0.3s ease; /* Smooth keyboard animation */
+            transition: bottom 0.3s ease; /* Smooth keyboard animation */
         }
         
         /* Only show input container when chat section is active */
@@ -1091,8 +1090,6 @@
             max-height: 84px; /* WhatsApp Web'e yakın */
             visibility: visible !important;
             opacity: 1 !important;
-            transform: translateY(0); /* Default position for keyboard handling */
-            transition: transform 0.3s ease; /* Smooth keyboard animation */
         }
 
         .nav-item {
@@ -12889,42 +12886,41 @@
                         // Klavye açıldı veya yüksekliği değişti
                         keyboardHeight = newKeyboardHeight;
                         
-                        // Input container'ı yukarı it
-                        inputContainer.style.transform = `translateY(-${keyboardHeight}px)`;
-                        inputContainer.style.transition = 'transform 0.3s ease';
-                        
-                        // Chat container'ın alt padding'ini artır
-                        chatContainer.style.paddingBottom = `calc(16px + 143px + ${keyboardHeight}px)`;
-                        chatContainer.style.transition = 'padding-bottom 0.3s ease';
-                        
-                        // Bottom navigation bar'ı gizle (klavye açıkken gereksiz)
+                        // Bottom navigation bar'ı tamamen gizle
                         if (bottomNav) {
-                            bottomNav.style.transform = 'translateY(100%)';
-                            bottomNav.style.transition = 'transform 0.3s ease';
+                            bottomNav.style.display = 'none';
                         }
+                        
+                        // Input container'ı klavyenin hemen üzerine yerleştir
+                        inputContainer.style.bottom = `${keyboardHeight}px`;
+                        inputContainer.style.transition = 'bottom 0.3s ease';
+                        
+                        // Chat container'ın alt padding'ini input + klavye yüksekliği kadar artır
+                        const inputHeight = inputContainer.offsetHeight || 60;
+                        chatContainer.style.paddingBottom = `${inputHeight + keyboardHeight + 16}px`;
+                        chatContainer.style.transition = 'padding-bottom 0.3s ease';
                         
                         // Scroll'u en alta al
                         setTimeout(() => {
                             chatContainer.scrollTop = chatContainer.scrollHeight;
                         }, 100);
                         
-                        console.log('🎹 Keyboard opened, height:', keyboardHeight, '- Bottom nav hidden');
+                        console.log('🎹 Keyboard opened, height:', keyboardHeight, '- Bottom nav hidden, input at:', `${keyboardHeight}px`);
                         
                     } else if (!isKeyboardOpen && wasKeyboardOpen) {
                         // Klavye kapandı
                         keyboardHeight = 0;
                         
-                        // Input container'ı eski pozisyonuna döndür
-                        inputContainer.style.transform = 'translateY(0)';
+                        // Bottom navigation bar'ı tekrar göster
+                        if (bottomNav) {
+                            bottomNav.style.display = 'flex';
+                        }
+                        
+                        // Input container'ı eski pozisyonuna döndür (bottom: 0)
+                        inputContainer.style.bottom = '0';
                         
                         // Chat container'ın padding'ini eski haline döndür
                         chatContainer.style.paddingBottom = 'calc(16px + 143px)';
-                        
-                        // Bottom navigation bar'ı göster
-                        if (bottomNav) {
-                            bottomNav.style.transform = 'translateY(0)';
-                            bottomNav.style.transition = 'transform 0.3s ease';
-                        }
                         
                         // Scroll'u en alta al
                         setTimeout(() => {
@@ -12970,26 +12966,23 @@
                     
                     if (heightDiff > 150 && !window.visualViewport) {
                         // Klavye açık (fallback)
-                        inputContainer.style.transform = `translateY(-${heightDiff * 0.6}px)`;
-                        chatContainer.style.paddingBottom = `calc(16px + 143px + ${heightDiff * 0.6}px)`;
-                        
-                        // Bottom nav'ı gizle
                         if (bottomNav) {
-                            bottomNav.style.transform = 'translateY(100%)';
+                            bottomNav.style.display = 'none';
                         }
+                        inputContainer.style.bottom = `${heightDiff * 0.6}px`;
+                        const inputHeight = inputContainer.offsetHeight || 60;
+                        chatContainer.style.paddingBottom = `${inputHeight + (heightDiff * 0.6) + 16}px`;
                         
                         setTimeout(() => {
                             chatContainer.scrollTop = chatContainer.scrollHeight;
                         }, 100);
                     } else if (heightDiff <= 50 && !window.visualViewport) {
                         // Klavye kapalı (fallback)
-                        inputContainer.style.transform = 'translateY(0)';
-                        chatContainer.style.paddingBottom = 'calc(16px + 143px)';
-                        
-                        // Bottom nav'ı göster
                         if (bottomNav) {
-                            bottomNav.style.transform = 'translateY(0)';
+                            bottomNav.style.display = 'flex';
                         }
+                        inputContainer.style.bottom = '0';
+                        chatContainer.style.paddingBottom = 'calc(16px + 143px)';
                         
                         setTimeout(() => {
                             chatContainer.scrollTop = chatContainer.scrollHeight;
