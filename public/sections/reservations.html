@@ -1,35 +1,66 @@
-<!-- reservations.html -->
-<div class="content-section" id="reservationsSection">
-  <div class="section-header">
-    <h1 class="section-header-title" data-i18n="reservations">Rezervasyonlar</h1>
-  </div>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Voyage Sorgun">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>Rezervasyonlar - Voyage Sorgun Chat</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="content-section" id="reservationsSection">
+      <div class="section-header">
+        <h1 class="section-header-title" data-i18n="reservations">Rezervasyonlar</h1>
+      </div>
 
-  <div class="info-section">
-    <div class="info-card">
-      <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">Add A New A'la Carte Reservation</span></div>
-      <div class="info-card-content" id="restaurantReservations">
-        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
-          Henüz restoran rezervasyonunuz bulunmamaktadır.
+      <div class="info-section">
+        <div class="info-card">
+          <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">Add A New A'la Carte Reservation</span></div>
+          <div class="info-card-content" id="restaurantReservations">
+            <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
+              Henüz restoran rezervasyonunuz bulunmamaktadır.
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card" style="border-top: 2px solid #e4e6e9; padding-top: 24px; margin-top: 32px;">
+          <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Add A New Spa Reservation</span></div>
+          <div class="info-card-content" id="spaReservations">
+            <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
+              Henüz spa rezervasyonunuz bulunmamaktadır.
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="mySpaReservations">Spa Rezervasyonlarım</span></div>
+          <div class="info-card-content" id="mySpaReservations">
+            <div style="text-align: center; padding: 20px; color: #667781;">
+              Yükleniyor...
+            </div>
+          </div>
         </div>
       </div>
     </div>
-
-    <div class="info-card" style="border-top: 2px solid #e4e6e9; padding-top: 24px; margin-top: 32px;">
-      <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Add A New Spa Reservation</span></div>
-      <div class="info-card-content" id="spaReservations">
-        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
-          Henüz spa rezervasyonunuz bulunmamaktadır.
-        </div>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="mySpaReservations">Spa Rezervasyonlarım</span></div>
-      <div class="info-card-content" id="mySpaReservations">
-        <div style="text-align: center; padding: 20px; color: #667781;">
-          Yükleniyor...
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+</body>
+</html>

@@ -1,35 +1,66 @@
-<!-- activities.html -->
-<div class="content-section" id="activitiesSection">
-  <div class="section-header">
-    <h1 class="section-header-title" data-i18n="activities">Aktiviteler</h1>
-  </div>
-
-  <div class="activities-section">
-    <div class="now-playing-banner" id="nowPlayingBanner">
-      <div class="now-playing-banner-header">
-        <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>
-        <span data-i18n="nowPlaying">ŞİMDİ OYNANIYOR</span>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Voyage Sorgun">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>Aktiviteler - Voyage Sorgun Chat</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="content-section" id="activitiesSection">
+      <div class="section-header">
+        <h1 class="section-header-title" data-i18n="activities">Aktiviteler</h1>
       </div>
-      <div class="now-playing-banner-title" id="nowPlayingTitle"></div>
-      <div class="now-playing-banner-time" id="nowPlayingTime"></div>
-    </div>
 
-    <div class="date-navigation" style="display: flex; align-items: center; justify-content: center; padding: 12px 16px; gap: 12px;">
-      <label for="activity-date-selector" style="font-size: 14px; font-weight: 500; color: #111b21; white-space: nowrap;">Tarih:</label>
-      <input type="date" id="activity-date-selector" class="form-input" style="flex: 1; max-width: 200px; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; background: white;" onchange="switchActivityDate(this.value)"/>
-    </div>
+      <div class="activities-section">
+        <div class="now-playing-banner" id="nowPlayingBanner">
+          <div class="now-playing-banner-header">
+            <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>
+            <span data-i18n="nowPlaying">ŞİMDİ OYNANIYOR</span>
+          </div>
+          <div class="now-playing-banner-title" id="nowPlayingTitle"></div>
+          <div class="now-playing-banner-time" id="nowPlayingTime"></div>
+        </div>
 
-    <div class="category-filters">
-      <button class="category-filter-chip active" onclick="filterByCategory(this)" data-category="All" data-i18n="all">Tümü</button>
-      <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Kids" data-i18n="kids">Çocuk</button>
-      <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
-    </div>
+        <div class="date-navigation" style="display: flex; align-items: center; justify-content: center; padding: 12px 16px; gap: 12px;">
+          <label for="activity-date-selector" style="font-size: 14px; font-weight: 500; color: #111b21; white-space: nowrap;">Tarih:</label>
+          <input type="date" id="activity-date-selector" class="form-input" style="flex: 1; max-width: 200px; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; background: white;" onchange="switchActivityDate(this.value)"/>
+        </div>
 
-    <div class="timeline-container" id="timelineContainer">
-      <div class="empty-timeline">
-        <div class="empty-timeline-icon">📅</div>
-        <div class="empty-timeline-text" data-i18n="activitiesLoading">Aktiviteler yükleniyor...</div>
+        <div class="category-filters">
+          <button class="category-filter-chip active" onclick="filterByCategory(this)" data-category="All" data-i18n="all">Tümü</button>
+          <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Kids" data-i18n="kids">Çocuk</button>
+          <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
+        </div>
+
+        <div class="timeline-container" id="timelineContainer">
+          <div class="empty-timeline">
+            <div class="empty-timeline-icon">📅</div>
+            <div class="empty-timeline-text" data-i18n="activitiesLoading">Aktiviteler yükleniyor...</div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
+</body>
+</html>
