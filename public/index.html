@@ -13443,7 +13443,7 @@ Backup created: 2026-02-03
         const DAILY_PROGRAM_EVENT_HEIGHT = AppState.get('dailyProgram.EVENT_HEIGHT');
         const DAILY_PROGRAM_EVENT_GAP = AppState.get('dailyProgram.EVENT_GAP');
         const dailyProgramReminderTimers = AppState.getState().dailyProgram.reminderTimers;
-        const dailyProgramEventCache = AppState.getState().dailyProgram.eventCache;
+        let dailyProgramEventCache = AppState.getState().dailyProgram.eventCache;
 
         function getStoredArray(key) {
             try {
