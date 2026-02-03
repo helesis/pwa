@@ -12091,8 +12091,8 @@ Backup created: 2026-02-03
                 
                 if (!response.ok) throw new Error('Failed to save avatar');
                 
-                // Update map marker with new avatar
-                updateUserMarkerAvatar(seed, style);
+                // Update map marker with new avatar (avatar system removed)
+                // updateUserMarkerAvatar(seed, style);
             } catch (error) {
                 console.error('Error saving avatar:', error);
             }
@@ -14619,7 +14619,7 @@ Backup created: 2026-02-03
         Voyage.map.showPermissionModal = showLocationPermissionModal;
         Voyage.map.focusOnUser = focusOnUserLocation;
         Voyage.map.stopTracking = stopLocationTracking;
-        Voyage.map.updateUserAvatar = updateUserMarkerAvatar;
+        // Voyage.map.updateUserAvatar = updateUserMarkerAvatar; // Avatar system removed
         Voyage.map.setupChips = setupMapChips;
         Voyage.map.setupSearch = setupMapSearch;
         Voyage.map.clearSearchMarkers = clearSearchMarkers;
