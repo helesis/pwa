@@ -8,6 +8,52 @@ function voyageT(key) {
 // Backward compatibility alias
 const t = voyageT;
 
+function applyTranslations() {
+    // Tüm data-i18n attribute'larına sahip elementleri bul ve çevir
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (key) {
+            element.textContent = t(key);
+        }
+    });
+    
+    // Map chips için özel işlem (Oda 101, Oda 102, vs.)
+    document.querySelectorAll('[data-i18n-room]').forEach(element => {
+        const roomNumber = element.getAttribute('data-i18n-room');
+        const roomText = t('room');
+        element.textContent = `${roomText} ${roomNumber}`;
+    });
+    
+    // Placeholder'ları çevir
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        if (key) {
+            element.placeholder = t(key);
+        }
+    });
+    
+    // Mevcut dili göster
+    const langNames = {
+        'tr': 'Türkçe',
+        'en': 'English',
+        'de': 'Deutsch',
+        'ru': 'Русский'
+    };
+    const currentLang = AppState.get('localization.currentLanguage');
+    const currentLangDisplay = document.getElementById('currentLanguageDisplay');
+    if (currentLangDisplay) {
+        currentLangDisplay.textContent = langNames[currentLang] || 'Türkçe';
+    }
+    
+    // Dil seçim modal'ındaki check işaretlerini güncelle
+    ['tr', 'en', 'de', 'ru'].forEach(lang => {
+        const checkEl = document.getElementById('langCheck' + lang.charAt(0).toUpperCase() + lang.slice(1));
+        if (checkEl) {
+            checkEl.style.display = (lang === currentLang) ? 'inline' : 'none';
+        }
+    });
+}
+
         const Voyage = {
             // State management reference
             state: AppState,
@@ -15,7 +61,7 @@ const t = voyageT;
             // Internationalization
             i18n: {
                 t: voyageT,
-                apply: null,  // Will be set below
+                apply: applyTranslations,
                 changeLanguage: null,
                 openSelector: null,
                 closeSelector: null
