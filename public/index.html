@@ -2915,15 +2915,10 @@ Backup created: 2026-02-03
     <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden-input">
     <input type="file" id="galleryInput" accept="image/*" class="hidden-input">
 
-    <script>
-        // ============================================
-        // CENTRALIZED STATE MANAGEMENT - AppState
-        // ============================================
-        
-        <!-- AppState moved to external file -->
-        <script src="/js/voyage-namespace.js"></script>
+    <script src="/js/voyage-namespace.js"></script>
     <script src="/js/app-state.js"></script>
-    <script src="/js/section-loader.js"></script>
+    <script src="/js/section-loader.js" defer></script>
+    <script>
         // ============================================
         // LEGACY COMPATIBILITY LAYER (Backward Compatibility)
         // Bu değişkenler kod içinde hala kullanılıyor, AppState'e proxy olarak çalışırlar
