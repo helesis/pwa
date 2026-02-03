@@ -6,6 +6,7 @@ Backup created: 2026-02-03
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <link rel="manifest" href="/manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#ffffff">
@@ -20,8 +21,6 @@ Backup created: 2026-02-03
     <meta name="msapplication-navbutton-color" content="#ffffff">
     
     <title>Voyage Sorgun Chat</title>
-    
-    <link rel="manifest" href="/manifest.json">
     
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
@@ -5259,7 +5258,8 @@ Backup created: 2026-02-03
                         });
                     })
                     .catch((error) => {
-                        console.log('❌ Service Worker registration failed:', error);
+                        console.error('❌ Service Worker registration failed:', error);
+                        console.error('SW Error details:', error.message, error.stack);
                     });
             });
 
