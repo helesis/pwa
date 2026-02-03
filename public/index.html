@@ -1154,10 +1154,12 @@ Backup created: 2026-02-03
             display: none !important; /* Force hide when not active */
             flex: 1;
             overflow-x: hidden; /* Prevent horizontal scroll only */
-            overflow-y: visible; /* Allow children to control vertical scroll */
+            overflow-y: auto; /* Allow vertical scroll in section */
+            -webkit-overflow-scrolling: touch;
             padding: 16px;
-            padding-bottom: calc(80px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Bottom nav height + safe area */
+            height: calc(100vh - 84px); /* 80px → 84px adjusted for bottom-nav */
             position: relative;
+            min-height: 0; /* ensure flex children can scroll */
         }
         
         #chatSection {
