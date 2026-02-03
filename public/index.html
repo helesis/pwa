@@ -1082,64 +1082,66 @@ Backup created: 2026-02-03
 
         /* Bottom Navigation Bar - WhatsApp Style */
         .bottom-nav {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.95);
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            display: flex; /* Removed !important - JS needs to control this */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background: #f0f2f5;
+            display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 8px 0;
-            padding-left: var(--safe-area-inset-left, env(safe-area-inset-left));
-            padding-right: var(--safe-area-inset-right, env(safe-area-inset-right));
-            padding-bottom: calc(20px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
-            z-index: 10000 !important; /* Increased to ensure it stays above chat section */
-            min-height: 56px; /* WhatsApp iOS standardı */
-            height: 84px;
-            max-height: 84px; /* WhatsApp Web'e yakın */
-            /* Removed visibility and opacity !important - JS needs to control these */
+            box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 0 10px;
         }
 
         .nav-item {
-            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 4px 4px;
+            gap: 2px;
+            padding: 8px 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            color: #667781;
-            text-decoration: none;
+            border-radius: 12px;
+            transition: background 0.2s;
+            min-width: 70px;
             border: none;
-            background: none;
-            font-size: 11px;
-            gap: 4px;
-            position: relative;
-            border-top: 3px solid transparent;
+            text-decoration: none;
         }
 
         .nav-item:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: rgba(0,0,0,0.05);
         }
 
         .nav-item.active {
-            color: #008069;
-            border-top: 3px solid #008069;
+            background: rgba(0,128,105,0.1);
         }
 
-        .nav-item-icon {
+        .nav-item svg,
+        .nav-item .nav-item-icon {
+            width: 24px;
+            height: 24px;
+            color: #667781;
             font-size: 24px;
-            line-height: 1;
         }
 
-        .nav-item-label {
+        .nav-item.active svg,
+        .nav-item.active .nav-item-icon {
+            color: #008069;
+        }
+
+        .nav-item span,
+        .nav-item .nav-item-label {
             font-size: 11px;
+            color: #667781;
             font-weight: 500;
+        }
+
+        .nav-item.active span,
+        .nav-item.active .nav-item-label {
+            color: #008069;
         }
 
         .nav-item.hidden {
