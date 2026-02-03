@@ -9,7 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!res.ok) throw new Error('Failed to fetch ' + name);
         return res.text();
       })
-      .then(html => { placeholder.innerHTML = html; })
+      .then(html => {
+        placeholder.innerHTML = html;
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+          lucide.createIcons();
+        }
+      })
       .catch(err => {
         console.warn('section-loader:', err);
       });
@@ -20,7 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (navPlaceholder) {
     fetch('/components/bottom-nav.html')
       .then(r => r.ok ? r.text() : Promise.reject('nav fetch failed'))
-      .then(html => { navPlaceholder.innerHTML = html; })
+      .then(html => {
+        navPlaceholder.innerHTML = html;
+
+        // Initialize Lucide icons for bottom-nav
+        if (typeof lucide !== 'undefined') {
+          lucide.createIcons();
+        }
+      })
       .catch(e => console.warn('bottom-nav load failed', e));
   }
 });
