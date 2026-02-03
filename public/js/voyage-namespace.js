@@ -1,3 +1,13 @@
+// Translation helper function
+function voyageT(key) {
+  const translations = AppState.get('localization.translations');
+  const lang = AppState.get('localization.currentLanguage');
+  return translations[lang]?.[key] || translations['tr']?.[key] || key;
+}
+
+// Backward compatibility alias
+const t = voyageT;
+
         const Voyage = {
             // State management reference
             state: AppState,
