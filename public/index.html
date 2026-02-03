@@ -8367,15 +8367,17 @@ Backup created: 2026-02-03
         // Map search functionality
         // MOVED TO AppState.map.markers.search and map.data.searchTimeout
         
+        function clearSearchMarkers() {
+            searchMarkers.forEach(marker => marker.remove());
+            searchMarkers = [];
+        }
+
         function setupMapSearch() {
             const searchInput = document.getElementById('mapSearchInput');
             if (!searchInput || !map) return;
             
             // Clear previous markers
-            function clearSearchMarkers() {
-                searchMarkers.forEach(marker => marker.remove());
-                searchMarkers = [];
-            }
+            
             
             // Search and mark locations on map
             async function searchAndMarkLocations(query) {
