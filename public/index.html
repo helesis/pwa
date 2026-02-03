@@ -14741,6 +14741,73 @@ Backup created: 2026-02-03
         console.log('✅ Voyage namespace initialized with', Object.keys(Voyage).length, 'modules');
         
     </script>
+
+    <!-- PWA Install Button -->
+    <script>
+    // Manuel PWA yükleme butonu
+    let deferredPrompt = null;
+    const installBtn = document.createElement('button');
+    installBtn.id = 'pwaInstallBtn';
+    installBtn.innerHTML = '📱 Uygulamayı Yükle';
+    installBtn.style.cssText = `
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      z-index: 99999;
+      padding: 15px 25px;
+      background: #008069;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: none;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: transform 0.2s, box-shadow 0.2s;
+    `;
+
+    // Hover efekti
+    installBtn.onmouseenter = () => {
+      installBtn.style.transform = 'scale(1.05)';
+      installBtn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+    };
+    installBtn.onmouseleave = () => {
+      installBtn.style.transform = 'scale(1)';
+      installBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+    };
+
+    // beforeinstallprompt event'ini yakala
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('✅ PWA yüklenebilir - Install butonu gösteriliyor');
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'block';
+      document.body.appendChild(installBtn);
+    });
+
+    // Butona tıklandığında
+    installBtn.onclick = async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('Install sonucu:', outcome);
+        
+        if (outcome === 'accepted') {
+          console.log('✅ PWA yüklendi!');
+          installBtn.style.display = 'none';
+        }
+        
+        deferredPrompt = null;
+      }
+    };
+
+    // Eğer zaten yüklüyse butonu gösterme
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('PWA zaten yüklü, buton gizleniyor');
+    }
+    </script>
 </body>
 </html>
 
