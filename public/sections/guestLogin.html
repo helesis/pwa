@@ -1,0 +1,27 @@
+<!-- guestLogin.html -->
+<div class="guest-login-container" id="guestLoginContainer">
+  <div class="guest-login-box">
+    <h1>👋 Misafir Girişi</h1>
+    <p>Lütfen giriş bilgilerinizi girin</p>
+    <div class="guest-login-error" id="guestLoginError"></div>
+    <form class="guest-login-form" id="guestLoginForm" onsubmit="handleGuestLogin(event)">
+      <div class="guest-form-group">
+        <label for="guestName">Ad</label>
+        <input type="text" id="guestName" name="guestName" placeholder="Adınız" required>
+      </div>
+      <div class="guest-form-group">
+        <label for="guestSurname">Soyad</label>
+        <input type="text" id="guestSurname" name="guestSurname" placeholder="Soyadınız" required>
+      </div>
+      <div class="guest-form-group">
+        <label for="checkinDate">Giriş Tarihi</label>
+        <input type="date" id="checkinDate" name="checkinDate" required>
+      </div>
+      <div class="guest-form-group">
+        <label for="checkoutDate">Çıkış Tarihi</label>
+        <input type="date" id="checkoutDate" name="checkoutDate" required>
+      </div>
+      <button type="submit" class="guest-login-btn" id="guestLoginBtn">Giriş Yap</button>
+    </form>
+  </div>
+</div>

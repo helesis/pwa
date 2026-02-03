@@ -1,0 +1,30 @@
+# Bağımlılıklar (En çok token tüketen yerler)
+node_modules/
+env/
+venv/
+.env
+
+# Build ve Çıktı Klasörleri
+dist/
+build/
+out/
+.next/
+documents/
+
+# Loglar ve Geçici Dosyalar
+logs/
+*.log
+npm-debug.log*
+.DS_Store
+
+# Görseller ve Medya (AI'nın okumasına gerek yok)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.mp4
+
+# Veritabanları
+*.db
+*.sqlite

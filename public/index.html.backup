@@ -2829,23 +2829,480 @@ Backup created: 2026-02-03
 </head>
 <body>
     <!-- Guest Login Page -->
-    <div id="guestLoginPlaceholder"></div>
+    <div class="guest-login-container" id="guestLoginContainer">
+        <div class="guest-login-box">
+            <h1>👋 Misafir Girişi</h1>
+            <p>Lütfen giriş bilgilerinizi girin</p>
+            <div class="guest-login-error" id="guestLoginError"></div>
+            <form class="guest-login-form" id="guestLoginForm" onsubmit="handleGuestLogin(event)">
+                <div class="guest-form-group">
+                    <label for="guestName">Ad</label>
+                    <input type="text" id="guestName" name="guestName" placeholder="Adınız" required>
+                </div>
+                <div class="guest-form-group">
+                    <label for="guestSurname">Soyad</label>
+                    <input type="text" id="guestSurname" name="guestSurname" placeholder="Soyadınız" required>
+                </div>
+                <div class="guest-form-group">
+                    <label for="checkinDate">Giriş Tarihi</label>
+                    <input type="date" id="checkinDate" name="checkinDate" required>
+                </div>
+                <div class="guest-form-group">
+                    <label for="checkoutDate">Çıkış Tarihi</label>
+                    <input type="date" id="checkoutDate" name="checkoutDate" required>
+                </div>
+                <button type="submit" class="guest-login-btn" id="guestLoginBtn">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
 
     <!-- Chat App (hidden until login) -->
     <div class="app-container" id="appContainer" style="display: flex;"> <!-- Geçici olarak görünür - tasarım görmek için -->
         <!-- Content Sections -->
-        <div id="chatPlaceholder"></div>
+        <div class="content-section" id="chatSection">
+            <!-- Chat Header -->
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="chat">Sohbetler</h1>
+                <div class="section-header-subtitle">
+                    <span class="connection-status" id="connectionStatus"></span>
+                    <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
+                </div>
+            </div>
 
-        <div id="reservationsPlaceholder"></div>
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <!-- Messages will be loaded here -->
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="message-avatar">
+                        <div class="voyage-logo">
+                            <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+                                <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle" letter-spacing="1">VOYAGE</text>
+                                <text x="60" y="42" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#8B0000" text-anchor="middle" letter-spacing="0.5">HOTELS</text>
+                                <line x1="30" y1="38" x2="35" y2="38" stroke="#8B0000" stroke-width="1"/>
+                                <line x1="85" y1="38" x2="90" y2="38" stroke="#8B0000" stroke-width="1"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
 
-        <div id="infoPlaceholder"></div>
+            <!-- Input Container (moved outside chat-container) -->
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Mesajınızı yazın..."
+                        data-i18n-placeholder="typeMessage"
+                        rows="1"
+                        onkeypress="handleKeyPress(event)"
+                        oninput="handleInputChange()"
+                    ></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <i data-lucide="send" class="icon icon-md"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="reservationsSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="reservations">Rezervasyonlar</h1>
+            </div>
+            <div class="info-section">
+                <div class="info-card">
+                    <div class="info-card-title"><i data-lucide="utensils-crossed" class="icon icon-md"></i> <span data-i18n="restaurantReservations">Add A New A'la Carte Reservation</span></div>
+                    <div class="info-card-content" id="restaurantReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noRestaurantReservations">
+                            Henüz restoran rezervasyonunuz bulunmamaktadır.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card" style="border-top: 2px solid #e4e6e9; padding-top: 24px; margin-top: 32px;">
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="spaReservations">Add A New Spa Reservation</span></div>
+                    <div class="info-card-content" id="spaReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;" data-i18n="noSpaReservations">
+                            Henüz spa rezervasyonunuz bulunmamaktadır.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-card-title"><i data-lucide="sparkles" class="icon icon-md"></i> <span data-i18n="mySpaReservations">Spa Rezervasyonlarım</span></div>
+                    <div class="info-card-content" id="mySpaReservations">
+                        <div style="text-align: center; padding: 20px; color: #667781;">
+                            Yükleniyor...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section active" id="infoSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="info">Info</h1>
+            </div>
+            <div class="info-section">
+                <!-- Instagram Story Tray Style Activity Notifications -->
+                <div class="activity-stories-tray" id="activityStoriesTray">
+                    <!-- Stories will be loaded dynamically from database -->
+                </div>
+                
+                <!-- Instagram Post Format Sections -->
+                <div class="info-posts-container" id="infoPostsContainer">
+                    <!-- Posts will be loaded dynamically from database -->
+                            </div>
+                            </div>
+                    </div>
 
         <!-- Activities Section -->
-        <div id="activitiesPlaceholder"></div>
+        <div class="content-section" id="activitiesSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="activities">Aktiviteler</h1>
+                            </div>
+            <div class="activities-section">
+                <!-- Now Playing Banner -->
+                <div class="now-playing-banner" id="nowPlayingBanner">
+                    <div class="now-playing-banner-header">
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>
+                        <span data-i18n="nowPlaying">ŞİMDİ OYNANIYOR</span>
+                            </div>
+                    <div class="now-playing-banner-title" id="nowPlayingTitle"></div>
+                    <div class="now-playing-banner-time" id="nowPlayingTime"></div>
+                    </div>
 
-        <div id="mapPlaceholder"></div>
+                <!-- Date Selection -->
+                <div class="date-navigation" style="display: flex; align-items: center; justify-content: center; padding: 12px 16px; gap: 12px;">
+                    <label for="activity-date-selector" style="font-size: 14px; font-weight: 500; color: #111b21; white-space: nowrap;">Tarih:</label>
+                    <input 
+                        type="date" 
+                        id="activity-date-selector" 
+                        class="form-input" 
+                        style="flex: 1; max-width: 200px; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; background: white;"
+                        onchange="switchActivityDate(this.value)"
+                    />
+                </div>
 
-        <div id="settingsPlaceholder"></div>
+                <!-- Category Filters -->
+                <div class="category-filters">
+                    <button class="category-filter-chip active" onclick="filterByCategory(this)" data-category="All" data-i18n="all">Tümü</button>
+                    <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Kids" data-i18n="kids">Çocuk</button>
+                    <button class="category-filter-chip" onclick="filterByCategory(this)" data-category="Adult" data-i18n="adult">Yetişkin</button>
+                    </div>
+
+                <!-- Timeline -->
+                <div class="timeline-container" id="timelineContainer">
+                    <div class="empty-timeline">
+                        <div class="empty-timeline-icon">📅</div>
+                        <div class="empty-timeline-text" data-i18n="activitiesLoading">Aktiviteler yükleniyor...</div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+        <div class="content-section" id="mapSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="map">Harita</h1>
+                            </div>
+            <div class="map-section">
+                <!-- Permission Banner (shown when permission not yet asked or denied) -->
+                <div id="locationPermissionBanner" class="location-permission-banner" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <i data-lucide="map-pin" class="icon icon-lg"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 14px; margin-bottom: 4px;" id="permissionBannerTitle">
+                                Konumunuza ihtiyacımız var
+                            </div>
+                            <div style="font-size: 12px; color: #667781;" id="permissionBannerMessage">
+                                Haritada konumunuzu göstermek için konum iznine ihtiyacımız var.
+                        </div>
+                        </div>
+                        </div>
+                    <button id="permissionBannerBtn" onclick="handlePermissionBannerClick()" style="
+                        padding: 8px 16px;
+                        background: #008069;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        white-space: nowrap;
+                    ">
+                        Konum Ver
+                    </button>
+                    </div>
+
+                <div class="info-card">
+                    <div class="info-card-title" data-i18n="map">Harita</div>
+                    <div class="info-card-content">
+                        <div class="map-search">
+                            <div class="map-search-label" data-i18n="mapSearchLabel">Gitmek istediğiniz yer</div>
+                            <div class="map-search-input-wrapper">
+                                <input
+                                    type="text"
+                                    id="mapSearchInput"
+                                    class="map-search-input"
+                                    placeholder="Oda numarası veya alan adı yazın"
+                                    data-i18n-placeholder="mapSearchPlaceholder"
+                                />
+                            </div>
+                            <div class="map-suggestions" id="mapSuggestions">
+                                <!-- Map chips will be loaded dynamically from database -->
+                            </div>
+                        </div>
+                        <div class="map-container" style="height: 500px; min-height: 500px;">
+                            <div id="mapContainer" style="width: 100%; height: 100%; position: relative;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; text-align: center; color: #667781; z-index: 1;" data-i18n="mapLoading">Harita yükleniyor...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section" id="settingsSection">
+            <div class="section-header">
+                <h1 class="section-header-title" data-i18n="settings">Ayarlar</h1>
+            </div>
+            
+            <!-- Login Screen (shown when not authenticated) -->
+            <div class="settings-section" id="loginScreen">
+                <div style="padding: 40px 20px; text-align: center;">
+                    <div style="width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 16px; background: rgba(0, 128, 105, 0.12); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="building" class="icon icon-xl" style="color: #008069;"></i>
+                    </div>
+                    <h2 style="font-size: 24px; font-weight: 600; color: #111b21; margin-bottom: 8px;">Voyage Sorgun</h2>
+                    <p style="font-size: 14px; color: #667781; margin-bottom: 32px;">Hoş geldiniz! Devam etmek için giriş yapın.</p>
+                    
+                    <div class="info-card" style="text-align: left;">
+                        <div class="info-card-title">Giriş Yap</div>
+                        <div class="info-card-content">
+                            <form id="loginForm" onsubmit="handleLogin(event)">
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Ad</label>
+                                    <input 
+                                        type="text" 
+                                        id="loginFirstName" 
+                                        placeholder="Adınız" 
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 24px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Soyad</label>
+                                    <input 
+                                        type="text" 
+                                        id="loginLastName" 
+                                        placeholder="Soyadınız" 
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Giriş Tarihi</label>
+                                    <input 
+                                        type="date" 
+                                        id="loginCheckinDate"
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <div style="margin-bottom: 24px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #111b21; margin-bottom: 8px;">Çıkış Tarihi</label>
+                                    <input 
+                                        type="date" 
+                                        id="loginCheckoutDate"
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 12px;
+                                            border: 1px solid #e4e6e9;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    id="loginSubmitBtn"
+                                    style="
+                                        width: 100%;
+                                        padding: 14px;
+                                        background: #008069;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 8px;
+                                        font-size: 16px;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                    "
+                                >
+                                    Giriş Yap
+                                </button>
+                            </form>
+                            
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e4e6e9; text-align: center;">
+                                <button 
+                                    onclick="continueAsGuest()"
+                                    style="
+                                        background: none;
+                                        border: none;
+                                        color: #008069;
+                                        font-size: 14px;
+                                        font-weight: 500;
+                                        cursor: pointer;
+                                        text-decoration: underline;
+                                    "
+                                >
+                                    Misafir olarak devam et
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Content (shown when authenticated) -->
+            <div class="settings-section" id="settingsContent" style="display: none;">
+                <div class="profile-header">
+                    <div class="profile-avatar-large" id="profileAvatarLarge">
+                        <i data-lucide="user" class="icon icon-xl"></i>
+                    </div>
+                    <div>
+                        <div class="profile-name" id="profileName">Misafir</div>
+                        <div class="profile-info" id="profileInfo">Oda bilgisi yükleniyor...</div>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title" data-i18n="personalInfo">Kişisel Bilgiler</div>
+                    <div class="info-card-content">
+                        <div style="margin-bottom: 8px;"><strong data-i18n="name">Ad:</strong> <span id="profileGuestName">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="surname">Soyad:</strong> <span id="profileGuestSurname">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="room">Oda:</strong> <span id="profileRoomNumber">-</span></div>
+                        <div style="margin-bottom: 8px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+                        <div style="margin-bottom: 16px;"><strong data-i18n="checkoutDate">Çıkış Tarihi:</strong> <span id="profileCheckoutDate">-</span></div>
+                    </div>
+                </div>
+                <!-- 1. Profil Fotoğrafı Değiştir -->
+                <div class="settings-item" onclick="showPhotoModal()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="changeProfilePhoto">Profil Fotoğrafı Değiştir</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+                
+                <!-- 2. Konum -->
+                <div class="info-card">
+                    <div class="info-card-title" data-i18n="location">Konum</div>
+                    <div class="info-card-content">
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 14px; color: #667781;" data-i18n="status">Durum:</span>
+                                <span id="locationPermissionStatus" style="font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="clock" class="icon icon-sm"></i>
+                                    <span data-i18n="checking">Kontrol ediliyor...</span>
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 14px; color: #667781;" data-i18n="lastUpdate">Son güncelleme:</span>
+                                <span id="locationLastUpdate" style="font-size: 14px; color: #667781;">-</span>
+                            </div>
+                            <button id="locationSettingsBtn" onclick="openLocationSettingsGuide()" style="
+                                width: 100%;
+                                padding: 12px;
+                                background: #f0f2f5;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                font-weight: 500;
+                                color: #008069;
+                                cursor: pointer;
+                                margin-top: 8px;
+                            " data-i18n="changeSettings">
+                                Ayarları Değiştir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 3. Bildirimler -->
+                <div class="settings-item" onclick="toggleNotifications()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="bell" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="notifications">Bildirimler</div>
+                    </div>
+                    <div class="settings-item-right">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notificationToggle" onchange="handleNotificationToggle()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 4. Dil -->
+                <div class="settings-item" onclick="openLanguageSelector()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="languages" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="language">Dil</div>
+                    </div>
+                    <div class="settings-item-right">
+                        <span id="currentLanguageDisplay">Türkçe</span> ›
+                    </div>
+                </div>
+                
+                <!-- 5. Uygulamayı Güncelle -->
+                <div class="settings-item" onclick="forceUpdateApp()">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="refresh-cw" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="updateApp">Uygulamayı Güncelle</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+                
+                <!-- 6. Çıkış Yap -->
+                <div class="settings-item" id="logoutBtn" onclick="handleLogout()" style="display: none;">
+                    <div class="settings-item-left">
+                        <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
+                        <div class="settings-item-label" data-i18n="logout">Çıkış Yap</div>
+                    </div>
+                    <div class="settings-item-right">›</div>
+                </div>
+                </div>
+            </div>
         </div>
 
         <!-- Language Selector Modal -->
@@ -2891,7 +3348,32 @@ Backup created: 2026-02-03
     </div>
     
     <!-- Bottom Navigation Bar (moved outside app-container to prevent overflow clipping) -->
-    <div id="bottomNavPlaceholder"></div>
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchSection('info')" data-section="info">
+            <div class="nav-item-icon"><i data-lucide="info" class="icon icon-lg"></i></div>
+            <div class="nav-item-label" data-i18n="info">Info</div>
+        </button>
+        <button class="nav-item" onclick="switchSection('activities')" data-section="activities">
+            <div class="nav-item-icon"><i data-lucide="calendar-clock" class="icon icon-lg"></i></div>
+            <div class="nav-item-label" data-i18n="activities">Aktiviteler</div>
+        </button>
+        <button class="nav-item" onclick="switchSection('reservations')" data-section="reservations">
+            <div class="nav-item-icon"><i data-lucide="calendar" class="icon icon-lg"></i></div>
+            <div class="nav-item-label" data-i18n="reservations">Rezervasyonlar</div>
+        </button>
+        <button class="nav-item" onclick="switchSection('chat')" data-section="chat">
+            <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+            <div class="nav-item-label" data-i18n="chat">Chat</div>
+        </button>
+        <button class="nav-item" onclick="switchSection('map')" data-section="map">
+            <div class="nav-item-icon"><i data-lucide="map" class="icon icon-lg"></i></div>
+            <div class="nav-item-label" data-i18n="map">Harita</div>
+        </button>
+        <button class="nav-item" onclick="switchSection('settings')" data-section="settings">
+            <div class="nav-item-icon"><i data-lucide="settings" class="icon icon-lg"></i></div>
+            <div class="nav-item-label" data-i18n="settings">Settings</div>
+        </button>
+    </div>
 
     <!-- Photo Selection Modal -->
     <div class="photo-modal" id="photoModal" onclick="closePhotoModal(event)">
@@ -2920,9 +3402,253 @@ Backup created: 2026-02-03
         // CENTRALIZED STATE MANAGEMENT - AppState
         // ============================================
         
-        <!-- AppState moved to external file -->
-    <script src="/js/app-state.js"></script>
-    <script src="/js/section-loader.js"></script>
+        const AppState = (() => {
+            // Private state object
+            const state = {
+                // Authentication & User Profile
+                auth: {
+                    uniqueId: localStorage.getItem('guest_unique_id') || null,
+                    name: localStorage.getItem('guest_name') || 'Misafir',
+                    surname: localStorage.getItem('guest_surname') || null,
+                    roomNumber: localStorage.getItem('room_number') || null,
+                    checkinDate: localStorage.getItem('checkin_date') || null,
+                    checkoutDate: localStorage.getItem('checkout_date') || null,
+                    teamId: localStorage.getItem('team_id') || null,
+                    isAuthenticated: false,
+                    profilePhoto: null,
+                    teamAvatar: null,
+                    infoLoaded: false
+                },
+                
+                // Network & Communication
+                network: {
+                    socket: null,
+                    isTyping: false,
+                    typingTimeout: null,
+                    connectionTimeout: null,
+                    serverUrl: window.location.origin
+                },
+                
+                // Activities & Timeline
+                activities: {
+                    currentDate: new Date().toISOString().split('T')[0],
+                    currentCategory: 'All',
+                    data: []
+                },
+                
+                // Daily Program & Reminders
+                dailyProgram: {
+                    // Constants
+                    START_HOUR: 6,
+                    END_HOUR: 23,
+                    HOUR_WIDTH: 120,
+                    EVENT_HEIGHT: 92,
+                    EVENT_GAP: 12,
+                    
+                    // Runtime data
+                    reminderTimers: {},
+                    eventCache: {},
+                    hiddenEvents: JSON.parse(localStorage.getItem('dailyProgramHiddenEvents') || '[]'),
+                    reminders: JSON.parse(localStorage.getItem('dailyProgramReminders') || '{}')
+                },
+                
+                // Reminders (Restaurant & Spa)
+                reminders: {
+                    restaurant: {},
+                    spa: {}
+                },
+                
+                // Localization
+                localization: {
+                    currentLanguage: localStorage.getItem('appLanguage') || 'tr',
+                    translations: {} // Will be populated later
+                },
+                
+                // Messaging System
+                messaging: {
+                    observer: null,
+                    isLoadingOlder: false,
+                    oldestTimestamp: null
+                },
+                
+                // Map & Location
+                map: {
+                    instance: null,
+                    markers: {
+                        user: null,
+                        hotel: null,
+                        others: {},
+                        activities: [],
+                        search: [],
+                        temp: null
+                    },
+                    location: {
+                        watchId: null,
+                        lastUpdateTime: null,
+                        updateInterval: null,
+                        permissionState: null,
+                        isCreatingUserMarker: false
+                    },
+                    animation: {
+                        hasPlayedCinematic: false
+                    },
+                    data: {
+                        locations: {},
+                        searchTimeout: null
+                    },
+                    config: {
+                        token: 'pk.eyJ1IjoiYWxpbXVyc2l0IiwiYSI6ImNtazRnYTRjZjAwa2IzZXF2cWJnaW9ocDcifQ.EL6OVUXoR22l0vrNPzVyoQ'
+                    }
+                },
+                
+                // Avatar System - REMOVED: Now using profile photo on map
+                
+                // Booking State
+                booking: {
+                    spa: {
+                        step: 'service',
+                        serviceId: null,
+                        date: null,
+                        slot: null,
+                        therapistId: null,
+                        note: '',
+                        // Extended SPA state
+                        allDates: [],
+                        currentDateIndex: 0,
+                        selectedDateElement: null,
+                        selectedDate: null,
+                        dateRange: null,
+                        availableServices: [],
+                        currentServiceIndex: 0,
+                        selectedServiceElement: null,
+                        dateSlotsByService: null,
+                        availableTherapists: [],
+                        currentTherapistIndex: 0,
+                        selectedTherapistElement: null,
+                        selectedTherapistId: null,
+                        availabilityDays: [],
+                        currentAvailability: null
+                    },
+                    restaurant: {
+                        allDates: [],
+                        currentDateIndex: 0,
+                        selectedDateElement: null,
+                        selectedDate: null,
+                        dateRange: null,
+                        // Extended Restaurant state
+                        currentForReservation: null,
+                        availableRestaurants: [],
+                        currentIndex: 0,
+                        selectedRestaurantId: null,
+                        selectedRestaurantElement: null
+                    }
+                }
+            };
+            
+            // Event listeners for state changes
+            const listeners = {};
+            
+            // Public API
+            return {
+                // Get nested property (e.g., 'auth.uniqueId')
+                get(path) {
+                    const keys = path.split('.');
+                    let value = state;
+                    for (const key of keys) {
+                        value = value?.[key];
+                    }
+                    return value;
+                },
+                
+                // Set nested property with localStorage sync
+                set(path, value) {
+                    const keys = path.split('.');
+                    const lastKey = keys.pop();
+                    let target = state;
+                    
+                    for (const key of keys) {
+                        target = target[key];
+                    }
+                    
+                    target[lastKey] = value;
+                    
+                    // Auto-sync critical data to localStorage
+                    this.syncToLocalStorage(path, value);
+                    
+                    // Notify listeners
+                    this.notify(path, value);
+                    
+                    return value;
+                },
+                
+                // Direct access to state (for complex operations)
+                getState() {
+                    return state;
+                },
+                
+                // Subscribe to state changes
+                on(path, callback) {
+                    if (!listeners[path]) listeners[path] = [];
+                    listeners[path].push(callback);
+                },
+                
+                // Notify listeners
+                notify(path, value) {
+                    listeners[path]?.forEach(cb => cb(value));
+                },
+                
+                // Sync to localStorage
+                syncToLocalStorage(path, value) {
+                    const syncMap = {
+                        'auth.uniqueId': 'guest_unique_id',
+                        'auth.name': 'guest_name',
+                        'auth.surname': 'guest_surname',
+                        'auth.roomNumber': 'room_number',
+                        'auth.checkinDate': 'checkin_date',
+                        'auth.checkoutDate': 'checkout_date',
+                        'auth.teamId': 'team_id',
+                        'localization.currentLanguage': 'appLanguage',
+                        'dailyProgram.hiddenEvents': 'dailyProgramHiddenEvents',
+                        'dailyProgram.reminders': 'dailyProgramReminders'
+                    };
+                    
+                    const storageKey = syncMap[path];
+                    if (storageKey) {
+                        if (value === null || value === undefined) {
+                            localStorage.removeItem(storageKey);
+                        } else if (typeof value === 'object') {
+                            localStorage.setItem(storageKey, JSON.stringify(value));
+                        } else {
+                            localStorage.setItem(storageKey, value);
+                        }
+                    }
+                },
+                
+                // Clear all auth data (logout)
+                clearAuth() {
+                    state.auth = {
+                        uniqueId: null,
+                        name: 'Misafir',
+                        surname: null,
+                        roomNumber: null,
+                        checkinDate: null,
+                        checkoutDate: null,
+                        teamId: null,
+                        isAuthenticated: false,
+                        profilePhoto: null,
+                        teamAvatar: null,
+                        infoLoaded: false
+                    };
+                    
+                    // Clear localStorage
+                    ['guest_unique_id', 'guest_name', 'guest_surname', 'room_number', 
+                     'checkin_date', 'checkout_date', 'team_id'].forEach(key => {
+                        localStorage.removeItem(key);
+                    });
+                }
+            };
+        })();
+        
         // ============================================
         // LEGACY COMPATIBILITY LAYER (Backward Compatibility)
         // Bu değişkenler kod içinde hala kullanılıyor, AppState'e proxy olarak çalışırlar

@@ -1,0 +1,40 @@
+<!-- chat.html -->
+<div class="content-section" id="chatSection">
+  <div class="section-header">
+    <h1 class="section-header-title" data-i18n="chat">Sohbetler</h1>
+    <div class="section-header-subtitle">
+      <span class="connection-status" id="connectionStatus"></span>
+      <span id="statusText" data-i18n="connecting">Bağlanıyor...</span>
+    </div>
+  </div>
+
+  <div class="chat-container" id="chatContainer">
+    <!-- Messages will be loaded here -->
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="message-avatar">
+        <div class="voyage-logo">
+          <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="116" height="56" fill="none" stroke="#8B0000" stroke-width="1.5" rx="2"/>
+            <text x="60" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#8B0000" text-anchor="middle">VOYAGE</text>
+          </svg>
+        </div>
+      </div>
+      <div class="typing-dots">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <div class="input-wrapper">
+      <textarea id="messageInput" placeholder="Mesajınızı yazın..." data-i18n-placeholder="typeMessage" rows="1" onkeypress="handleKeyPress(event)" oninput="handleInputChange()"></textarea>
+    </div>
+    <div class="action-buttons">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <i data-lucide="send" class="icon icon-md"></i>
+      </button>
+    </div>
+  </div>
+</div>
