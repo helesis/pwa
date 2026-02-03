@@ -13131,15 +13131,7 @@ Backup created: 2026-02-03
             }
         });
         
-        // Main translation function with unique name to avoid namespace collisions
-        function voyageT(key) {
-            const translations = AppState.get('localization.translations');
-            const lang = AppState.get('localization.currentLanguage');
-            return translations[lang]?.[key] || translations['tr']?.[key] || key;
-        }
-        
-        // Backward compatibility alias (can be removed after migrating all usages to voyageT)
-        const t = voyageT;
+        // Translation helper now provided by /js/voyage-namespace.js
         
         /* Voyage namespace moved to /js/voyage-namespace.js - inline declaration removed */
         
