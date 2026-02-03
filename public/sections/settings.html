@@ -44,6 +44,109 @@
   </div>
 
   <div class="settings-section" id="settingsContent" style="display:none;">
-    <!-- profile header + settings items kept in index.html or moved later -->
+    <div class="profile-header">
+      <div class="profile-avatar-large" id="profileAvatarLarge">
+        <i data-lucide="user" class="icon icon-xl"></i>
+      </div>
+      <div>
+        <div class="profile-name" id="profileName">Misafir</div>
+        <div class="profile-info" id="profileInfo">Oda bilgisi yükleniyor...</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title" data-i18n="personalInfo">Kişisel Bilgiler</div>
+      <div class="info-card-content">
+        <div style="margin-bottom: 8px;"><strong data-i18n="name">Ad:</strong> <span id="profileGuestName">-</span></div>
+        <div style="margin-bottom: 8px;"><strong data-i18n="surname">Soyad:</strong> <span id="profileGuestSurname">-</span></div>
+        <div style="margin-bottom: 8px;"><strong data-i18n="room">Oda:</strong> <span id="profileRoomNumber">-</span></div>
+        <div style="margin-bottom: 8px;"><strong data-i18n="checkinDate">Giriş Tarihi:</strong> <span id="profileCheckinDate">-</span></div>
+        <div style="margin-bottom: 16px;"><strong data-i18n="checkoutDate">Çıkış Tarihi:</strong> <span id="profileCheckoutDate">-</span></div>
+      </div>
+    </div>
+    <!-- 1. Profil Fotoğrafı Değiştir -->
+    <div class="settings-item" onclick="showPhotoModal()">
+      <div class="settings-item-left">
+        <div class="settings-item-icon"><i data-lucide="camera" class="icon icon-lg"></i></div>
+        <div class="settings-item-label" data-i18n="changeProfilePhoto">Profil Fotoğrafı Değiştir</div>
+      </div>
+      <div class="settings-item-right">›</div>
+    </div>
+    
+    <!-- 2. Konum -->
+    <div class="info-card">
+      <div class="info-card-title" data-i18n="location">Konum</div>
+      <div class="info-card-content">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 14px; color: #667781;" data-i18n="status">Durum:</span>
+            <span id="locationPermissionStatus" style="font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="clock" class="icon icon-sm"></i>
+              <span data-i18n="checking">Kontrol ediliyor...</span>
+            </span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 14px; color: #667781;" data-i18n="lastUpdate">Son güncelleme:</span>
+            <span id="locationLastUpdate" style="font-size: 14px; color: #667781;">-</span>
+          </div>
+          <button id="locationSettingsBtn" onclick="openLocationSettingsGuide()" style="
+            width: 100%;
+            padding: 12px;
+            background: #f0f2f5;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #008069;
+            cursor: pointer;
+            margin-top: 8px;
+          " data-i18n="changeSettings">
+            Ayarları Değiştir
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 3. Bildirimler -->
+    <div class="settings-item" onclick="toggleNotifications()">
+      <div class="settings-item-left">
+        <div class="settings-item-icon"><i data-lucide="bell" class="icon icon-lg"></i></div>
+        <div class="settings-item-label" data-i18n="notifications">Bildirimler</div>
+      </div>
+      <div class="settings-item-right">
+        <label class="toggle-switch">
+          <input type="checkbox" id="notificationToggle" onchange="handleNotificationToggle()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    
+    <!-- 4. Dil -->
+    <div class="settings-item" onclick="openLanguageSelector()">
+      <div class="settings-item-left">
+        <div class="settings-item-icon"><i data-lucide="languages" class="icon icon-lg"></i></div>
+        <div class="settings-item-label" data-i18n="language">Dil</div>
+      </div>
+      <div class="settings-item-right">
+        <span id="currentLanguageDisplay">Türkçe</span> ›
+      </div>
+    </div>
+    
+    <!-- 5. Uygulamayı Güncelle -->
+    <div class="settings-item" onclick="forceUpdateApp()">
+      <div class="settings-item-left">
+        <div class="settings-item-icon"><i data-lucide="refresh-cw" class="icon icon-lg"></i></div>
+        <div class="settings-item-label" data-i18n="updateApp">Uygulamayı Güncelle</div>
+      </div>
+      <div class="settings-item-right">›</div>
+    </div>
+    
+    <!-- 6. Çıkış Yap -->
+    <div class="settings-item" id="logoutBtn" onclick="handleLogout()" style="display: none;">
+      <div class="settings-item-left">
+        <div class="settings-item-icon"><i data-lucide="log-out" class="icon icon-lg"></i></div>
+        <div class="settings-item-label" data-i18n="logout">Çıkış Yap</div>
+      </div>
+      <div class="settings-item-right">›</div>
+    </div>
   </div>
 </div>
