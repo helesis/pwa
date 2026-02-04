@@ -618,14 +618,11 @@
         /* Section-specific padding-top adjustments for fixed headers */
         #chatSection.content-section,
         #infoSection.content-section,
-        #activitiesSection.content-section {
-            padding-top: 0px !important; /* No header spacing needed */
-        }
-
+        #activitiesSection.content-section,
         #reservationsSection.content-section,
         #mapSection.content-section,
         #settingsSection.content-section {
-            padding-top: 64px !important; /* Header height spacing */
+            padding-top: 64px !important; /* Header height spacing for all sections */
         }
         
         #chatSection {
