@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -26,6 +26,122 @@
     
     <!-- Scripts -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chat keyboard optimization -->
+    <script>
+        // Android ve iOS için klavye optimizasyonu
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('messageInput');
+            const chatContainer = document.getElementById('chatContainer');
+            const inputContainer = document.querySelector('.input-container');
+            const chatSection = document.getElementById('chatSection');
+            
+            let initialViewportHeight = window.innerHeight;
+            let isKeyboardVisible = false;
+            
+            if (messageInput) {
+                // Section yüklendiğinde otomatik focus
+                setTimeout(() => {
+                    messageInput.focus();
+                    // Body scroll'u engelle
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.height = '100%';
+                }, 150);
+                
+                // Klavye durumunu takip et
+                function handleKeyboardVisibility() {
+                    const currentHeight = window.innerHeight;
+                    const heightDifference = initialViewportHeight - currentHeight;
+                    
+                    if (heightDifference > 150 && !isKeyboardVisible) {
+                        // Klavye açıldı
+                        isKeyboardVisible = true;
+                        document.body.classList.add('keyboard-visible');
+                        
+                        // Chat container'ı scroll'u en alta getir
+                        setTimeout(() => {
+                            if (chatContainer) {
+                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                            }
+                        }, 100);
+                        
+                    } else if (heightDifference <= 150 && isKeyboardVisible) {
+                        // Klavye kapandı
+                        isKeyboardVisible = false;
+                        document.body.classList.remove('keyboard-visible');
+                    }
+                }
+                
+                // Viewport değişikliklerini takip et
+                window.addEventListener('resize', handleKeyboardVisibility);
+                
+                // iOS Safari için özel ayarlar
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    messageInput.addEventListener('focus', function() {
+                        setTimeout(() => {
+                            handleKeyboardVisibility();
+                            if (chatContainer) {
+                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                            }
+                        }, 300);
+                    });
+                    
+                    messageInput.addEventListener('blur', function() {
+                        setTimeout(() => {
+                            handleKeyboardVisibility();
+                        }, 100);
+                    });
+                }
+                
+                // Visual Viewport API desteği (modern browsers)
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', function() {
+                        const keyboardHeight = initialViewportHeight - window.visualViewport.height;
+                        
+                        if (keyboardHeight > 150) {
+                            document.body.classList.add('keyboard-visible');
+                            isKeyboardVisible = true;
+                        } else {
+                            document.body.classList.remove('keyboard-visible');
+                            isKeyboardVisible = false;
+                        }
+                    });
+                }
+            }
+        });
+        
+        // Section aktif olduğunda focus yap
+        function initChatSection() {
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) {
+                setTimeout(() => {
+                    messageInput.focus();
+                    // Body scroll'u engelle
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.height = '100%';
+                }, 100);
+            }
+        }
+        
+        // Section kapatıldığında body scroll'u restore et
+        function cleanupChatSection() {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            document.body.classList.remove('keyboard-visible');
+        }
+        
+        // Eğer section loader kullanılıyorsa
+        if (window.VoyageApp && window.VoyageApp.onSectionLoad) {
+            window.VoyageApp.onSectionLoad('chat', initChatSection);
+            window.VoyageApp.onSectionUnload('chat', cleanupChatSection);
+        }
+    </script>
 </head>
 <body>
     <div class="content-section" id="chatSection">
@@ -58,7 +174,19 @@
 
       <div class="input-container">
         <div class="input-wrapper">
-          <textarea id="messageInput" placeholder="Mesajınızı yazın..." data-i18n-placeholder="typeMessage" rows="1" onkeypress="handleKeyPress(event)" oninput="handleInputChange()"></textarea>
+          <textarea id="messageInput" 
+                    placeholder="Mesajınızı yazın..." 
+                    data-i18n-placeholder="typeMessage" 
+                    rows="1" 
+                    autofocus
+                    autocomplete="off"
+                    autocorrect="on"
+                    autocapitalize="sentences"
+                    spellcheck="true"
+                    inputmode="text"
+                    enterkeyhint="send"
+                    onkeypress="handleKeyPress(event)" 
+                    oninput="handleInputChange()"></textarea>
         </div>
         <div class="action-buttons">
           <button class="send-btn" id="sendBtn" onclick="sendMessage()">

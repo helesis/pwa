@@ -1,21 +1,45 @@
         .chat-container {
-            flex: 1;
-            overflow-y: auto !important; /* Force scroll - override any parent overflow */
+            position: fixed;
+            top: 80px; /* Header height */
+            left: 0;
+            right: 0;
+            bottom: 143px; /* Input container height */
+            overflow-y: auto !important;
             overflow-x: hidden;
-            padding: 16px 16px;
+            padding: 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-top: calc(80px + 16px); /* Header height (80px) + spacing */
-            padding-bottom: calc(16px + 143px); /* Space for input container */
             background: white;
             scroll-behavior: smooth;
             display: flex;
             flex-direction: column;
-            min-height: 0; /* Allow flex shrinking */
-            max-height: calc(100vh - 80px - 84px); /* viewport - header - bottom nav */
-            max-height: calc(100dvh - 80px - 84px); /* Use dynamic viewport for mobile */
             box-sizing: border-box;
-            transition: padding-bottom 0.3s ease; /* Smooth keyboard animation */
+            z-index: 1;
+        }
+        
+        /* Klavye açıldığında chat container'ın alt boşluğunu ayarla */
+        .keyboard-visible .chat-container {
+            bottom: 143px; /* Input container height - sabit kal */
+        }
+        
+        /* iOS Safari için */
+        @supports (-webkit-touch-callout: none) {
+            .chat-container {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        
+        /* Chat section için header'ı sabit tut */
+        #chatSection .section-header {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1003 !important; /* Input container'dan daha yüksek */
+            background: white !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            height: 80px;
+            box-sizing: border-box;
         }
 
         .chat-container::-webkit-scrollbar {
@@ -332,25 +356,32 @@
         }
 
         .input-container {
-            padding: 10px 16px;
-            padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
-            padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-bottom: calc(10px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar + safe area */
-            background: white;
-            border-top: 1px solid rgba(0, 0, 0, 0.08);
-            display: flex;
-            gap: 8px;
-            align-items: flex-start; /* Yukarıdan hizalama için */
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            z-index: 1001; /* Above chat content but below bottom nav */
+            padding: 10px 16px;
+            padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
+            padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
+            padding-bottom: calc(10px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            background: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+            z-index: 1002; /* Above everything */
             flex-shrink: 0;
             width: 100%;
-            min-height: 143px;
+            height: 143px; /* Fixed height */
             box-sizing: border-box;
-            transition: bottom 0.3s ease; /* Smooth keyboard animation */
+            transform: translateZ(0); /* Hardware acceleration */
+        }
+        
+        /* Klavye açıldığında input container klavyenin hemen üzerinde */
+        .keyboard-visible .input-container {
+            bottom: 0; /* Klavyenin hemen üzerinde */
+            position: fixed;
+            transform: translateY(0);
         }
         
         /* Only show input container when chat section is active */
@@ -389,6 +420,27 @@
             font-family: inherit;
             color: #111b21;
             line-height: 20px;
+            -webkit-appearance: none;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        
+        /* iOS Safari için özel textarea ayarları */
+        @supports (-webkit-touch-callout: none) {
+            #messageInput {
+                -webkit-appearance: none;
+                -webkit-border-radius: 0;
+                border-radius: 0;
+                font-size: 16px; /* iOS'ta zoom'u engellemek için */
+                transform: translateZ(0); /* Hardware acceleration */
+            }
+        }
+        
+        /* Android için özel ayarlar */
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            #messageInput {
+                font-size: 16px; /* Android'de zoom'u engellemek için */
+            }
         }
 
         #messageInput::placeholder {
@@ -432,4 +484,66 @@
             opacity: 0.5;
             cursor: not-allowed;
             background: #b0b0b0;
+        }
+        
+        /* Body scroll'u engelle - sadece chat container scroll edilebilir */
+        #chatSection.active {
+            overflow: hidden !important;
+            height: 100vh;
+            height: 100dvh;
+        }
+        
+        #chatSection.active body {
+            overflow: hidden !important;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* iOS için klavye açıldığında özel ayarlar */
+        @supports (-webkit-touch-callout: none) {
+            .keyboard-visible .input-container {
+                bottom: env(keyboard-inset-height, 0px);
+                position: fixed !important;
+            }
+            
+            .keyboard-visible .chat-container {
+                bottom: calc(143px + env(keyboard-inset-height, 0px));
+            }
+        }
+        
+        /* Android için klavye açıldığında ayarlar */
+        @media screen and (max-height: 500px) {
+            .input-container {
+                position: fixed !important;
+                bottom: 0 !important;
+                padding-bottom: calc(10px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            }
+            
+            .chat-container {
+                bottom: 143px !important;
+            }
+        }
+        
+        /* Küçük ekranlarda input container'ı optimize et */
+        @media screen and (max-height: 600px) {
+            .input-container {
+                height: 80px;
+                padding: 8px 16px;
+                padding-bottom: calc(8px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+            }
+            
+            .chat-container {
+                bottom: 80px;
+            }
+            
+            .input-wrapper {
+                min-height: 36px;
+                padding: 6px 12px;
+            }
+            
+            .send-btn {
+                width: 36px;
+                height: 36px;
+            }
         }
