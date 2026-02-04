@@ -748,11 +748,13 @@ Backup created: 2026-02-03
                 headerPhoto.offsetHeight; // Trigger reflow
                 
                 if (guestProfilePhoto) {
-                    // Show guest's own profile photo with cache-busting timestamp
+                    // Show guest's own profile photo with cache-busting timestamp (skip for base64)
                     const timestamp = Date.now();
-                    const photoSrc = guestProfilePhoto.includes('?') ? 
-                        `${guestProfilePhoto}&_t=${timestamp}` : 
-                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    const photoSrc = guestProfilePhoto.startsWith('data:') ? 
+                        guestProfilePhoto : // Base64 URLs don't need cache-busting
+                        (guestProfilePhoto.includes('?') ? 
+                            `${guestProfilePhoto}&_t=${timestamp}` : 
+                            `${guestProfilePhoto}?_t=${timestamp}`);
                     headerPhoto.innerHTML = `<img src="${photoSrc}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                     headerPhoto.classList.add('has-photo');
                     headerPhoto.setAttribute('onclick', 'showPhotoModal()');
@@ -761,9 +763,11 @@ Backup created: 2026-02-03
                 } else if (teamAvatar) {
                     // Fallback to team avatar if guest has no profile photo with cache-busting
                     const timestamp = Date.now();
-                    const avatarSrc = teamAvatar.includes('?') ? 
-                        `${teamAvatar}&_t=${timestamp}` : 
-                        `${teamAvatar}?_t=${timestamp}`;
+                    const avatarSrc = teamAvatar.startsWith('data:') ? 
+                        teamAvatar : // Base64 URLs don't need cache-busting
+                        (teamAvatar.includes('?') ? 
+                            `${teamAvatar}&_t=${timestamp}` : 
+                            `${teamAvatar}?_t=${timestamp}`);
                     headerPhoto.innerHTML = `<img src="${avatarSrc}" alt="Takım" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                     headerPhoto.classList.add('has-photo');
                     headerPhoto.setAttribute('onclick', 'showPhotoModal()');
@@ -981,11 +985,13 @@ Backup created: 2026-02-03
                 avatar.offsetHeight;
                 
                 if (guestProfilePhoto) {
-                    // Add cache-busting timestamp
+                    // Add cache-busting timestamp (skip for base64)
                     const timestamp = Date.now();
-                    const photoSrc = guestProfilePhoto.includes('?') ? 
-                        `${guestProfilePhoto}&_t=${timestamp}` : 
-                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    const photoSrc = guestProfilePhoto.startsWith('data:') ? 
+                        guestProfilePhoto : // Base64 URLs don't need cache-busting
+                        (guestProfilePhoto.includes('?') ? 
+                            `${guestProfilePhoto}&_t=${timestamp}` : 
+                            `${guestProfilePhoto}?_t=${timestamp}`);
                     avatar.innerHTML = `<img src="${photoSrc}" alt="Profil" style="width:100%;height:100%;object-fit:cover;">`;
                 } else {
                     avatar.innerHTML = '<i data-lucide="user" class="icon icon-md"></i>';
@@ -1007,11 +1013,13 @@ Backup created: 2026-02-03
                 profileAvatarLargeEl.offsetHeight;
                 
                 if (guestProfilePhoto) {
-                    // Add cache-busting timestamp
+                    // Add cache-busting timestamp (skip for base64)
                     const timestamp = Date.now();
-                    const photoSrc = guestProfilePhoto.includes('?') ? 
-                        `${guestProfilePhoto}&_t=${timestamp}` : 
-                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    const photoSrc = guestProfilePhoto.startsWith('data:') ? 
+                        guestProfilePhoto : // Base64 URLs don't need cache-busting
+                        (guestProfilePhoto.includes('?') ? 
+                            `${guestProfilePhoto}&_t=${timestamp}` : 
+                            `${guestProfilePhoto}?_t=${timestamp}`);
                     profileAvatarLargeEl.innerHTML = `<img src="${photoSrc}" alt="Profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                 } else {
                     profileAvatarLargeEl.innerHTML = '<i data-lucide="user" class="icon icon-xl"></i>';
@@ -5034,11 +5042,13 @@ Backup created: 2026-02-03
 
                 // Use profile photo instead of avatar
                 if (guestProfilePhoto) {
-                    // Add cache-busting timestamp to prevent caching issues
+                    // Add cache-busting timestamp to prevent caching issues (skip for base64)
                     const timestamp = Date.now();
-                    const photoSrc = guestProfilePhoto.includes('?') ? 
-                        `${guestProfilePhoto}&_t=${timestamp}` : 
-                        `${guestProfilePhoto}?_t=${timestamp}`;
+                    const photoSrc = guestProfilePhoto.startsWith('data:') ? 
+                        guestProfilePhoto : // Base64 URLs don't need cache-busting
+                        (guestProfilePhoto.includes('?') ? 
+                            `${guestProfilePhoto}&_t=${timestamp}` : 
+                            `${guestProfilePhoto}?_t=${timestamp}`);
                     
                     // Create img element with proper event handlers
                     const img = document.createElement('img');
@@ -5096,11 +5106,13 @@ Backup created: 2026-02-03
                                 const existingImg = markerEl.querySelector('img');
                                 
                                 if (guestProfilePhoto) {
-                                    // Add cache-busting timestamp
+                                    // Add cache-busting timestamp (skip for base64)
                                     const timestamp = Date.now();
-                                    const photoSrc = guestProfilePhoto.includes('?') ? 
-                                        `${guestProfilePhoto}&_t=${timestamp}` : 
-                                        `${guestProfilePhoto}?_t=${timestamp}`;
+                                    const photoSrc = guestProfilePhoto.startsWith('data:') ? 
+                                        guestProfilePhoto : // Base64 URLs don't need cache-busting
+                                        (guestProfilePhoto.includes('?') ? 
+                                            `${guestProfilePhoto}&_t=${timestamp}` : 
+                                            `${guestProfilePhoto}?_t=${timestamp}`);
                                     
                                     if (existingImg) {
                                         // Update existing image src
@@ -5227,11 +5239,13 @@ Backup created: 2026-02-03
 
             // Update profile photo
             if (guestProfilePhoto) {
-                // Add cache-busting timestamp
+                // Add cache-busting timestamp (skip for base64)
                 const timestamp = Date.now();
-                const photoSrc = guestProfilePhoto.includes('?') ? 
-                    `${guestProfilePhoto}&_t=${timestamp}` : 
-                    `${guestProfilePhoto}?_t=${timestamp}`;
+                const photoSrc = guestProfilePhoto.startsWith('data:') ? 
+                    guestProfilePhoto : // Base64 URLs don't need cache-busting
+                    (guestProfilePhoto.includes('?') ? 
+                        `${guestProfilePhoto}&_t=${timestamp}` : 
+                        `${guestProfilePhoto}?_t=${timestamp}`);
                 
                 const existingImg = markerEl.querySelector('img');
                 
