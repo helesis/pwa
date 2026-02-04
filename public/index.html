@@ -1273,10 +1273,24 @@ Backup created: 2026-02-03
             console.log('🔌 Server URL:', SERVER_URL);
             console.log('🔌 User Agent:', navigator.userAgent);
             
-            // Detect mobile device
+            // Enhanced device detection
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            console.log('📱 Step 4: Device detection');
+            const isTouchDevice = 'ontouchstart' in window;
+            const isDesktop = window.innerWidth >= 1024 && !isTouchDevice;
+            
+            // Make device detection globally available
+            window.DeviceInfo = {
+                isMobile,
+                isTouchDevice,
+                isDesktop,
+                isLandscape: () => window.innerWidth > window.innerHeight,
+                isMobileLandscape: () => window.innerWidth > window.innerHeight && !isDesktop && (isMobile || isTouchDevice)
+            };
+            
+            console.log('📱 Step 4: Enhanced device detection');
             console.log('📱 Is mobile device:', isMobile);
+            console.log('📱 Is touch device:', isTouchDevice);
+            console.log('📱 Is desktop:', isDesktop);
             console.log('📱 Screen size:', window.innerWidth + 'x' + window.innerHeight);
             
             // Now create socket connection
@@ -2541,11 +2555,14 @@ Backup created: 2026-02-03
             window.addEventListener('orientationchange', () => {
                 setTimeout(setHeight, 100);
                 
-                // Force render daily program timeline in landscape mode
+                // Force render daily program timeline in landscape mode (mobile only)
                 setTimeout(() => {
-                    if (window.innerWidth > window.innerHeight) {
-                        // Landscape mode - render timeline
+                    if (window.DeviceInfo && window.DeviceInfo.isMobileLandscape()) {
+                        // Landscape mode - render timeline (mobile/tablet only)
+                        console.log('📱 Mobile landscape detected - rendering timeline');
                         renderDailyProgramTimeline();
+                    } else if (window.DeviceInfo && window.DeviceInfo.isDesktop) {
+                        console.log('🖥️ Desktop detected - skipping landscape timeline');
                     }
                 }, 300);
             });
