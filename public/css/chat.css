@@ -1,9 +1,9 @@
         .chat-container {
-            position: fixed;
-            top: 80px; /* Header height */
+            position: fixed !important;
+            top: 80px !important; /* Header height */
             left: 0;
             right: 0;
-            bottom: 143px; /* Input container height */
+            bottom: 143px !important; /* Input container height */
             overflow-y: auto !important;
             overflow-x: hidden;
             padding: 16px;
@@ -15,6 +15,12 @@
             flex-direction: column;
             box-sizing: border-box;
             z-index: 1;
+        }
+        
+        /* Klavye açıldığında chat container pozisyonunu koru */
+        .keyboard-visible .chat-container {
+            top: 80px !important;
+            bottom: 143px !important;
         }
         
         /* Klavye açıldığında chat container'ın alt boşluğunu ayarla */
@@ -40,7 +46,15 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.08);
             height: 80px;
             box-sizing: border-box;
-            transform: translateZ(0); /* Hardware acceleration */
+            transform: translate3d(0, 0, 0) !important; /* 3D transform for better positioning */
+            will-change: transform; /* Optimize for changes */
+        }
+        
+        /* Klavye açıldığında header pozisyonunu zorla sabitle */
+        .keyboard-visible #chatSection .section-header {
+            position: fixed !important;
+            top: 0 !important;
+            transform: translate3d(0, 0, 0) !important;
         }
 
         .chat-container::-webkit-scrollbar {
@@ -501,9 +515,9 @@
         
         body.chat-active {
             overflow: hidden !important;
-            position: fixed;
-            width: 100%;
-            height: 100%;
+            /* position: fixed kaldırıldı - header pozisyonunu bozuyordu */
+            height: 100vh;
+            height: 100dvh;
         }
         
         /* iOS için klavye açıldığında özel ayarlar */
