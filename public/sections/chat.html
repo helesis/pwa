@@ -39,40 +39,20 @@
             let initialViewportHeight = window.innerHeight;
             let isKeyboardVisible = false;
             
-            // Input container ve header pozisyonunu sürekli kontrol et
+            // Sadece chat container yüksekliğini kontrol et
             function ensureFixedPositions() {
-                // Input container kontrolü - visual viewport'a göre
-                if (inputContainer && window.visualViewport) {
-                    const rect = inputContainer.getBoundingClientRect();
+                // Chat container'ın yüksekliğini kontrol et
+                if (chatContainer && window.visualViewport) {
                     const vvHeight = window.visualViewport.height;
                     const windowHeight = window.innerHeight;
                     const keyboardHeight = windowHeight - vvHeight;
                     
-                    // Input container visual viewport dışındaysa düzelt
-                    if (rect.bottom > vvHeight) {
-                        if (keyboardHeight > 150) {
-                            // Klavye açık - klavyenin üzerine yerleştir
-                            inputContainer.style.bottom = `${keyboardHeight}px`;
-                        } else {
-                            // Klavye kapalı - en alta yerleştir
-                            inputContainer.style.bottom = '0px';
-                        }
-                        inputContainer.style.position = 'fixed';
-                        inputContainer.style.transform = 'translateY(0)';
-                    }
-                }
-                
-                // Header kontrolü - visual viewport'a göre
-                const header = document.querySelector('#chatSection .section-header');
-                if (header && window.visualViewport) {
-                    const headerRect = header.getBoundingClientRect();
-                    const vvHeight = window.visualViewport.height;
-                    
-                    // Header visual viewport dışındaysa düzelt
-                    if (headerRect.top < 0 || headerRect.bottom > vvHeight) {
-                        header.style.top = '0px';
-                        header.style.position = 'fixed';
-                        header.style.transform = 'translate3d(0, 0, 0)';
+                    if (keyboardHeight > 150) {
+                        // Klavye açık - chat container'ı küçült
+                        chatContainer.style.bottom = `${keyboardHeight + 143}px`;
+                    } else {
+                        // Klavye kapalı - chat container'ı normal boyut
+                        chatContainer.style.bottom = '143px';
                     }
                 }
             }
@@ -104,10 +84,7 @@
                         const keyboardHeight = windowHeight - vvHeight;
                         
                         if (keyboardHeight > 150) {
-                            // Klavye zaten açık - pozisyonları ayarla
-                            if (inputContainer) {
-                                inputContainer.style.bottom = `${keyboardHeight}px`;
-                            }
+                            // Klavye zaten açık - sadece chat container'ı ayarla
                             if (chatContainer) {
                                 chatContainer.style.bottom = `${keyboardHeight + 143}px`;
                             }
@@ -161,7 +138,7 @@
                     });
                 }
                 
-                // Visual Viewport API desteği (modern browsers)
+                // Visual Viewport API desteği - Sadece chat container yüksekliğini ayarla
                 if (window.visualViewport) {
                     window.visualViewport.addEventListener('resize', function() {
                         const vvHeight = window.visualViewport.height;
@@ -172,25 +149,9 @@
                             document.body.classList.add('keyboard-visible');
                             isKeyboardVisible = true;
                             
-                            // Input container'ı visual viewport'un altına yerleştir
-                            if (inputContainer) {
-                                inputContainer.style.position = 'fixed';
-                                inputContainer.style.bottom = `${keyboardHeight}px`;
-                                inputContainer.style.transform = 'translateY(0)';
-                            }
-                            
-                            // Header'ı visual viewport'un üstünde tut
-                            const header = document.querySelector('#chatSection .section-header');
-                            if (header) {
-                                header.style.position = 'fixed';
-                                header.style.top = '0px';
-                                header.style.transform = 'translate3d(0, 0, 0)';
-                            }
-                            
-                            // Chat container'ı visual viewport'a göre ayarla
+                            // Sadece chat container'ın bottom'unu ayarla
+                            // Header ve input container sabit kalsın
                             if (chatContainer) {
-                                chatContainer.style.position = 'fixed';
-                                chatContainer.style.top = '80px';
                                 chatContainer.style.bottom = `${keyboardHeight + 143}px`;
                             }
                             
@@ -204,10 +165,7 @@
                             document.body.classList.remove('keyboard-visible');
                             isKeyboardVisible = false;
                             
-                            // Pozisyonları restore et
-                            if (inputContainer) {
-                                inputContainer.style.bottom = '0px';
-                            }
+                            // Chat container'ı normale döndür
                             if (chatContainer) {
                                 chatContainer.style.bottom = '143px';
                             }
