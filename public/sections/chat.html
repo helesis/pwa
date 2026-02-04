@@ -42,13 +42,20 @@
             if (messageInput) {
                 // Section yüklendiğinde otomatik focus
                 setTimeout(() => {
-                    messageInput.focus();
+                    // iOS için özel klavye açma
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        messageInput.focus();
+                        messageInput.click();
+                        // iOS'ta bazen iki kez gerekir
+                        setTimeout(() => {
+                            messageInput.focus();
+                        }, 100);
+                    } else {
+                        messageInput.focus();
+                    }
                     // Body scroll'u engelle
-                    document.body.style.overflow = 'hidden';
-                    document.body.style.position = 'fixed';
-                    document.body.style.width = '100%';
-                    document.body.style.height = '100%';
-                }, 150);
+                    document.body.classList.add('chat-active');
+                }, 300);
                 
                 // Klavye durumunu takip et
                 function handleKeyboardVisibility() {
@@ -117,22 +124,25 @@
             const messageInput = document.getElementById('messageInput');
             if (messageInput) {
                 setTimeout(() => {
-                    messageInput.focus();
+                    // iOS için özel klavye açma
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        messageInput.focus();
+                        messageInput.click();
+                        setTimeout(() => {
+                            messageInput.focus();
+                        }, 100);
+                    } else {
+                        messageInput.focus();
+                    }
                     // Body scroll'u engelle
-                    document.body.style.overflow = 'hidden';
-                    document.body.style.position = 'fixed';
-                    document.body.style.width = '100%';
-                    document.body.style.height = '100%';
-                }, 100);
+                    document.body.classList.add('chat-active');
+                }, 200);
             }
         }
         
         // Section kapatıldığında body scroll'u restore et
         function cleanupChatSection() {
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
+            document.body.classList.remove('chat-active');
             document.body.classList.remove('keyboard-visible');
         }
         
