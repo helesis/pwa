@@ -610,8 +610,22 @@
             -webkit-overflow-scrolling: touch;
             padding: 16px;
             height: calc(100vh - 65px); /* Adjusted for 65px bottom-nav height */
+            max-height: calc(100vh - 65px); /* Ensure fixed height for scroll */
             position: relative;
             min-height: 0; /* ensure flex children can scroll */
+        }
+
+        /* Section-specific padding-top adjustments for fixed headers */
+        #chatSection.content-section,
+        #infoSection.content-section,
+        #activitiesSection.content-section {
+            padding-top: 0px !important; /* No header spacing needed */
+        }
+
+        #reservationsSection.content-section,
+        #mapSection.content-section,
+        #settingsSection.content-section {
+            padding-top: 64px !important; /* Header height spacing */
         }
         
         #chatSection {
