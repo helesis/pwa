@@ -9621,6 +9621,7 @@
                     }
                 };
                 
+                // Visual Viewport listeners DEVRE DIŞI
                 // window.visualViewport.addEventListener('resize', handleViewportChange);
                 // window.visualViewport.addEventListener('scroll', handleViewportChange);
                 console.log('✅ Visual Viewport listeners attached');
@@ -9657,9 +9658,11 @@
             const initialHeight = window.innerHeight;
             console.log('📏 Initial window height:', initialHeight);
             
-            // window.addEventListener('resize', () => {
-            //     clearTimeout(resizeTimeout);
-            //     resizeTimeout = setTimeout(() => {
+            // Fallback resize listener TAMAMEN DEVRE DIŞI
+            /*
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
                     const currentHeight = window.innerHeight;
                     const heightDiff = initialHeight - currentHeight;
                     
@@ -9688,10 +9691,11 @@
                         inputContainer.style.bottom = '0';
                         chatContainer.style.paddingBottom = 'calc(16px + 143px)';
                         
-            //             scrollToBottom('FALLBACK CLOSED', 350);
-            //         }
-            //     }, 150);
-            // });
+                        scrollToBottom('FALLBACK CLOSED', 350);
+                    }
+                }, 150);
+            });
+            */
         }
 
         // PWA standalone mode değişikliğini dinle ve safe area'yı güncelle
