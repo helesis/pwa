@@ -1,0 +1,435 @@
+        .chat-container {
+            flex: 1;
+            overflow-y: auto !important; /* Force scroll - override any parent overflow */
+            overflow-x: hidden;
+            padding: 16px 16px;
+            padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
+            padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
+            padding-top: calc(80px + 16px); /* Header height (80px) + spacing */
+            padding-bottom: calc(16px + 143px); /* Space for input container */
+            background: white;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Allow flex shrinking */
+            max-height: calc(100vh - 80px - 84px); /* viewport - header - bottom nav */
+            max-height: calc(100dvh - 80px - 84px); /* Use dynamic viewport for mobile */
+            box-sizing: border-box;
+            transition: padding-bottom 0.3s ease; /* Smooth keyboard animation */
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .message {
+            margin-bottom: 4px;
+            display: flex;
+            gap: 8px;
+            animation: messageSlide 0.2s ease;
+            align-items: flex-end;
+            justify-content: flex-start;
+            width: 100%;
+            position: relative;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.sent {
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+            margin-left: auto;
+            margin-right: 0;
+            align-self: flex-end;
+            width: 100%;
+        }
+
+        /* iOS Safari için özel düzeltme */
+        @supports (-webkit-touch-callout: none) {
+            .message.sent {
+                margin-left: auto !important;
+                margin-right: 0 !important;
+                align-self: flex-end !important;
+            }
+            
+            .message.sent .message-content {
+                margin-left: auto;
+                margin-right: 0;
+            }
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #54656f;
+            font-size: 14px;
+            flex-shrink: 0;
+            font-weight: 500;
+            object-fit: cover;
+            overflow: hidden;
+        }
+
+        .message-avatar .voyage-logo {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-avatar .voyage-logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .message.sent .message-avatar {
+            display: flex;
+        }
+
+        .message.sent .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .message-content {
+            max-width: 70%;
+            min-width: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .message.sent .message-content {
+            align-items: flex-end;
+            margin-left: auto;
+        }
+
+        .message:not(.sent) .message-content {
+            align-items: flex-start;
+        }
+
+        .message-bubble {
+            background: #ffffff;
+            padding: 6px 12px 8px 12px;
+            border-radius: 7.5px;
+            position: relative;
+            word-wrap: break-word;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        }
+
+        .message.sent .message-bubble {
+            background: #d9fdd3;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message:not(.sent) .message-bubble {
+            background: #ffffff;
+            border-bottom-left-radius: 2px;
+        }
+
+        .message-text {
+            font-size: 14.2px;
+            line-height: 19px;
+            word-wrap: break-word;
+            color: #111b21;
+        }
+
+        .message.sent .message-text {
+            color: #111b21;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #667781;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+            justify-content: flex-start;
+        }
+
+        .message.sent .message-time {
+            color: #667781;
+            justify-content: flex-end;
+        }
+
+        /* Message Status Ticks (WhatsApp style) */
+        .message-status {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 4px;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .message-status.sent {
+            color: #667781; /* Grey single tick */
+        }
+
+        .message-status.delivered {
+            color: #667781; /* Grey double tick */
+        }
+
+        .message-status.read {
+            color: #34B7F1; /* Blue double tick - WhatsApp blue */
+        }
+
+        /* WhatsApp style tick icons */
+        .message-status {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 4px;
+            font-size: 14px;
+            line-height: 1;
+        }
+        
+        .message-status.sent {
+            color: #667781; /* Grey */
+        }
+        
+        .message-status.delivered {
+            color: #667781; /* Grey */
+        }
+        
+        .message-status.read {
+            color: #34B7F1; /* WhatsApp blue */
+        }
+        
+        .message-status-icon {
+            display: inline-block;
+            position: relative;
+            width: 18px;
+            height: 14px;
+            line-height: 1;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-weight: normal;
+            vertical-align: middle;
+        }
+
+        /* Single tick (sent) */
+        .message-status.sent .message-status-icon::after {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 16px;
+            line-height: 1;
+            color: #667781;
+        }
+
+        /* Double tick (delivered) - Two ticks overlapped */
+        .message-status.delivered .message-status-icon::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 16px;
+            line-height: 1;
+            color: #667781;
+        }
+        
+        .message-status.delivered .message-status-icon::after {
+            content: '✓';
+            position: absolute;
+            left: 7px;
+            top: 0;
+            font-size: 16px;
+            line-height: 1;
+            color: #667781;
+        }
+
+        /* Double tick (read) - Two ticks overlapped, blue color */
+        .message-status.read .message-status-icon::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 16px;
+            line-height: 1;
+            color: #34B7F1;
+        }
+        
+        .message-status.read .message-status-icon::after {
+            content: '✓';
+            position: absolute;
+            left: 7px;
+            top: 0;
+            font-size: 16px;
+            line-height: 1;
+            color: #34B7F1;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin: 16px 0;
+            padding: 0 10px;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+            animation: messageSlide 0.3s ease;
+        }
+
+        .typing-dots {
+            background: #ffffff;
+            padding: 12px 16px;
+            border-radius: 16px;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #667781;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .input-container {
+            padding: 10px 16px;
+            padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
+            padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
+            padding-bottom: calc(10px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Navigation bar + safe area */
+            background: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 8px;
+            align-items: flex-start; /* Yukarıdan hizalama için */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001; /* Above chat content but below bottom nav */
+            flex-shrink: 0;
+            width: 100%;
+            min-height: 143px;
+            box-sizing: border-box;
+            transition: bottom 0.3s ease; /* Smooth keyboard animation */
+        }
+        
+        /* Only show input container when chat section is active */
+        #chatSection:not(.active) .input-container {
+            display: none !important;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1); /* Sürekli görünür border */
+            border-radius: 21px;
+            padding: 9px 16px;
+            transition: all 0.2s ease;
+            min-height: 42px;
+            max-width: calc(100% - 50px); /* Button için yer bırak (42px button + 8px gap) */
+        }
+
+        .input-wrapper:focus-within {
+            background: white;
+            border-color: rgba(0, 0, 0, 0.2); /* Focus olduğunda border daha belirgin */
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        #messageInput {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            font-family: inherit;
+            color: #111b21;
+            line-height: 20px;
+        }
+
+        #messageInput::placeholder {
+            color: #667781;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start; /* Button'u yukarıdan hizala */
+            flex-shrink: 0; /* Button genişliğini sabit tut */
+        }
+
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            background: white;
+            border: 1px solid #e4e6e9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #111b21;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: white;
+            transform: scale(1.05);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+            background: white;
+        }
+
+        .send-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #b0b0b0;
+        }
