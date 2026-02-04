@@ -1,8 +1,8 @@
 {
-  "name": "Voyage Sorgun Chat",
-  "short_name": "Voyage Chat",
-  "description": "Voyage Sorgun otel müşteri iletişim uygulaması",
-  "start_url": ".",
+  "name": "Voyage Sorgun",
+  "short_name": "Voyage Sorgun",
+  "description": "Voyage Sorgun Guest Experience",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

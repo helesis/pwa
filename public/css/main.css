@@ -905,10 +905,27 @@
             padding-right: 0;
         }
 
-        /* Avatar Selection */
+        /* Settings content section - Instagram post style */
+        #settingsSection.content-section {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Settings Container - Instagram post style (kenardan kenara) */
+        .settings-container {
+            padding: 0 !important;
+            margin: 0;
+        }
+
+        /* Avatar Selection - Instagram post style */
         .avatar-selection {
-            padding: 16px;
+            padding: 0; /* Kenardan kenara tam genişlik */
             background: white;
+            border-bottom: 1px solid #efefef; /* Instagram post gibi ayırıcı çizgi */
+        }
+
+        .avatar-selection-content {
+            padding: 16px; /* İçerik için padding */
         }
 
         .avatar-selection-title {
@@ -1969,10 +1986,10 @@
             color: #667781;
         }
 
-        /* Settings Section */
+        /* Settings Section - Instagram post style */
         .settings-section {
-            gap: 16px; /* Container'lar arası boşluk */
-            padding: 16px;
+            gap: 0; /* Instagram post gibi gap yok */
+            padding: 0; /* Kenardan kenara tam genişlik */
             display: flex;
             flex-direction: column;
             /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
@@ -1982,16 +1999,34 @@
             min-height: 0; /* Flex container'da scroll için gerekli */
         }
 
+        .settings-list {
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
         .settings-item {
             background: white;
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: 0; /* Instagram post gibi köşe yok */
+            padding: 0; /* Padding kaldırıldı */
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
             transition: background 0.2s;
+            margin-bottom: 8px; /* Item'lar arası boşluk */
+            border-bottom: 1px solid #efefef; /* Instagram post gibi ayırıcı çizgi */
+        }
+
+        /* İçerik için padding */
+        .settings-item-content {
+            padding: 16px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .settings-item:hover {
