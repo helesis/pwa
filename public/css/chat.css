@@ -20,7 +20,7 @@
         /* Klavye açıldığında chat container pozisyonunu koru */
         .keyboard-visible .chat-container {
             top: 80px !important;
-            bottom: 143px !important;
+            /* Bottom JavaScript ile dynamic olarak ayarlanacak */
         }
         
         /* Klavye açıldığında chat container'ın alt boşluğunu ayarla */
@@ -397,7 +397,7 @@
         
         /* Klavye açıldığında input container klavyenin hemen üzerinde */
         .keyboard-visible .input-container {
-            bottom: 0 !important; /* Klavyenin hemen üzerinde */
+            /* JavaScript ile dynamic olarak ayarlanacak */
             position: fixed !important;
             transform: translateY(0) !important;
             max-height: 143px !important;
@@ -527,15 +527,21 @@
                 transform: translateZ(0);
             }
             
+            #chatSection .section-header {
+                -webkit-transform: translate3d(0, 0, 0);
+                transform: translate3d(0, 0, 0);
+            }
+            
+            /* iOS'ta visual viewport desteği */
             .keyboard-visible .input-container {
-                bottom: 0px !important;
                 position: fixed !important;
                 transform: translateY(0) !important;
                 -webkit-transform: translateY(0) !important;
+                /* Bottom JavaScript ile ayarlanacak */
             }
             
             .keyboard-visible .chat-container {
-                bottom: 143px !important;
+                /* Bottom JavaScript ile ayarlanacak */
             }
         }
         
