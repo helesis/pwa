@@ -9393,8 +9393,10 @@
             }
         }
 
-        // Klavye açıldığında input container pozisyonunu koru
+        // Klavye açıldığında input container pozisyonunu koru - DEVRE DIŞI
         function setupKeyboardHandling() {
+            console.log('🚫 KEYBOARD HANDLING DISABLED - Using chat.html specific handling');
+            return; // Erken çıkış - fonksiyonu devre dışı bırak
             const inputContainer = document.querySelector('.input-container');
             const messageInput = document.getElementById('messageInput');
             const chatContainer = document.querySelector('.chat-container');
@@ -9619,8 +9621,8 @@
                     }
                 };
                 
-                window.visualViewport.addEventListener('resize', handleViewportChange);
-                window.visualViewport.addEventListener('scroll', handleViewportChange);
+                // window.visualViewport.addEventListener('resize', handleViewportChange);
+                // window.visualViewport.addEventListener('scroll', handleViewportChange);
                 console.log('✅ Visual Viewport listeners attached');
             }
             
@@ -9655,9 +9657,9 @@
             const initialHeight = window.innerHeight;
             console.log('📏 Initial window height:', initialHeight);
             
-            window.addEventListener('resize', () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
+            // window.addEventListener('resize', () => {
+            //     clearTimeout(resizeTimeout);
+            //     resizeTimeout = setTimeout(() => {
                     const currentHeight = window.innerHeight;
                     const heightDiff = initialHeight - currentHeight;
                     
@@ -9686,10 +9688,10 @@
                         inputContainer.style.bottom = '0';
                         chatContainer.style.paddingBottom = 'calc(16px + 143px)';
                         
-                        scrollToBottom('FALLBACK CLOSED', 350);
-                    }
-                }, 150);
-            });
+            //             scrollToBottom('FALLBACK CLOSED', 350);
+            //         }
+            //     }, 150);
+            // });
         }
 
         // PWA standalone mode değişikliğini dinle ve safe area'yı güncelle
@@ -11306,8 +11308,8 @@
             // Setup PWA safe area refresh (ana ekrana eklendiğinde safe area'yı güncelle)
             setupPWASafeAreaRefresh();
             
-            // Klavye açıldığında input container pozisyonunu koru
-            setupKeyboardHandling();
+            // Klavye açıldığında input container pozisyonunu koru - DEVRE DIŞI
+            // setupKeyboardHandling(); // Chat.html kendi handling'ini kullanacak
             
             // Initialize socket connection if guest is authenticated
             if (GUEST_UNIQUE_ID) {
@@ -11972,7 +11974,7 @@
         Voyage.pwa.setupFullscreen = setupPWAFullscreen;
         Voyage.pwa.setupScrollListener = setupScrollListener;
         Voyage.pwa.refreshSafeArea = refreshSafeAreaCalculations;
-        Voyage.pwa.setupKeyboardHandling = setupKeyboardHandling;
+        // Voyage.pwa.setupKeyboardHandling = setupKeyboardHandling; // DEVRE DIŞI
         Voyage.pwa.setupSafeAreaRefresh = setupPWASafeAreaRefresh;
         
         // Reservations
