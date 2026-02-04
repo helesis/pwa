@@ -357,8 +357,8 @@
         }
 
         .input-container {
-            position: fixed;
-            bottom: 0;
+            position: fixed !important;
+            bottom: 0 !important;
             left: 0;
             right: 0;
             padding: 10px 16px;
@@ -376,13 +376,18 @@
             height: 143px; /* Fixed height */
             box-sizing: border-box;
             transform: translateZ(0); /* Hardware acceleration */
+            overflow: hidden !important;
+            overflow-x: hidden !important;
+            overflow-y: hidden !important;
         }
         
         /* Klavye açıldığında input container klavyenin hemen üzerinde */
         .keyboard-visible .input-container {
-            bottom: 0; /* Klavyenin hemen üzerinde */
-            position: fixed;
-            transform: translateY(0);
+            bottom: 0 !important; /* Klavyenin hemen üzerinde */
+            position: fixed !important;
+            transform: translateY(0) !important;
+            max-height: 143px !important;
+            min-height: 143px !important;
         }
         
         /* Only show input container when chat section is active */
@@ -503,13 +508,20 @@
         
         /* iOS için klavye açıldığında özel ayarlar */
         @supports (-webkit-touch-callout: none) {
+            .input-container {
+                -webkit-transform: translateZ(0);
+                transform: translateZ(0);
+            }
+            
             .keyboard-visible .input-container {
-                bottom: env(keyboard-inset-height, 0px);
+                bottom: 0px !important;
                 position: fixed !important;
+                transform: translateY(0) !important;
+                -webkit-transform: translateY(0) !important;
             }
             
             .keyboard-visible .chat-container {
-                bottom: calc(143px + env(keyboard-inset-height, 0px));
+                bottom: 143px !important;
             }
         }
         

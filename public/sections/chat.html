@@ -39,6 +39,24 @@
             let initialViewportHeight = window.innerHeight;
             let isKeyboardVisible = false;
             
+            // Input container pozisyonunu sürekli kontrol et
+            function ensureInputContainerPosition() {
+                if (inputContainer) {
+                    const rect = inputContainer.getBoundingClientRect();
+                    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                    
+                    // Eğer container viewport dışındaysa düzelt
+                    if (rect.bottom > viewportHeight) {
+                        inputContainer.style.bottom = '0px';
+                        inputContainer.style.transform = 'translateY(0)';
+                        inputContainer.style.position = 'fixed';
+                    }
+                }
+            }
+            
+            // Sürekli pozisyon kontrolü
+            setInterval(ensureInputContainerPosition, 100);
+            
             if (messageInput) {
                 // Section yüklendiğinde otomatik focus
                 setTimeout(() => {
@@ -110,6 +128,20 @@
                         if (keyboardHeight > 150) {
                             document.body.classList.add('keyboard-visible');
                             isKeyboardVisible = true;
+                            
+                            // Input container'ı klavyenin üzerinde sabitle
+                            if (inputContainer) {
+                                inputContainer.style.bottom = '0px';
+                                inputContainer.style.transform = 'translateY(0)';
+                                inputContainer.style.position = 'fixed';
+                            }
+                            
+                            // Chat container'ı scroll'u en alta getir
+                            setTimeout(() => {
+                                if (chatContainer) {
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                            }, 100);
                         } else {
                             document.body.classList.remove('keyboard-visible');
                             isKeyboardVisible = false;
