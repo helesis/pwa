@@ -361,24 +361,26 @@
 
         .input-container {
             position: fixed !important;
-            bottom: 0 !important;
+            bottom: 84px !important;
             left: 0 !important;
             right: 0 !important;
             width: 100% !important;
-            height: 143px !important;
-            padding: 10px 16px;
+            height: auto !important;
+            padding: 12px 16px;
             padding-left: calc(16px + var(--safe-area-inset-left, env(safe-area-inset-left)));
             padding-right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right)));
-            padding-bottom: calc(10px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
             background: white;
             border-top: 1px solid rgba(0, 0, 0, 0.08);
             display: flex;
+            flex-direction: row;
+            align-items: center;
             gap: 8px;
-            align-items: flex-start;
-            z-index: 99998 !important; /* Header'dan bir altta */
+            min-height: 60px;
+            z-index: 10000 !important;
             flex-shrink: 0;
             box-sizing: border-box;
             overflow: hidden !important;
+            pointer-events: none;
             /* En altta sabit kalsın - HİÇ HAREKET ETMESİN */
         }
         
@@ -404,6 +406,7 @@
             transition: all 0.2s ease;
             min-height: 42px;
             max-width: calc(100% - 50px); /* Button için yer bırak (42px button + 8px gap) */
+            pointer-events: auto;
         }
 
         .input-wrapper:focus-within {
@@ -426,6 +429,7 @@
             -webkit-appearance: none;
             -webkit-user-select: text;
             user-select: text;
+            pointer-events: auto;
         }
         
         /* iOS Safari için özel textarea ayarları */
@@ -451,10 +455,12 @@
         }
 
         .action-buttons {
+            flex: 0 0 auto;
             display: flex;
             gap: 8px;
             align-items: flex-start; /* Button'u yukarıdan hizala */
             flex-shrink: 0; /* Button genişliğini sabit tut */
+            pointer-events: auto;
         }
 
 
@@ -471,6 +477,7 @@
             transition: all 0.2s ease;
             color: #111b21;
             flex-shrink: 0;
+            pointer-events: auto;
         }
 
         .send-btn:hover {
@@ -524,7 +531,7 @@
         @media screen and (max-height: 500px) {
             .input-container {
                 position: fixed !important;
-                bottom: 0 !important;
+                bottom: 84px !important;
                 padding-bottom: calc(10px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
             }
             
@@ -536,9 +543,9 @@
         /* Küçük ekranlarda input container'ı optimize et */
         @media screen and (max-height: 600px) {
             .input-container {
-                height: 80px;
+                height: auto;
                 padding: 8px 16px;
-                padding-bottom: calc(8px + 60px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+                bottom: 84px !important;
             }
             
             .chat-container {

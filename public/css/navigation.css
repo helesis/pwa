@@ -13,7 +13,7 @@
             padding-left: var(--safe-area-inset-left, env(safe-area-inset-left));
             padding-right: var(--safe-area-inset-right, env(safe-area-inset-right));
             padding-bottom: calc(20px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
-            z-index: 10000 !important; /* Increased to ensure it stays above chat section */
+            z-index: 10001 !important; /* Increased to ensure it stays above chat section */
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
             min-height: 56px; /* WhatsApp iOS standardı */
             height: 84px;
