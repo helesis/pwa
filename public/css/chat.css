@@ -3,7 +3,7 @@
             top: 80px !important; /* Header'ın hemen altında */
             left: 0 !important;
             right: 0 !important;
-            bottom: 143px !important; /* Input container için yer */
+            bottom: 144px !important; /* Bottom nav (84px) + Input container (60px min-height) için yer */
             overflow-y: auto !important;
             overflow-x: hidden !important;
             padding: 16px;
@@ -20,7 +20,7 @@
         
         /* Klavye açıldığında chat container'ın alt boşluğunu ayarla */
         .keyboard-visible .chat-container {
-            bottom: 143px; /* Input container height - sabit kal */
+            bottom: 144px; /* Bottom nav (84px) + Input container (60px min-height) - sabit kal */
         }
         
         /* iOS Safari için */
@@ -536,7 +536,7 @@
             }
             
             .chat-container {
-                bottom: 143px !important;
+                bottom: 144px !important;
             }
         }
         
@@ -549,7 +549,7 @@
             }
             
             .chat-container {
-                bottom: 80px;
+                bottom: 144px;
             }
             
             .input-wrapper {
