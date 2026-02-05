@@ -1599,13 +1599,25 @@
 
             // Typing indicators
             socket.on('user_typing', (data) => {
-                const indicator = document.getElementById('typingIndicator');
-                indicator.classList.add('active');
+                // Sadece chat section aktifken typing indicator'ı göster
+                const chatSection = document.getElementById('chatSection');
+                if (chatSection && chatSection.classList.contains('active')) {
+                    const indicator = document.getElementById('typingIndicator');
+                    if (indicator) {
+                        indicator.classList.add('active');
+                    }
+                }
             });
 
             socket.on('user_stopped_typing', () => {
-                const indicator = document.getElementById('typingIndicator');
-                indicator.classList.remove('active');
+                // Sadece chat section aktifken typing indicator'ı gizle
+                const chatSection = document.getElementById('chatSection');
+                if (chatSection && chatSection.classList.contains('active')) {
+                    const indicator = document.getElementById('typingIndicator');
+                    if (indicator) {
+                        indicator.classList.remove('active');
+                    }
+                }
             });
 
             // SPA request confirmed event
