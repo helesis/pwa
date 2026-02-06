@@ -12,10 +12,11 @@
             background: white;
             scroll-behavior: smooth;
             display: flex;
-            flex-direction: column;
+            flex-direction: column-reverse; /* Reverse chat: yeni mesajlar üstte */
+            justify-content: flex-start;
             box-sizing: border-box;
             z-index: 1;
-            /* Sadece bu alan scroll edilebilir */
+            /* Reverse chat: son mesaj input'un hemen altında görünür */
         }
         
         /* Klavye açıldığında chat container'ın alt boşluğunu ayarla */

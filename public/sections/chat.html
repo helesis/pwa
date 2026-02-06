@@ -103,23 +103,13 @@
                         isKeyboardVisible = true;
                         document.body.classList.add('keyboard-visible');
                         
-                        // Chat container'ı scroll'u en alta getir (iOS/Android optimize)
+                        // Reverse chat: Üste scroll (son mesaj input altında)
                         setTimeout(() => {
                             if (chatContainer) {
-                                // iOS için scrollIntoView, Android için scrollTop
-                                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                                    const messages = chatContainer.querySelectorAll('.message');
-                                    if (messages.length > 0) {
-                                        messages[messages.length - 1].scrollIntoView({ 
-                                            behavior: 'smooth', 
-                                            block: 'end' 
-                                        });
-                                    }
-                                } else {
-                                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                                }
+                                // Reverse chat: Her zaman üste scroll
+                                chatContainer.scrollTop = 0;
                             }
-                        }, /iPad|iPhone|iPod/.test(navigator.userAgent) ? 200 : 100);
+                        }, 50);
                         
                     } else if (heightDifference <= 150 && isKeyboardVisible) {
                         // Klavye kapandı
@@ -137,16 +127,8 @@
                         setTimeout(() => {
                             handleKeyboardVisibility();
                             if (chatContainer) {
-                                // iOS için optimize scroll
-                                const messages = chatContainer.querySelectorAll('.message');
-                                if (messages.length > 0) {
-                                    messages[messages.length - 1].scrollIntoView({ 
-                                        behavior: 'smooth', 
-                                        block: 'end' 
-                                    });
-                                } else {
-                                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                                }
+                                // Reverse chat: iOS için de üste scroll
+                                chatContainer.scrollTop = 0;
                             }
                         }, 300);
                     });
@@ -175,20 +157,12 @@
                                 chatContainer.style.bottom = `${keyboardHeight + 143}px`;
                             }
                             
-                            // Chat container'ı scroll'u en alta getir (iOS/Android optimize)
+                            // Reverse chat: Üste scroll
                             setTimeout(() => {
                                 if (chatContainer) {
-                                    const messages = chatContainer.querySelectorAll('.message');
-                                    if (messages.length > 0) {
-                                        messages[messages.length - 1].scrollIntoView({ 
-                                            behavior: 'smooth', 
-                                            block: 'end' 
-                                        });
-                                    } else {
-                                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                                    }
+                                    chatContainer.scrollTop = 0;
                                 }
-                            }, 150);
+                            }, 100);
                         } else {
                             document.body.classList.remove('keyboard-visible');
                             isKeyboardVisible = false;

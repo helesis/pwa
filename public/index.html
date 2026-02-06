@@ -1494,14 +1494,14 @@
                         fixMessageAlignment();
                     }, 300);
                     
-                    // Final check after scroll
+                    // Final check after scroll (Reverse chat)
                     setTimeout(() => {
-                        scrollToBottom();
+                        scrollToTop();
                         fixMessageAlignment();
-                    }, 500);
+                    }, 300);
                 }
                 
-                scrollToBottom();
+                scrollToTop();
                 
                 // Setup scroll listener for loading older messages
                 setupScrollListener();
@@ -1556,7 +1556,7 @@
                     }
                     
                     displayMessage(data, !isSent);
-                    scrollToBottom();
+                    scrollToTop();
                 }
                 
                 // Send notification if message is from staff/hotel and page is not visible
@@ -1739,15 +1739,17 @@
                 // Store previous scroll height before adding messages
                 const previousScrollHeight = chatContainerEl ? chatContainerEl.scrollHeight : 0;
 
-                // Add messages to the top
+                // Add older messages (reverse chat: bunlar alta eklenir)
                 messages.forEach(msg => {
-                    displayMessage(msg, false);
+                    displayMessage(msg, true); // prepend=true: eski mesajlar alta
                 });
 
-                // Restore scroll position
+                // Reverse chat: Scroll pozisyonunu koru
                 if (chatContainerEl) {
+                    // Eski mesajlar yüklendiğinde mevcut pozisyonu koru
                     const newScrollHeight = chatContainerEl.scrollHeight;
-                    chatContainerEl.scrollTop = newScrollHeight - previousScrollHeight;
+                    const scrollDifference = newScrollHeight - previousScrollHeight;
+                    chatContainerEl.scrollTop = chatContainerEl.scrollTop + scrollDifference;
                 }
 
                 // Update oldest message timestamp
@@ -1901,16 +1903,18 @@
                 </div>
             `;
             
-            // prepend parameter: true = add to top, false = add to bottom
+            // Reverse chat: prepend parameter logic değişti
+            // true = eski mesajlar (alta ekle), false = yeni mesajlar (üste ekle)
             const prepend = arguments[2] || false;
             
             if (prepend) {
-                // Insert at the beginning (for older messages)
-                chatContainer.insertAdjacentHTML('afterbegin', messageHTML);
-            } else {
-                // Insert at the end (for new messages)
+                // Eski mesajlar: Alta ekle (reverse chat'te scroll aşağısında)
                 chatContainer.insertAdjacentHTML('beforeend', messageHTML);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } else {
+                // Yeni mesajlar: Üste ekle (reverse chat'te input'un hemen altında)
+                chatContainer.insertAdjacentHTML('afterbegin', messageHTML);
+                // Reverse chat: scroll pozisyonunu koru (üstte kal)
+                chatContainer.scrollTop = 0;
             }
             
             // Observe new message for read status
@@ -2177,7 +2181,7 @@
             
             // Display message immediately
             displayMessage(optimisticMessage, true);
-            scrollToBottom();
+            scrollToTop();
             
             // Clear input
             input.value = '';
@@ -2399,9 +2403,17 @@
             return div.innerHTML;
         }
 
-        function scrollToBottom() {
+        function scrollToTop() {
             const chatContainer = document.getElementById('chatContainer');
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            if (chatContainer) {
+                // Reverse chat: Her zaman üste scroll
+                chatContainer.scrollTop = 0;
+            }
+        }
+        
+        // Backward compatibility için
+        function scrollToBottom() {
+            scrollToTop();
         }
 
         // Load older messages when scrolling to top
@@ -2412,8 +2424,9 @@
             if (!chatContainer) return;
 
             chatContainer.addEventListener('scroll', () => {
-                // Check if scrolled near the top (within 100px)
-                if (chatContainer.scrollTop < 100 && !isLoadingOlderMessages && oldestMessageTimestamp) {
+                // Reverse chat: Eski mesajları yüklemek için AŞAĞIYA scroll kontrol et
+                const scrollBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+                if (scrollBottom < 100 && !isLoadingOlderMessages && oldestMessageTimestamp) {
                     loadOlderMessages();
                 }
             });
@@ -11965,7 +11978,8 @@
         Voyage.messaging.fixAlignment = fixMessageAlignment;
         Voyage.messaging.initObserver = initMessageObserver;
         Voyage.messaging.addWelcome = addWelcomeMessage;
-        Voyage.messaging.scrollToBottom = scrollToBottom;
+        Voyage.messaging.scrollToTop = scrollToTop;
+        Voyage.messaging.scrollToBottom = scrollToBottom; // Backward compatibility
         Voyage.messaging.format.time = formatMessageTime;
         Voyage.messaging.format.escapeHtml = escapeMessageHtml;
         

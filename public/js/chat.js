@@ -1,35 +1,30 @@
-// Chat klavye yönetimi - Optimized versiyon
-function scrollChatToBottom() {
+// Chat klavye yönetimi - Reverse Chat Optimized
+function scrollChatToTop() {
     const chatContainer = document.getElementById('chatContainer');
     if (!chatContainer) return;
     
     setTimeout(() => {
-        // iOS ve Android için optimize edilmiş scroll
+        // Reverse chat: Her zaman en üste scroll (son mesaj input altında)
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isAndroid = /Android/.test(navigator.userAgent);
         
         if (isIOS) {
-            // iOS için: scrollIntoView daha güvenilir
-            const allMessages = chatContainer.querySelectorAll('.message');
-            if (allMessages.length > 0) {
-                const lastMessage = allMessages[allMessages.length - 1];
-                lastMessage.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'end',
-                    inline: 'nearest'
-                });
-            }
+            // iOS için: smooth scroll to top
+            chatContainer.scrollTo({ 
+                top: 0, 
+                behavior: 'smooth' 
+            });
         } else if (isAndroid) {
-            // Android için: scrollTop daha hızlı
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            // Android için: instant scroll to top
+            chatContainer.scrollTop = 0;
         } else {
-            // Desktop/diğer platformlar için hybrid yaklaşım
-            const allMessages = chatContainer.querySelectorAll('.message');
-            if (allMessages.length > 0) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
+            // Desktop: smooth scroll to top
+            chatContainer.scrollTo({ 
+                top: 0, 
+                behavior: 'smooth' 
+            });
         }
-    }, isIOS ? 100 : 50); // iOS için biraz daha fazla gecikme
+    }, isIOS ? 50 : 20); // Reverse chat'te daha hızlı response
 }
 
 function setupChatKeyboardHandling() {
@@ -74,8 +69,8 @@ function setupChatKeyboardHandling() {
                 chatTop: chatContainer.style.top
             });
             
-            // Klavye açıldığında scroll (iOS/Android için optimize)
-            setTimeout(scrollChatToBottom, 150);
+            // Klavye açıldığında scroll (Reverse chat: üste scroll)
+            setTimeout(scrollChatToTop, 100);
         } else {
             // Klavye KAPALI
             chatContainer.style.top = '80px';
@@ -91,16 +86,16 @@ function setupChatKeyboardHandling() {
                 chatTop: chatContainer.style.top
             });
             
-            // Klavye kapandığında scroll (layout değişikliği sonrası)
-            setTimeout(scrollChatToBottom, 200);
+            // Klavye kapandığında scroll (Reverse chat: üste scroll)
+            setTimeout(scrollChatToTop, 150);
         }
     }
     
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             handleKeyboardResize();
-            // Visual viewport resize sonrası scroll (iOS/Android için kritik)
-            setTimeout(scrollChatToBottom, 100);
+            // Visual viewport resize sonrası scroll (Reverse chat)
+            setTimeout(scrollChatToTop, 50);
         });
         window.visualViewport.addEventListener('scroll', handleKeyboardResize);
     }
@@ -108,9 +103,9 @@ function setupChatKeyboardHandling() {
     if (messageInput) {
         messageInput.addEventListener('focus', () => {
             setTimeout(handleKeyboardResize, 100);
-            // iOS için focus sonrası ek scroll
+            // iOS için focus sonrası ek scroll (Reverse chat)
             if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                setTimeout(scrollChatToBottom, 300);
+                setTimeout(scrollChatToTop, 200);
             }
         });
         messageInput.addEventListener('blur', () => {
@@ -121,14 +116,14 @@ function setupChatKeyboardHandling() {
     // İlk çalıştırma
     handleKeyboardResize();
     
-    // Input focus/click olduğunda scroll
+    // Input focus/click olduğunda scroll (Reverse chat)
     if (messageInput) {
-        messageInput.addEventListener('focus', scrollChatToBottom);
-        messageInput.addEventListener('click', scrollChatToBottom);
+        messageInput.addEventListener('focus', scrollChatToTop);
+        messageInput.addEventListener('click', scrollChatToTop);
     }
 
-    // Chat section ilk açıldığında scroll
-    setTimeout(scrollChatToBottom, 500);
+    // Chat section ilk açıldığında scroll (Reverse chat)
+    setTimeout(scrollChatToTop, 300);
 }
 
 // Chat section açıldığında otomatik başlat
@@ -152,8 +147,8 @@ function setupChatSectionObserver() {
             const observer = new MutationObserver(() => {
                 if (chatSection.classList.contains('active')) {
                     console.log('🎹 Chat section activated, scrolling to bottom');
-                    // Section aktif olduğunda scroll (iOS/Android için optimize)
-                    setTimeout(scrollChatToBottom, /iPad|iPhone|iPod/.test(navigator.userAgent) ? 400 : 300);
+                    // Section aktif olduğunda scroll (Reverse chat)
+                    setTimeout(scrollChatToTop, /iPad|iPhone|iPod/.test(navigator.userAgent) ? 300 : 200);
                 }
             });
             observer.observe(chatSection, { attributes: true, attributeFilter: ['class'] });
