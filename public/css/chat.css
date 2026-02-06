@@ -27,6 +27,20 @@
         @supports (-webkit-touch-callout: none) {
             .chat-container {
                 -webkit-overflow-scrolling: touch;
+                /* iOS için scroll momentum */
+                scroll-behavior: smooth;
+                /* iOS Safari'de scroll sıçramalarını engelle */
+                overscroll-behavior: none;
+            }
+        }
+        
+        /* Android için scroll optimizasyonu */
+        @media screen and (max-width: 768px) {
+            .chat-container {
+                /* Android için smooth scroll */
+                scroll-behavior: smooth;
+                /* Android'de scroll bounce'u engelle */
+                overscroll-behavior-y: contain;
             }
         }
         

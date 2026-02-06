@@ -103,12 +103,23 @@
                         isKeyboardVisible = true;
                         document.body.classList.add('keyboard-visible');
                         
-                        // Chat container'ı scroll'u en alta getir
+                        // Chat container'ı scroll'u en alta getir (iOS/Android optimize)
                         setTimeout(() => {
                             if (chatContainer) {
-                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                                // iOS için scrollIntoView, Android için scrollTop
+                                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                                    const messages = chatContainer.querySelectorAll('.message');
+                                    if (messages.length > 0) {
+                                        messages[messages.length - 1].scrollIntoView({ 
+                                            behavior: 'smooth', 
+                                            block: 'end' 
+                                        });
+                                    }
+                                } else {
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
                             }
-                        }, 100);
+                        }, /iPad|iPhone|iPod/.test(navigator.userAgent) ? 200 : 100);
                         
                     } else if (heightDifference <= 150 && isKeyboardVisible) {
                         // Klavye kapandı
@@ -126,7 +137,16 @@
                         setTimeout(() => {
                             handleKeyboardVisibility();
                             if (chatContainer) {
-                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                                // iOS için optimize scroll
+                                const messages = chatContainer.querySelectorAll('.message');
+                                if (messages.length > 0) {
+                                    messages[messages.length - 1].scrollIntoView({ 
+                                        behavior: 'smooth', 
+                                        block: 'end' 
+                                    });
+                                } else {
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
                             }
                         }, 300);
                     });
@@ -155,12 +175,20 @@
                                 chatContainer.style.bottom = `${keyboardHeight + 143}px`;
                             }
                             
-                            // Chat container'ı scroll'u en alta getir
+                            // Chat container'ı scroll'u en alta getir (iOS/Android optimize)
                             setTimeout(() => {
                                 if (chatContainer) {
-                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                    const messages = chatContainer.querySelectorAll('.message');
+                                    if (messages.length > 0) {
+                                        messages[messages.length - 1].scrollIntoView({ 
+                                            behavior: 'smooth', 
+                                            block: 'end' 
+                                        });
+                                    } else {
+                                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                                    }
                                 }
-                            }, 100);
+                            }, 150);
                         } else {
                             document.body.classList.remove('keyboard-visible');
                             isKeyboardVisible = false;

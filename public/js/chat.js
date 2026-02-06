@@ -4,13 +4,32 @@ function scrollChatToBottom() {
     if (!chatContainer) return;
     
     setTimeout(() => {
-        const allMessages = chatContainer.querySelectorAll('.message');
-        if (allMessages.length > 0) {
-            const lastMessage = allMessages[allMessages.length - 1];
-            const targetScroll = (lastMessage.offsetTop + lastMessage.offsetHeight) - chatContainer.clientHeight + 20;
-            chatContainer.scrollTop = targetScroll;
+        // iOS ve Android için optimize edilmiş scroll
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        
+        if (isIOS) {
+            // iOS için: scrollIntoView daha güvenilir
+            const allMessages = chatContainer.querySelectorAll('.message');
+            if (allMessages.length > 0) {
+                const lastMessage = allMessages[allMessages.length - 1];
+                lastMessage.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'end',
+                    inline: 'nearest'
+                });
+            }
+        } else if (isAndroid) {
+            // Android için: scrollTop daha hızlı
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } else {
+            // Desktop/diğer platformlar için hybrid yaklaşım
+            const allMessages = chatContainer.querySelectorAll('.message');
+            if (allMessages.length > 0) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
         }
-    }, 50);
+    }, isIOS ? 100 : 50); // iOS için biraz daha fazla gecikme
 }
 
 function setupChatKeyboardHandling() {
@@ -54,6 +73,9 @@ function setupChatKeyboardHandling() {
                 availableHeight,
                 chatTop: chatContainer.style.top
             });
+            
+            // Klavye açıldığında scroll (iOS/Android için optimize)
+            setTimeout(scrollChatToBottom, 150);
         } else {
             // Klavye KAPALI
             chatContainer.style.top = '80px';
@@ -68,17 +90,32 @@ function setupChatKeyboardHandling() {
                 availableHeight,
                 chatTop: chatContainer.style.top
             });
+            
+            // Klavye kapandığında scroll (layout değişikliği sonrası)
+            setTimeout(scrollChatToBottom, 200);
         }
     }
     
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', handleKeyboardResize);
+        window.visualViewport.addEventListener('resize', () => {
+            handleKeyboardResize();
+            // Visual viewport resize sonrası scroll (iOS/Android için kritik)
+            setTimeout(scrollChatToBottom, 100);
+        });
         window.visualViewport.addEventListener('scroll', handleKeyboardResize);
     }
     
     if (messageInput) {
-        messageInput.addEventListener('focus', () => setTimeout(handleKeyboardResize, 100));
-        messageInput.addEventListener('blur', () => setTimeout(handleKeyboardResize, 300));
+        messageInput.addEventListener('focus', () => {
+            setTimeout(handleKeyboardResize, 100);
+            // iOS için focus sonrası ek scroll
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                setTimeout(scrollChatToBottom, 300);
+            }
+        });
+        messageInput.addEventListener('blur', () => {
+            setTimeout(handleKeyboardResize, 300);
+        });
     }
     
     // İlk çalıştırma
@@ -96,8 +133,30 @@ function setupChatKeyboardHandling() {
 
 // Chat section açıldığında otomatik başlat
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupChatKeyboardHandling);
+    document.addEventListener('DOMContentLoaded', () => {
+        setupChatKeyboardHandling();
+        setupChatSectionObserver();
+    });
 } else {
     // Sayfa zaten yüklenmişse hemen çalıştır
     setupChatKeyboardHandling();
+    setupChatSectionObserver();
+}
+
+// Chat section aktivasyon kontrolü
+function setupChatSectionObserver() {
+    // Section loader için gecikme
+    setTimeout(() => {
+        const chatSection = document.getElementById('chatSection');
+        if (chatSection) {
+            const observer = new MutationObserver(() => {
+                if (chatSection.classList.contains('active')) {
+                    console.log('🎹 Chat section activated, scrolling to bottom');
+                    // Section aktif olduğunda scroll (iOS/Android için optimize)
+                    setTimeout(scrollChatToBottom, /iPad|iPhone|iPod/.test(navigator.userAgent) ? 400 : 300);
+                }
+            });
+            observer.observe(chatSection, { attributes: true, attributeFilter: ['class'] });
+        }
+    }, 1000); // Section loader'ın çalışması için bekle
 }
