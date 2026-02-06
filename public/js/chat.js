@@ -1,4 +1,18 @@
 // Chat klavye yönetimi - Optimized versiyon
+function scrollChatToBottom() {
+    const chatContainer = document.getElementById('chatContainer');
+    if (!chatContainer) return;
+    
+    setTimeout(() => {
+        const allMessages = chatContainer.querySelectorAll('.message');
+        if (allMessages.length > 0) {
+            const lastMessage = allMessages[allMessages.length - 1];
+            const targetScroll = (lastMessage.offsetTop + lastMessage.offsetHeight) - chatContainer.clientHeight + 20;
+            chatContainer.scrollTop = targetScroll;
+        }
+    }, 50);
+}
+
 function setupChatKeyboardHandling() {
     const chatContainer = document.getElementById('chatContainer');
     const inputContainer = document.querySelector('.input-container');
@@ -69,6 +83,15 @@ function setupChatKeyboardHandling() {
     
     // İlk çalıştırma
     handleKeyboardResize();
+    
+    // Input focus/click olduğunda scroll
+    if (messageInput) {
+        messageInput.addEventListener('focus', scrollChatToBottom);
+        messageInput.addEventListener('click', scrollChatToBottom);
+    }
+
+    // Chat section ilk açıldığında scroll
+    setTimeout(scrollChatToBottom, 500);
 }
 
 // Chat section açıldığında otomatik başlat
