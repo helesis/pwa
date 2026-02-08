@@ -3448,13 +3448,17 @@
             content.innerHTML = '';
             indicators.innerHTML = '';
             
+            // Store all media for navigation
+            window.currentStoryMedia = allMedia;
+            window.currentMediaIndex = 0;
+            
             allMedia.forEach((media, index) => {
                 // Create media item
                 const item = document.createElement('div');
                 item.className = 'story-viewer-item';
                 
                 if (media.type === 'video') {
-                    item.innerHTML = `<video controls autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"><source src="${media.url}" type="video/mp4"></video>`;
+                    item.innerHTML = `<video controls autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain;"><source src="${media.url}" type="video/mp4"></video>`;
                 } else {
                     item.innerHTML = `<img src="${media.url}" alt="Story ${index + 1}" style="width: 100%; height: 100%; object-fit: contain;">`;
                 }
@@ -3464,7 +3468,6 @@
                 // Create indicator
                 const indicator = document.createElement('div');
                 indicator.className = 'story-indicator';
-                if (index === 0) indicator.classList.add('active');
                 
                 // Instagram tarzı indicator stili
                 indicator.style.cssText = `
@@ -3475,10 +3478,6 @@
                     margin: 0 2px !important;
                     transition: background 0.3s ease !important;
                 `;
-                
-                if (index === 0) {
-                    indicator.style.background = 'rgba(255, 255, 255, 0.9) !important';
-                }
                 
                 indicators.appendChild(indicator);
             });
@@ -3583,8 +3582,9 @@
             
             console.log('✅ Story tam ekran yapıldı! Instagram tarzı görünüm aktif.');
             
-            // Start auto-advance timer for first story
+            // Initialize progress bars and start timer
             setTimeout(() => {
+                updateProgressBars();
                 startStoryTimer();
             }, 100); // Small delay to ensure everything is rendered
             
@@ -3594,15 +3594,13 @@
                 const newIndex = Math.round(content.scrollLeft / window.innerWidth);
                 if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allMedia.length) {
                     currentIndex = newIndex;
-                    indicators.querySelectorAll('.story-indicator').forEach((ind, idx) => {
-                        ind.classList.toggle('active', idx === currentIndex);
-                        // Instagram tarzı indicator renklendirme
-                        if (idx === currentIndex) {
-                            ind.style.background = 'rgba(255, 255, 255, 0.9) !important';
-                        } else {
-                            ind.style.background = 'rgba(255, 255, 255, 0.3) !important';
-                        }
-                    });
+                    window.currentMediaIndex = currentIndex;
+                    updateProgressBars();
+                    
+                    // Restart timer for new story
+                    if (!storyPaused) {
+                        startStoryTimer();
+                    }
                 }
             };
             content.addEventListener('scroll', updateIndicators);
@@ -3611,7 +3609,7 @@
             let storyTimer = null;
             let storyPaused = false;
             let storyStartTime = Date.now();
-            const STORY_DURATION = 5000; // 5 seconds per story
+            const STORY_DURATION = 10000; // 10 seconds per story
             
             // Touch/swipe support with improved handling
             let touchStartX = 0;
@@ -3715,14 +3713,29 @@
                 clearStoryTimer();
                 
                 const currentMedia = allMedia[currentIndex];
-                let duration = STORY_DURATION;
+                if (!currentMedia) return;
+                
+                let duration = STORY_DURATION; // 10 seconds for images
                 
                 // Check if current media is video and get its duration
                 const currentStoryItem = document.querySelectorAll('.story-viewer-item')[currentIndex];
                 const video = currentStoryItem?.querySelector('video');
                 
-                if (video && !isNaN(video.duration) && video.duration > 0) {
-                    duration = Math.max(video.duration * 1000, STORY_DURATION); // Use video duration or minimum 5s
+                if (video && currentMedia.type === 'video') {
+                    // For videos, wait for loadedmetadata to get duration
+                    if (!isNaN(video.duration) && video.duration > 0) {
+                        duration = Math.max(video.duration * 1000, STORY_DURATION); // Use video duration or minimum 10s
+                    } else {
+                        // If duration not available yet, wait for it
+                        video.addEventListener('loadedmetadata', () => {
+                            if (!isNaN(video.duration) && video.duration > 0) {
+                                duration = Math.max(video.duration * 1000, STORY_DURATION);
+                                // Restart timer with correct duration
+                                startStoryTimer();
+                            }
+                        }, { once: true });
+                        duration = STORY_DURATION; // Fallback
+                    }
                 }
                 
                 storyStartTime = Date.now();
@@ -3757,30 +3770,51 @@
                 const indicator = indicators.querySelectorAll('.story-indicator')[index];
                 if (!indicator) return;
                 
-                // Reset and animate progress
-                indicator.style.transition = 'none';
-                indicator.style.background = 'rgba(255, 255, 255, 0.3)';
+                // Create a progress fill element
+                let progressFill = indicator.querySelector('.progress-fill');
+                if (!progressFill) {
+                    progressFill = document.createElement('div');
+                    progressFill.className = 'progress-fill';
+                    progressFill.style.cssText = `
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        height: 100% !important;
+                        background: rgba(255, 255, 255, 0.9) !important;
+                        border-radius: 2px !important;
+                        width: 0% !important;
+                        transition: width ${duration}ms linear !important;
+                    `;
+                    indicator.style.position = 'relative';
+                    indicator.appendChild(progressFill);
+                }
+                
+                // Reset progress
+                progressFill.style.width = '0%';
+                progressFill.style.transition = 'none';
                 
                 // Force reflow
-                indicator.offsetHeight;
+                progressFill.offsetHeight;
                 
                 // Start animation
-                indicator.style.transition = `background ${duration}ms linear`;
-                indicator.style.background = 'rgba(255, 255, 255, 0.9)';
+                progressFill.style.transition = `width ${duration}ms linear`;
+                progressFill.style.width = '100%';
             }
             
             function updateProgressBars() {
-                indicators.querySelectorAll('.story-indicator').forEach((ind, idx) => {
+                const indicatorElements = indicators.querySelectorAll('.story-indicator');
+                indicatorElements.forEach((ind, idx) => {
                     if (idx < currentIndex) {
-                        // Completed stories
-                        ind.style.background = 'rgba(255, 255, 255, 0.9)';
+                        // Completed stories - full white
+                        ind.style.background = 'rgba(255, 255, 255, 0.9) !important';
                         ind.style.transition = 'none';
                     } else if (idx === currentIndex) {
                         // Current story - will be animated by animateProgressBar
-                        ind.style.background = 'rgba(255, 255, 255, 0.3)';
+                        ind.style.background = 'rgba(255, 255, 255, 0.3) !important';
+                        ind.style.transition = 'none';
                     } else {
-                        // Future stories
-                        ind.style.background = 'rgba(255, 255, 255, 0.3)';
+                        // Future stories - dim white
+                        ind.style.background = 'rgba(255, 255, 255, 0.3) !important';
                         ind.style.transition = 'none';
                     }
                 });
@@ -3803,6 +3837,15 @@
                     video.pause();
                     video.currentTime = 0;
                 });
+                
+                // Clean up progress fills
+                indicators.querySelectorAll('.progress-fill').forEach(fill => {
+                    fill.remove();
+                });
+                
+                // Reset global variables
+                window.currentStoryMedia = null;
+                window.currentMediaIndex = 0;
             }
             
             // Close on click outside or close button
