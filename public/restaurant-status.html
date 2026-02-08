@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1A4D6D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Restoran Durumu">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>Restoran Durumu - Voyage Sorgun</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --voyage-navy: #1A4D6D;
+            --voyage-blue: #2C6E8F;
+            --voyage-light-blue: #E8F1F5;
+            --voyage-gold: #C9A961;
+            --text-dark: #2C3E50;
+            --text-light: #6C757D;
+            --border: #dee2e6;
+            --bg-light: #f8f9fa;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--voyage-navy) 0%, var(--voyage-blue) 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(26, 77, 109, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .date-input {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .date-input::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .btn-today {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-today:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .date-info {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 20px;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        /* Restaurant Cards */
+        .restaurant-card {
+            position: relative;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+            padding: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .restaurant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 24px rgba(16, 24, 40, 0.12);
+        }
+
+        .restaurant-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .restaurant-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .restaurant-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--card-color-light, #f4f7f9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--card-color, var(--voyage-blue));
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-low {
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+        }
+
+        .status-medium {
+            background: rgba(255, 193, 7, 0.15);
+            color: #e6a800;
+        }
+
+        .status-high {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
+        }
+
+        .restaurant-card-body {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 18px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        /* Progress Ring */
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring .progress-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .progress-ring .progress-value span {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .progress-ring .progress-value small {
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Capacity Info */
+        .capacity-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .capacity-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .capacity-row strong {
+            color: var(--text-dark);
+            font-size: 16px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--danger);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        /* Table Distribution */
+        .table-distribution {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .table-distribution-card {
+            background: var(--card-color-light, #f4f7f9);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .table-distribution-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .table-progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .table-progress-bar span {
+            display: block;
+            height: 100%;
+            background: var(--card-color, var(--voyage-blue));
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        /* Loading & Empty States */
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+            font-size: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Color Themes */
+        .theme-blue {
+            --card-color: #2c6e8f;
+            --card-color-light: rgba(44, 110, 143, 0.12);
+        }
+
+        .theme-purple {
+            --card-color: #8b5cf6;
+            --card-color-light: rgba(139, 92, 246, 0.12);
+        }
+
+        .theme-green {
+            --card-color: #10b981;
+            --card-color-light: rgba(16, 185, 129, 0.12);
+        }
+
+        .theme-orange {
+            --card-color: #f59e0b;
+            --card-color-light: rgba(245, 158, 11, 0.12);
+        }
+
+        .theme-red {
+            --card-color: #ef4444;
+            --card-color-light: rgba(239, 68, 68, 0.12);
+        }
+
+        .theme-teal {
+            --card-color: #14b8a6;
+            --card-color-light: rgba(20, 184, 166, 0.12);
+        }
+
+        .theme-gold {
+            --card-color: #c9a961;
+            --card-color-light: rgba(201, 169, 97, 0.12);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 16px;
+            }
+
+            .header-title {
+                font-size: 20px;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .restaurant-card-body {
+                grid-template-columns: 1fr;
+                justify-items: center;
+                text-align: center;
+                gap: 16px;
+            }
+
+            .capacity-info {
+                align-items: center;
+                width: 100%;
+            }
+
+            .capacity-row {
+                width: 100%;
+                max-width: 200px;
+            }
+
+            .progress-ring {
+                width: 100px;
+                height: 100px;
+            }
+
+            .progress-ring .progress-value span {
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-controls {
+                justify-content: center;
+            }
+
+            .restaurant-card {
+                padding: 16px;
+            }
+        }
+
+        /* Icon Styles */
+        .icon {
+            width: 1em;
+            height: 1em;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .icon-sm { width: 16px; height: 16px; }
+        .icon-md { width: 20px; height: 20px; }
+        .icon-lg { width: 24px; height: 24px; }
+        .icon-xl { width: 32px; height: 32px; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i data-lucide="utensils-crossed" class="icon icon-lg"></i>
+                Restoran Durumu
+            </div>
+            <div class="header-controls">
+                <input type="date" id="dashboard-date" class="date-input">
+                <button id="today-btn" class="btn-today">Bugün</button>
+                <div id="date-info" class="date-info">Bugün</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div id="dashboard-grid" class="dashboard-grid">
+            <div class="loading">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let dashboardInterval = null;
+        let dashboardInitialized = false;
+
+        // Utility functions
+        function formatDateInput(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function isSameDate(dateStr, compareDate) {
+            return dateStr === formatDateInput(compareDate);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text ?? '';
+            return div.innerHTML;
+        }
+
+        function getDashboardStatus(percentage) {
+            if (percentage >= 80) {
+                return { label: 'Yüksek', className: 'status-high' };
+            }
+            if (percentage >= 55) {
+                return { label: 'Orta', className: 'status-medium' };
+            }
+            return { label: 'Düşük', className: 'status-low' };
+        }
+
+        function getDashboardTheme(index) {
+            const themes = [
+                'theme-blue',
+                'theme-purple',
+                'theme-green',
+                'theme-orange',
+                'theme-red',
+                'theme-teal',
+                'theme-gold'
+            ];
+            return themes[index % themes.length];
+        }
+
+        function calculateTotalCapacity(tableSetup) {
+            if (!Array.isArray(tableSetup)) return 0;
+            return tableSetup.reduce((total, table) => {
+                const capacity = parseInt(table.capacity, 10) || 0;
+                const count = parseInt(table.count, 10) || 0;
+                return total + (capacity * count);
+            }, 0);
+        }
+
+        function calculateTableBreakdown(tableSetup, totalPax) {
+            if (!Array.isArray(tableSetup)) return [];
+            const validTables = tableSetup
+                .map(table => ({
+                    capacity: parseInt(table.capacity, 10) || 0,
+                    count: parseInt(table.count, 10) || 0
+                }))
+                .filter(table => table.capacity > 0 && table.count > 0);
+
+            const totalCapacity = calculateTotalCapacity(validTables);
+            if (totalCapacity === 0) return [];
+
+            return validTables.map(table => {
+                const tableCapacity = table.capacity * table.count;
+                const allocated = Math.round((tableCapacity / totalCapacity) * totalPax);
+                const occupancy = Math.min(100, Math.round((allocated / tableCapacity) * 100));
+                return {
+                    label: `${table.capacity} Kişilik (${table.count} adet)`,
+                    occupancy,
+                    usedTables: Math.ceil(allocated / table.capacity),
+                    totalTables: table.count,
+                    remainingCapacity: Math.max(0, tableCapacity - allocated)
+                };
+            });
+        }
+
+        function getSimulatedPercentage(dateStr, restaurantId) {
+            const hash = (dateStr + restaurantId).split('').reduce((a, b) => {
+                a = ((a << 5) - a) + b.charCodeAt(0);
+                return a & a;
+            }, 0);
+            const normalized = Math.abs(hash) % 76;
+            return 20 + normalized;
+        }
+
+        function updateDateInfo(dateStr) {
+            const infoEl = document.getElementById('date-info');
+            if (!infoEl || !dateStr) return;
+
+            const today = new Date();
+            const selectedDate = new Date(dateStr);
+            const diffMs = selectedDate.setHours(0, 0, 0, 0) - today.setHours(0, 0, 0, 0);
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) {
+                infoEl.textContent = 'Bugün';
+            } else if (diffDays === 1) {
+                infoEl.textContent = 'Yarın';
+            } else if (diffDays === -1) {
+                infoEl.textContent = 'Dün';
+            } else if (diffDays > 0) {
+                infoEl.textContent = `${diffDays} gün sonra`;
+            } else {
+                infoEl.textContent = `${Math.abs(diffDays)} gün önce`;
+            }
+        }
+
+        // API functions
+        async function fetchRestaurants() {
+            try {
+                const response = await fetch('/admin/restaurants', {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const result = await response.json();
+                return result && result.success ? result.data : [];
+            } catch (error) {
+                console.error('Error fetching restaurants:', error);
+                return [];
+            }
+        }
+
+        async function fetchAvailability(dateStr, restaurants) {
+            if (!restaurants.length) return {};
+            const restaurantIds = restaurants.map(r => r.id).join(',');
+            try {
+                const response = await fetch(`/api/restaurants/check-availability?date=${dateStr}&restaurant_ids=${restaurantIds}`);
+                if (!response.ok) {
+                    throw new Error('Doluluk verileri yüklenemedi');
+                }
+                const result = await response.json();
+                return result && result.success ? result.data : {};
+            } catch (error) {
+                console.error('Error fetching availability:', error);
+                return {};
+            }
+        }
+
+        // Main render function
+        async function renderDashboard(dateStr) {
+            const gridEl = document.getElementById('dashboard-grid');
+            if (!gridEl) return;
+
+            gridEl.innerHTML = '<div class="loading">Yükleniyor...</div>';
+            
+            const restaurants = await fetchRestaurants();
+            const isToday = isSameDate(dateStr, new Date());
+            const isMobile = window.innerWidth <= 768;
+            
+            let availability = {};
+            if (isToday) {
+                availability = await fetchAvailability(dateStr, restaurants);
+            }
+
+            if (!restaurants.length) {
+                gridEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🍽️</div>
+                        <p>Henüz restoran eklenmemiş</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter restaurants for mobile
+            let filteredRestaurants = restaurants;
+            if (isMobile && isToday) {
+                // Show only restaurants with reservations on mobile
+                filteredRestaurants = restaurants.filter(restaurant => {
+                    const availabilityInfo = availability[restaurant.id];
+                    return availabilityInfo && availabilityInfo.reserved_pax > 0;
+                });
+                
+                // If no restaurants have reservations, show all
+                if (filteredRestaurants.length === 0) {
+                    filteredRestaurants = restaurants;
+                }
+            }
+
+            gridEl.innerHTML = filteredRestaurants.map((restaurant, index) => {
+                const rules = restaurant.rules_json || {};
+                const tableSetup = rules.table_setup || [];
+                const totalCapacity = calculateTotalCapacity(tableSetup);
+                
+                let totalPax, percentage;
+                if (isToday) {
+                    const availabilityInfo = availability[restaurant.id] || {};
+                    totalPax = availabilityInfo.reserved_pax || 0;
+                } else {
+                    const simulatedPercentage = getSimulatedPercentage(dateStr, restaurant.id);
+                    totalPax = Math.round((simulatedPercentage / 100) * totalCapacity);
+                }
+                
+                percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
+                const status = getDashboardStatus(percentage);
+                const breakdown = calculateTableBreakdown(tableSetup, totalPax);
+                const available = Math.max(0, totalCapacity - totalPax);
+                const themeClass = getDashboardTheme(index);
+                
+                const circumference = 2 * Math.PI * 50;
+                const dashOffset = circumference - (percentage / 100) * circumference;
+
+                return `
+                    <div class="restaurant-card ${themeClass}" data-restaurant-id="${restaurant.id}">
+                        <div class="restaurant-card-header">
+                            <div class="restaurant-card-title">
+                                <div class="restaurant-icon">
+                                    <i data-lucide="utensils-crossed" class="icon icon-md"></i>
+                                </div>
+                                <span>${escapeHtml(restaurant.name)}</span>
+                            </div>
+                            <span class="status-badge ${status.className}" data-role="status">${status.label}</span>
+                        </div>
+                        <div class="restaurant-card-body">
+                            <div class="progress-ring">
+                                <svg width="120" height="120">
+                                    <circle cx="60" cy="60" r="50" stroke="#edf2f6" stroke-width="12" fill="none"></circle>
+                                    <circle cx="60" cy="60" r="50" stroke="var(--card-color, #2c6e8f)" stroke-width="12" fill="none"
+                                        stroke-linecap="round"
+                                        stroke-dasharray="${circumference}"
+                                        stroke-dashoffset="${dashOffset}"
+                                        style="transition: stroke-dashoffset 1s ease;"
+                                        data-role="progress-ring" data-circumference="${circumference}">
+                                    </circle>
+                                </svg>
+                                <div class="progress-value">
+                                    <span data-role="percent">%${percentage}</span>
+                                    <small>Doluluk</small>
+                                </div>
+                            </div>
+                            <div class="capacity-info">
+                                <div class="capacity-row">
+                                    <span>Toplam Kapasite</span>
+                                    <strong data-role="total-capacity">${totalCapacity}</strong>
+                                </div>
+                                <div class="capacity-row">
+                                    <span>Rezerve</span>
+                                    <strong data-role="reserved">${totalPax}</strong>
+                                </div>
+                                <div class="capacity-row">
+                                    <span>Boş</span>
+                                    <strong data-role="available">${available}</strong>
+                                </div>
+                                ${isToday ? `
+                                    <div class="live-indicator">
+                                        <span class="live-dot"></span>
+                                        Live
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="table-distribution">
+                            ${breakdown.length ? breakdown.map((item, idx) => `
+                                <div class="table-distribution-card" data-role="table-card">
+                                    <div class="table-distribution-header">
+                                        <span data-role="table-label">${item.label}</span>
+                                        <span data-role="table-percent">${item.usedTables}/${item.totalTables}</span>
+                                    </div>
+                                    <div class="table-progress-bar">
+                                        <span style="width: ${item.occupancy}%" data-role="table-progress"></span>
+                                    </div>
+                                </div>
+                            `).join('') : `
+                                <div class="table-distribution-card">
+                                    <div class="table-distribution-header">
+                                        <span>Masa kurulumu yok</span>
+                                        <span>%0</span>
+                                    </div>
+                                    <div class="table-progress-bar">
+                                        <span style="width: 0%"></span>
+                                    </div>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        // Update stats without full rerender
+        async function updateDashboardStats(dateStr) {
+            const gridEl = document.getElementById('dashboard-grid');
+            if (!gridEl) return;
+
+            const restaurants = await fetchRestaurants();
+            const availability = await fetchAvailability(dateStr, restaurants);
+
+            for (const restaurant of restaurants) {
+                const card = gridEl.querySelector(`[data-restaurant-id="${restaurant.id}"]`);
+                if (!card) {
+                    await renderDashboard(dateStr);
+                    return;
+                }
+
+                const availabilityInfo = availability[restaurant.id] || {};
+                const rules = restaurant.rules_json || {};
+                const tableSetup = rules.table_setup || [];
+                const totalCapacity = calculateTotalCapacity(tableSetup);
+                const totalPax = availabilityInfo.reserved_pax || 0;
+                const availableCapacity = Math.max(0, totalCapacity - totalPax);
+                const percentage = totalCapacity > 0 ? Math.min(100, Math.round((totalPax / totalCapacity) * 100)) : 0;
+                const status = getDashboardStatus(percentage);
+                const breakdown = calculateTableBreakdown(tableSetup, totalPax);
+
+                // Update status badge
+                const statusEl = card.querySelector('[data-role="status"]');
+                if (statusEl) {
+                    statusEl.textContent = status.label;
+                    statusEl.classList.remove('status-low', 'status-medium', 'status-high');
+                    statusEl.classList.add(status.className);
+                }
+
+                // Update percentage
+                const percentEl = card.querySelector('[data-role="percent"]');
+                if (percentEl) {
+                    percentEl.textContent = `%${percentage}`;
+                }
+
+                // Update capacity numbers
+                const totalEl = card.querySelector('[data-role="total-capacity"]');
+                if (totalEl) totalEl.textContent = totalCapacity;
+
+                const reservedEl = card.querySelector('[data-role="reserved"]');
+                if (reservedEl) reservedEl.textContent = totalPax;
+
+                const availableEl = card.querySelector('[data-role="available"]');
+                if (availableEl) availableEl.textContent = availableCapacity;
+
+                // Update progress ring
+                const ring = card.querySelector('[data-role="progress-ring"]');
+                if (ring) {
+                    const circumference = parseFloat(ring.dataset.circumference) || (2 * Math.PI * 50);
+                    const dashOffset = circumference - (percentage / 100) * circumference;
+                    ring.style.strokeDashoffset = dashOffset;
+                }
+
+                // Update table breakdown
+                const tableCards = card.querySelectorAll('[data-role="table-card"]');
+                if (tableCards.length !== breakdown.length) {
+                    await renderDashboard(dateStr);
+                    return;
+                }
+
+                breakdown.forEach((item, idx) => {
+                    const tableCard = tableCards[idx];
+                    if (!tableCard) return;
+                    
+                    const labelEl = tableCard.querySelector('[data-role="table-label"]');
+                    const percentValueEl = tableCard.querySelector('[data-role="table-percent"]');
+                    const barEl = tableCard.querySelector('[data-role="table-progress"]');
+                    
+                    if (labelEl) labelEl.textContent = item.label;
+                    if (percentValueEl) percentValueEl.textContent = `${item.usedTables}/${item.totalTables}`;
+                    if (barEl) barEl.style.width = `${item.occupancy}%`;
+                });
+            }
+        }
+
+        // Interval management
+        function manageDashboardInterval(dateStr) {
+            if (dashboardInterval) {
+                clearInterval(dashboardInterval);
+                dashboardInterval = null;
+            }
+            if (isSameDate(dateStr, new Date())) {
+                dashboardInterval = setInterval(() => {
+                    updateDashboardStats(dateStr);
+                }, 60000); // Update every minute
+            }
+        }
+
+        // Initialize dashboard
+        function initDashboard() {
+            const dateInput = document.getElementById('dashboard-date');
+            const todayBtn = document.getElementById('today-btn');
+            
+            if (!dateInput || !todayBtn) return;
+
+            if (!dashboardInitialized) {
+                dateInput.addEventListener('change', () => {
+                    updateDateInfo(dateInput.value);
+                    renderDashboard(dateInput.value);
+                    manageDashboardInterval(dateInput.value);
+                });
+                
+                todayBtn.addEventListener('click', () => {
+                    dateInput.value = formatDateInput(new Date());
+                    updateDateInfo(dateInput.value);
+                    renderDashboard(dateInput.value);
+                    manageDashboardInterval(dateInput.value);
+                });
+                
+                dashboardInitialized = true;
+            }
+
+            if (!dateInput.value) {
+                dateInput.value = formatDateInput(new Date());
+            }
+            updateDateInfo(dateInput.value);
+            renderDashboard(dateInput.value);
+            manageDashboardInterval(dateInput.value);
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+            
+            // Initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        });
+
+        // Handle window resize for mobile filtering
+        window.addEventListener('resize', () => {
+            const dateInput = document.getElementById('dashboard-date');
+            if (dateInput && dateInput.value) {
+                renderDashboard(dateInput.value);
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (dashboardInterval) {
+                clearInterval(dashboardInterval);
+            }
+        });
+    </script>
+</body>
+</html>
