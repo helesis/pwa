@@ -3949,6 +3949,7 @@
                 // Hide modal
                 modal.style.display = 'none';
                 document.body.style.overflow = '';
+                document.body.classList.remove('story-viewer-open');
                 
                 // Remove event listeners
                 modal.removeEventListener('click', handleStoryTap);
