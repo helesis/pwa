@@ -3189,9 +3189,67 @@
                                     <td><strong>${a.title || '-'}</strong></td>
                                     <td>${a.icon || '-'}</td>
                                     <td>
-                                        ${a.image_url ? `<img src="${a.image_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" alt="Image">` : ''}
-                                        ${a.video_url ? `<video src="${a.video_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" controls></video>` : ''}
-                                        ${!a.image_url && !a.video_url ? '<span style="color: #999;">Yok</span>' : ''}
+                                        ${(() => {
+                                            const mediaItems = [];
+                                            
+                                            // Collect all media URLs
+                                            if (a.image_url) {
+                                                if (typeof a.image_url === 'string' && a.image_url.startsWith('[')) {
+                                                    // JSON array format
+                                                    try {
+                                                        const urls = JSON.parse(a.image_url);
+                                                        urls.forEach(url => mediaItems.push({type: 'image', url}));
+                                                    } catch (e) {
+                                                        mediaItems.push({type: 'image', url: a.image_url});
+                                                    }
+                                                } else {
+                                                    // Single URL
+                                                    mediaItems.push({type: 'image', url: a.image_url});
+                                                }
+                                            }
+                                            
+                                            if (a.video_url) {
+                                                if (typeof a.video_url === 'string' && a.video_url.startsWith('[')) {
+                                                    // JSON array format
+                                                    try {
+                                                        const urls = JSON.parse(a.video_url);
+                                                        urls.forEach(url => mediaItems.push({type: 'video', url}));
+                                                    } catch (e) {
+                                                        mediaItems.push({type: 'video', url: a.video_url});
+                                                    }
+                                                } else {
+                                                    // Single URL
+                                                    mediaItems.push({type: 'video', url: a.video_url});
+                                                }
+                                            }
+                                            
+                                            if (mediaItems.length === 0) {
+                                                return '<span style="color: #999;">Yok</span>';
+                                            }
+                                            
+                                            // Create grid layout for multiple media
+                                            if (mediaItems.length === 1) {
+                                                const item = mediaItems[0];
+                                                return item.type === 'image' 
+                                                    ? `<img src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" alt="Image">`
+                                                    : `<video src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" controls></video>`;
+                                            } else {
+                                                // Multiple media - create grid
+                                                const gridSize = Math.min(mediaItems.length, 4); // Max 4 items in grid
+                                                const itemSize = gridSize <= 2 ? '28px' : '18px';
+                                                
+                                                return `
+                                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; width: 60px; height: 60px;">
+                                                        ${mediaItems.slice(0, 4).map(item => 
+                                                            item.type === 'image'
+                                                                ? `<img src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px;" alt="Image">`
+                                                                : `<video src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px;" muted></video>`
+                                                        ).join('')}
+                                                        ${mediaItems.length > 4 ? `<div style="width: ${itemSize}; height: ${itemSize}; background: rgba(0,0,0,0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold;">+${mediaItems.length - 4}</div>` : ''}
+                                                    </div>
+                                                `;
+                                            }
+                                        })()}
                                     </td>
                                     <td>${a.display_order || 0}</td>
                                     <td>${a.is_active ? '<span style="color: green;">✓ Aktif</span>' : '<span style="color: red;">✗ Pasif</span>'}</td>
@@ -3360,16 +3418,19 @@
             content.innerHTML = `
                 <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Fotoğraf veya Video Yükle</div>
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Fotoğraf Dosyası</label>
-                    <input type="file" id="activity-image-file" accept="image/*" class="form-input" style="padding: 8px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Fotoğraf Dosyaları (Birden fazla seçebilirsiniz)</label>
+                    <input type="file" id="activity-image-file" accept="image/*" multiple class="form-input" style="padding: 8px;">
                     <div style="font-size: 12px; color: #667781; margin-top: 4px;">veya</div>
                     <input type="text" id="activity-image-url" class="form-input" placeholder="Fotoğraf URL (opsiyonel)" style="margin-top: 8px;">
                 </div>
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Video Dosyası</label>
-                    <input type="file" id="activity-video-file" accept="video/*" class="form-input" style="padding: 8px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Video Dosyaları (Birden fazla seçebilirsiniz)</label>
+                    <input type="file" id="activity-video-file" accept="video/*" multiple class="form-input" style="padding: 8px;">
                     <div style="font-size: 12px; color: #667781; margin-top: 4px;">veya</div>
                     <input type="text" id="activity-video-url" class="form-input" placeholder="Video URL (opsiyonel)" style="margin-top: 8px;">
+                </div>
+                <div style="margin-bottom: 12px; padding: 8px; background: #f0f8ff; border-radius: 6px; font-size: 12px; color: #0066cc;">
+                    💡 İpucu: Birden fazla dosya seçerek aynı anda yükleyebilirsiniz. Yüklenen tüm medya dosyaları hikaye listesinde grid şeklinde görünecektir.
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button id="cancel-upload-btn" class="btn btn-secondary" style="flex: 1;">İptal</button>
@@ -3382,51 +3443,96 @@
             
             document.getElementById('cancel-upload-btn').onclick = () => modal.remove();
             document.getElementById('upload-activity-btn').onclick = async () => {
-                const imageFile = document.getElementById('activity-image-file').files[0];
-                const videoFile = document.getElementById('activity-video-file').files[0];
+                const imageFiles = document.getElementById('activity-image-file').files;
+                const videoFiles = document.getElementById('activity-video-file').files;
                 const imageUrl = document.getElementById('activity-image-url').value.trim();
                 const videoUrl = document.getElementById('activity-video-url').value.trim();
                 
-                if (!imageFile && !videoFile && !imageUrl && !videoUrl) {
-                    alert('Fotoğraf veya video dosyası/URL\'si gerekli');
+                if (imageFiles.length === 0 && videoFiles.length === 0 && !imageUrl && !videoUrl) {
+                    alert('En az bir fotoğraf, video dosyası veya URL gerekli');
                     return;
                 }
                 
                 try {
-                    const formData = new FormData();
+                    let uploadCount = 0;
+                    let totalFiles = imageFiles.length + videoFiles.length + (imageUrl ? 1 : 0) + (videoUrl ? 1 : 0);
                     
-                    // Add file if selected
-                    if (imageFile) {
-                        formData.append('file', imageFile);
-                    } else if (videoFile) {
-                        formData.append('file', videoFile);
+                    // Upload progress indicator
+                    const uploadBtn = document.getElementById('upload-activity-btn');
+                    uploadBtn.textContent = 'Yükleniyor...';
+                    uploadBtn.disabled = true;
+                    
+                    // Upload image files
+                    for (let i = 0; i < imageFiles.length; i++) {
+                        const formData = new FormData();
+                        formData.append('file', imageFiles[i]);
+                        
+                        const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload-files`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: 'Failed to upload' }));
+                            throw new Error(errorData.error || `Failed to upload image ${i + 1}`);
+                        }
+                        
+                        uploadCount++;
+                        uploadBtn.textContent = `Yükleniyor... ${uploadCount}/${totalFiles}`;
                     }
                     
-                    // Add URL if provided (as fallback or alternative)
-                    if (imageUrl && !imageFile) {
-                        formData.append('image_url', imageUrl);
-                    }
-                    if (videoUrl && !videoFile) {
-                        formData.append('video_url', videoUrl);
+                    // Upload video files
+                    for (let i = 0; i < videoFiles.length; i++) {
+                        const formData = new FormData();
+                        formData.append('file', videoFiles[i]);
+                        
+                        const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload-files`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: 'Failed to upload' }));
+                            throw new Error(errorData.error || `Failed to upload video ${i + 1}`);
+                        }
+                        
+                        uploadCount++;
+                        uploadBtn.textContent = `Yükleniyor... ${uploadCount}/${totalFiles}`;
                     }
                     
-                    const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload-files`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        body: formData
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ error: 'Failed to upload' }));
-                        throw new Error(errorData.error || 'Failed to upload');
+                    // Upload URLs if provided
+                    if (imageUrl || videoUrl) {
+                        const formData = new FormData();
+                        if (imageUrl) formData.append('image_url', imageUrl);
+                        if (videoUrl) formData.append('video_url', videoUrl);
+                        
+                        const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload-files`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: 'Failed to upload' }));
+                            throw new Error(errorData.error || 'Failed to upload URLs');
+                        }
                     }
                     
                     modal.remove();
                     loadActivities();
-                    showAlert('Medya başarıyla yüklendi', 'success');
+                    showAlert(`${uploadCount} medya dosyası başarıyla yüklendi`, 'success');
                 } catch (error) {
                     console.error('Error uploading:', error);
                     alert('Yükleme başarısız: ' + error.message);
+                    
+                    // Reset button
+                    const uploadBtn = document.getElementById('upload-activity-btn');
+                    if (uploadBtn) {
+                        uploadBtn.textContent = 'Yükle';
+                        uploadBtn.disabled = false;
+                    }
                 }
             };
         }

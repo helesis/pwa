@@ -4160,10 +4160,40 @@ app.post('/api/admin/story-tray-items/:id/upload', upload.single('file'), async 
 app.post('/api/admin/story-tray-items/:id/upload-files', uploadFiles.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
-    let image_url = req.body.image_url;
-    let video_url = req.body.video_url;
     
-    // If file was uploaded, use the file path
+    // Get current story item
+    const currentResult = await retryQuery(() =>
+      pool.query('SELECT image_url, video_url FROM story_tray_items WHERE id = $1', [id])
+    );
+    
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    const currentItem = currentResult.rows[0];
+    let imageUrls = [];
+    let videoUrls = [];
+    
+    // Parse existing URLs
+    if (currentItem.image_url) {
+      try {
+        imageUrls = Array.isArray(currentItem.image_url) ? currentItem.image_url : 
+                   (currentItem.image_url.startsWith('[') ? JSON.parse(currentItem.image_url) : [currentItem.image_url]);
+      } catch (e) {
+        imageUrls = [currentItem.image_url];
+      }
+    }
+    
+    if (currentItem.video_url) {
+      try {
+        videoUrls = Array.isArray(currentItem.video_url) ? currentItem.video_url : 
+                   (currentItem.video_url.startsWith('[') ? JSON.parse(currentItem.video_url) : [currentItem.video_url]);
+      } catch (e) {
+        videoUrls = [currentItem.video_url];
+      }
+    }
+    
+    // If file was uploaded, add to appropriate array
     if (req.file) {
       const fileUrl = getFileUrl(req, req.file.filename, true);
       const filePath = join(filesDir, req.file.filename);
@@ -4179,13 +4209,25 @@ app.post('/api/admin/story-tray-items/:id/upload-files', uploadFiles.single('fil
       }
       
       if (req.file.mimetype.startsWith('image/')) {
-        image_url = fileUrl;
-        video_url = null; // Clear video if image is uploaded
+        imageUrls.push(fileUrl);
       } else if (req.file.mimetype.startsWith('video/')) {
-        video_url = fileUrl;
-        image_url = null; // Clear image if video is uploaded
+        videoUrls.push(fileUrl);
       }
     }
+    
+    // Handle URL inputs from form
+    if (req.body.image_url && req.body.image_url.trim()) {
+      imageUrls.push(req.body.image_url.trim());
+    }
+    if (req.body.video_url && req.body.video_url.trim()) {
+      videoUrls.push(req.body.video_url.trim());
+    }
+    
+    // Convert to JSON strings (or single URL if only one)
+    const finalImageUrl = imageUrls.length === 0 ? null : 
+                         imageUrls.length === 1 ? imageUrls[0] : JSON.stringify(imageUrls);
+    const finalVideoUrl = videoUrls.length === 0 ? null : 
+                         videoUrls.length === 1 ? videoUrls[0] : JSON.stringify(videoUrls);
     
     const result = await retryQuery(() =>
       pool.query(`
@@ -4193,14 +4235,18 @@ app.post('/api/admin/story-tray-items/:id/upload-files', uploadFiles.single('fil
         SET image_url = $1, video_url = $2, updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
         RETURNING *
-      `, [image_url || null, video_url || null, id])
+      `, [finalImageUrl, finalVideoUrl, id])
     );
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Story tray item not found' });
-    }
-    
-    res.json({ success: true, file_url: req.file ? getFileUrl(req, req.file.filename, true) : null, data: result.rows[0] });
+    res.json({ 
+      success: true, 
+      file_url: req.file ? getFileUrl(req, req.file.filename, true) : null, 
+      data: result.rows[0],
+      media_count: {
+        images: imageUrls.length,
+        videos: videoUrls.length
+      }
+    });
   } catch (error) {
     console.error('Error uploading file for story tray item:', error);
     res.status(500).json({ error: 'Failed to upload file' });
@@ -7712,6 +7758,78 @@ app.get('/api/spa/requests/all', async (req, res) => {
 // This ensures the server only starts after the database is ready
 
 // Graceful shutdown
+// Remove specific media from story tray item
+app.delete('/api/admin/story-tray-items/:id/media', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { media_url } = req.body;
+    
+    if (!media_url) {
+      return res.status(400).json({ error: 'Media URL is required' });
+    }
+    
+    // Get current story item
+    const currentResult = await retryQuery(() =>
+      pool.query('SELECT image_url, video_url FROM story_tray_items WHERE id = $1', [id])
+    );
+    
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    const currentItem = currentResult.rows[0];
+    let imageUrls = [];
+    let videoUrls = [];
+    
+    // Parse existing URLs
+    if (currentItem.image_url) {
+      try {
+        imageUrls = Array.isArray(currentItem.image_url) ? currentItem.image_url : 
+                   (currentItem.image_url.startsWith('[') ? JSON.parse(currentItem.image_url) : [currentItem.image_url]);
+      } catch (e) {
+        imageUrls = [currentItem.image_url];
+      }
+    }
+    
+    if (currentItem.video_url) {
+      try {
+        videoUrls = Array.isArray(currentItem.video_url) ? currentItem.video_url : 
+                   (currentItem.video_url.startsWith('[') ? JSON.parse(currentItem.video_url) : [currentItem.video_url]);
+      } catch (e) {
+        videoUrls = [currentItem.video_url];
+      }
+    }
+    
+    // Remove the specified URL
+    imageUrls = imageUrls.filter(url => url !== media_url);
+    videoUrls = videoUrls.filter(url => url !== media_url);
+    
+    // Convert back to appropriate format
+    const finalImageUrl = imageUrls.length === 0 ? null : 
+                         imageUrls.length === 1 ? imageUrls[0] : JSON.stringify(imageUrls);
+    const finalVideoUrl = videoUrls.length === 0 ? null : 
+                         videoUrls.length === 1 ? videoUrls[0] : JSON.stringify(videoUrls);
+    
+    const result = await retryQuery(() =>
+      pool.query(`
+        UPDATE story_tray_items
+        SET image_url = $1, video_url = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING *
+      `, [finalImageUrl, finalVideoUrl, id])
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Media removed successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error removing media:', error);
+    res.status(500).json({ error: 'Failed to remove media' });
+  }
+});
+
 // General upload endpoint for files
 app.post('/api/admin/upload-files', uploadFiles.single('file'), async (req, res) => {
   try {
