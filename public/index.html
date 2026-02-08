@@ -3545,6 +3545,25 @@
                         height: 100% !important;
                         object-fit: cover !important;
                     `;
+                    
+                    // Auto-play video and handle ended event
+                    video.muted = true; // Required for autoplay
+                    video.play().catch(e => console.log('Video autoplay failed:', e));
+                    
+                    video.addEventListener('ended', () => {
+                        if (!storyPaused) {
+                            nextStory();
+                        }
+                    });
+                    
+                    // Pause/resume story timer when video is paused/played
+                    video.addEventListener('pause', () => {
+                        if (!video.ended) pauseStoryTimer();
+                    });
+                    
+                    video.addEventListener('play', () => {
+                        if (!video.ended) resumeStoryTimer();
+                    });
                 }
             });
             
@@ -3563,6 +3582,11 @@
             }
             
             console.log('✅ Story tam ekran yapıldı! Instagram tarzı görünüm aktif.');
+            
+            // Start auto-advance timer for first story
+            setTimeout(() => {
+                startStoryTimer();
+            }, 100); // Small delay to ensure everything is rendered
             
             // Handle scroll to update indicators
             let currentIndex = 0;
@@ -3583,41 +3607,202 @@
             };
             content.addEventListener('scroll', updateIndicators);
             
-            // Touch/swipe support
+            // Story auto-advance variables
+            let storyTimer = null;
+            let storyPaused = false;
+            let storyStartTime = Date.now();
+            const STORY_DURATION = 5000; // 5 seconds per story
+            
+            // Touch/swipe support with improved handling
             let touchStartX = 0;
             let touchEndX = 0;
+            let touchStartY = 0;
+            let touchEndY = 0;
+            let isSwiping = false;
             
             content.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-            });
+                touchStartX = e.changedTouches[0].clientX;
+                touchStartY = e.changedTouches[0].clientY;
+                isSwiping = false;
+                
+                // Pause auto-advance on touch
+                pauseStoryTimer();
+            }, { passive: true });
+            
+            content.addEventListener('touchmove', (e) => {
+                if (!isSwiping) {
+                    const diffX = Math.abs(e.changedTouches[0].clientX - touchStartX);
+                    const diffY = Math.abs(e.changedTouches[0].clientY - touchStartY);
+                    
+                    // Determine if this is a horizontal swipe
+                    if (diffX > diffY && diffX > 10) {
+                        isSwiping = true;
+                        e.preventDefault(); // Prevent scroll
+                    }
+                }
+            }, { passive: false });
             
             content.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipe();
-            });
+                touchEndX = e.changedTouches[0].clientX;
+                touchEndY = e.changedTouches[0].clientY;
+                
+                if (isSwiping) {
+                    handleSwipe();
+                } else {
+                    // Resume auto-advance after short delay
+                    setTimeout(() => {
+                        if (!storyPaused) {
+                            startStoryTimer();
+                        }
+                    }, 500);
+                }
+            }, { passive: true });
             
             function handleSwipe() {
                 const swipeThreshold = 50;
-                const diff = touchStartX - touchEndX;
+                const diffX = touchStartX - touchEndX;
+                const diffY = Math.abs(touchStartY - touchEndY);
                 
-                if (Math.abs(diff) > swipeThreshold) {
-                    if (diff > 0 && currentIndex < allMedia.length - 1) {
-                        // Swipe left - next
-                        currentIndex++;
-                        content.scrollTo({
-                            left: currentIndex * window.innerWidth,
-                            behavior: 'smooth'
-                        });
-                    } else if (diff < 0 && currentIndex > 0) {
-                        // Swipe right - previous
-                        currentIndex--;
-                        content.scrollTo({
-                            left: currentIndex * window.innerWidth,
-                            behavior: 'smooth'
-                        });
+                // Only handle horizontal swipes
+                if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > diffY) {
+                    if (diffX > 0 && currentIndex < allMedia.length - 1) {
+                        // Swipe left - next story
+                        nextStory();
+                    } else if (diffX < 0 && currentIndex > 0) {
+                        // Swipe right - previous story
+                        previousStory();
+                    } else if (diffX > 0 && currentIndex >= allMedia.length - 1) {
+                        // Last story, close viewer
+                        closeStoryViewer();
                     }
-                    updateIndicators();
                 }
+            }
+            
+            function nextStory() {
+                if (currentIndex < allMedia.length - 1) {
+                    currentIndex++;
+                    updateStoryView();
+                    startStoryTimer();
+                } else {
+                    // Auto-close after last story
+                    closeStoryViewer();
+                }
+            }
+            
+            function previousStory() {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateStoryView();
+                    startStoryTimer();
+                }
+            }
+            
+            function updateStoryView() {
+                // Scroll to current story
+                content.scrollTo({
+                    left: currentIndex * window.innerWidth,
+                    behavior: 'smooth'
+                });
+                
+                // Update indicators
+                updateIndicators();
+                
+                // Update progress bars
+                updateProgressBars();
+            }
+            
+            function startStoryTimer() {
+                clearStoryTimer();
+                
+                const currentMedia = allMedia[currentIndex];
+                let duration = STORY_DURATION;
+                
+                // Check if current media is video and get its duration
+                const currentStoryItem = document.querySelectorAll('.story-viewer-item')[currentIndex];
+                const video = currentStoryItem?.querySelector('video');
+                
+                if (video && !isNaN(video.duration) && video.duration > 0) {
+                    duration = Math.max(video.duration * 1000, STORY_DURATION); // Use video duration or minimum 5s
+                }
+                
+                storyStartTime = Date.now();
+                storyTimer = setTimeout(() => {
+                    if (!storyPaused) {
+                        nextStory();
+                    }
+                }, duration);
+                
+                // Start progress bar animation
+                animateProgressBar(currentIndex, duration);
+            }
+            
+            function pauseStoryTimer() {
+                storyPaused = true;
+                clearStoryTimer();
+            }
+            
+            function resumeStoryTimer() {
+                storyPaused = false;
+                startStoryTimer();
+            }
+            
+            function clearStoryTimer() {
+                if (storyTimer) {
+                    clearTimeout(storyTimer);
+                    storyTimer = null;
+                }
+            }
+            
+            function animateProgressBar(index, duration) {
+                const indicator = indicators.querySelectorAll('.story-indicator')[index];
+                if (!indicator) return;
+                
+                // Reset and animate progress
+                indicator.style.transition = 'none';
+                indicator.style.background = 'rgba(255, 255, 255, 0.3)';
+                
+                // Force reflow
+                indicator.offsetHeight;
+                
+                // Start animation
+                indicator.style.transition = `background ${duration}ms linear`;
+                indicator.style.background = 'rgba(255, 255, 255, 0.9)';
+            }
+            
+            function updateProgressBars() {
+                indicators.querySelectorAll('.story-indicator').forEach((ind, idx) => {
+                    if (idx < currentIndex) {
+                        // Completed stories
+                        ind.style.background = 'rgba(255, 255, 255, 0.9)';
+                        ind.style.transition = 'none';
+                    } else if (idx === currentIndex) {
+                        // Current story - will be animated by animateProgressBar
+                        ind.style.background = 'rgba(255, 255, 255, 0.3)';
+                    } else {
+                        // Future stories
+                        ind.style.background = 'rgba(255, 255, 255, 0.3)';
+                        ind.style.transition = 'none';
+                    }
+                });
+            }
+            
+            // Close story viewer function
+            function closeStoryViewer() {
+                clearStoryTimer();
+                storyPaused = false;
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+                
+                // Remove event listeners
+                if (typeof keyHandler !== 'undefined') {
+                    document.removeEventListener('keydown', keyHandler);
+                }
+                
+                // Stop all videos
+                modal.querySelectorAll('video').forEach(video => {
+                    video.pause();
+                    video.currentTime = 0;
+                });
             }
             
             // Close on click outside or close button
@@ -3654,14 +3839,39 @@
                 };
             }
             
-            // Close on escape key
-            const escapeHandler = (e) => {
-                if (e.key === 'Escape') {
+            // Click outside to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
                     closeStoryViewer();
-                    document.removeEventListener('keydown', escapeHandler);
                 }
             };
-            document.addEventListener('keydown', escapeHandler);
+            
+            // Keyboard navigation
+            const keyHandler = (e) => {
+                switch(e.key) {
+                    case 'Escape':
+                        closeStoryViewer();
+                        document.removeEventListener('keydown', keyHandler);
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        previousStory();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        nextStory();
+                        break;
+                    case ' ': // Space bar to pause/resume
+                        e.preventDefault();
+                        if (storyPaused) {
+                            resumeStoryTimer();
+                        } else {
+                            pauseStoryTimer();
+                        }
+                        break;
+                }
+            };
+            document.addEventListener('keydown', keyHandler);
         }
         
         function closeStoryViewer() {

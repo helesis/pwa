@@ -3254,28 +3254,28 @@
                                                 return '<span style="color: #999;">Yok</span>';
                                             }
                                             
-                                            // Create grid layout for multiple media
-                                            if (mediaItems.length === 1) {
-                                                const item = mediaItems[0];
-                                                return item.type === 'image' 
-                                                    ? `<img src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;" alt="Image" onclick="openMediaViewer('${item.url}', '${item.type}')">`
-                                                    : `<video src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;" muted onclick="openMediaViewer('${item.url}', '${item.type}')"></video>`;
-                                            } else {
-                                                // Multiple media - create grid
-                                                const gridSize = Math.min(mediaItems.length, 4); // Max 4 items in grid
-                                                const itemSize = gridSize <= 2 ? '28px' : '18px';
-                                                
-                                                return `
-                                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; width: 60px; height: 60px;">
-                                                        ${mediaItems.slice(0, 4).map((item, idx) => 
-                                                            item.type === 'image'
-                                                                ? `<img src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px; cursor: pointer;" alt="Image" onclick="openMediaViewer('${item.url}', '${item.type}')">`
-                                                                : `<video src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px; cursor: pointer;" muted onclick="openMediaViewer('${item.url}', '${item.type}')"></video>`
-                                                        ).join('')}
-                                                        ${mediaItems.length > 4 ? `<div style="width: ${itemSize}; height: ${itemSize}; background: rgba(0,0,0,0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold; cursor: pointer;" onclick="showAllMediaGrid(${a.id}, ${JSON.stringify(mediaItems).replace(/"/g, '&quot;')})">+${mediaItems.length - 4}</div>` : ''}
-                                                    </div>
-                                                `;
+                                            // Create horizontal layout for media thumbnails
+                                            if (mediaItems.length === 0) {
+                                                return '<span style="color: #999;">Yok</span>';
                                             }
+                                            
+                                            return `
+                                                <div style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 300px;">
+                                                    ${mediaItems.map((item, idx) => `
+                                                        <div style="position: relative; display: inline-block;">
+                                                            ${item.type === 'image' 
+                                                                ? `<img src="${item.url}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer;" alt="Image" onclick="openMediaViewer('${item.url}', '${item.type}')">`
+                                                                : `<video src="${item.url}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer;" muted onclick="openMediaViewer('${item.url}', '${item.type}')"></video>`
+                                                            }
+                                                            <button 
+                                                                onclick="deleteMediaFromStory(${a.id}, '${item.url.replace(/'/g, "\\'")}', event)" 
+                                                                style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; background: #ff4444; color: white; border: none; font-size: 12px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
+                                                                title="Bu medyayı sil"
+                                                            >×</button>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            `;
                                         })()}
                                     </td>
                                     <td>${a.display_order || 0}</td>
@@ -5949,6 +5949,87 @@
                 modal.style.display = 'none';
                 document.body.style.overflow = '';
             }
+        }
+
+        async function deleteMediaFromStory(storyId, mediaUrl, event) {
+            event.stopPropagation();
+            
+            if (!confirm('Bu medyayı silmek istediğinize emin misiniz?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/story-tray-items/${storyId}/media`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ media_url: mediaUrl })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Medya silinirken hata oluştu');
+                }
+                
+                // Refresh the activities list
+                loadActivities();
+                
+                showNotification('Medya başarıyla silindi', 'success');
+            } catch (error) {
+                console.error('Error deleting media:', error);
+                showNotification('Medya silinirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                transition: all 0.3s ease;
+                transform: translateX(100%);
+            `;
+            
+            // Set background color based on type
+            switch(type) {
+                case 'success':
+                    notification.style.background = '#10b981';
+                    break;
+                case 'error':
+                    notification.style.background = '#ef4444';
+                    break;
+                case 'warning':
+                    notification.style.background = '#f59e0b';
+                    break;
+                default:
+                    notification.style.background = '#3b82f6';
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 10);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
         }
     </script>
 </body>
