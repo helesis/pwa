@@ -3582,35 +3582,140 @@
             
             console.log('✅ Story tam ekran yapıldı! Instagram tarzı görünüm aktif.');
             
-            // Initialize progress bars and start timer
-            setTimeout(() => {
+            // Setup Story Interactions
+            function setupStoryInteractions() {
+                // Calculate current index from scroll position
+                const scrollLeft = content.scrollLeft;
+                const itemWidth = window.innerWidth;
+                currentStoryIndex = Math.round(scrollLeft / itemWidth);
+                
+                // Initialize progress bars
+                initializeStoryProgressBars();
                 updateProgressBars();
-                startStoryTimer();
-            }, 100); // Small delay to ensure everything is rendered
+                startStoryProgress();
+                
+                // Add event listeners
+                modal.addEventListener('click', handleStoryTap);
+                
+                // Close button
+                const closeBtn = document.getElementById('storyViewerClose');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        closeStoryViewer();
+                    });
+                }
+            }
+
+            // Initialize story interactions
+            setTimeout(setupStoryInteractions, 100);
             
-            // Handle scroll to update indicators
-            let currentIndex = 0;
-            const updateIndicators = () => {
+            // Instagram-style Progress Bar System
+            function initializeStoryProgressBars() {
+                const indicators = document.getElementById('storyViewerIndicators');
+                const storyCount = allMedia.length;
+                
+                indicators.innerHTML = '';
+                indicators.style.cssText = `
+                    display: flex !important;
+                    gap: 4px !important;
+                    padding: 12px !important;
+                    position: absolute !important;
+                    top: env(safe-area-inset-top, 0) !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    z-index: 100001 !important;
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent) !important;
+                `;
+                
+                for (let i = 0; i < storyCount; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'story-progress-bar';
+                    bar.innerHTML = '<div class="story-progress-fill"></div>';
+                    bar.style.cssText = `
+                        flex: 1 !important;
+                        height: 2px !important;
+                        background: rgba(255,255,255,0.3) !important;
+                        border-radius: 2px !important;
+                        overflow: hidden !important;
+                    `;
+                    
+                    const fill = bar.querySelector('.story-progress-fill');
+                    fill.style.cssText = `
+                        width: 0% !important;
+                        height: 100% !important;
+                        background: #fff !important;
+                        transition: none !important;
+                    `;
+                    
+                    indicators.appendChild(bar);
+                }
+            }
+
+            // Handle scroll to update story index
+            const updateStoryIndex = () => {
                 const newIndex = Math.round(content.scrollLeft / window.innerWidth);
-                if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allMedia.length) {
-                    currentIndex = newIndex;
-                    window.currentMediaIndex = currentIndex;
+                if (newIndex !== currentStoryIndex && newIndex >= 0 && newIndex < allMedia.length) {
+                    currentStoryIndex = newIndex;
                     updateProgressBars();
                     
-                    // Restart timer for new story
+                    // Restart progress for new story
                     if (!storyPaused) {
-                        startStoryTimer();
+                        startStoryProgress();
                     }
                 }
             };
-            content.addEventListener('scroll', updateIndicators);
+            content.addEventListener('scroll', updateStoryIndex);
             
-            // Story auto-advance variables
-            let storyTimer = null;
+            // Instagram-style story variables
+            let currentStoryIndex = 0;
+            let progressTimer = null;
             let storyPaused = false;
-            let storyStartTime = Date.now();
-            const STORY_DURATION = 10000; // 10 seconds per story
+            const STORY_DURATION = 5000; // 5 seconds per story
             
+            // Auto-Advance Timer Functions
+            function startStoryProgress() {
+                stopStoryProgress();
+                
+                const progressBars = document.querySelectorAll('.story-progress-bar');
+                if (!progressBars[currentStoryIndex]) return;
+                
+                const fill = progressBars[currentStoryIndex].querySelector('.story-progress-fill');
+                fill.style.transition = `width ${STORY_DURATION}ms linear`;
+                fill.style.width = '100%';
+                
+                progressTimer = setTimeout(() => {
+                    nextStory();
+                }, STORY_DURATION);
+            }
+
+            function stopStoryProgress() {
+                if (progressTimer) {
+                    clearTimeout(progressTimer);
+                    progressTimer = null;
+                }
+            }
+
+            function updateProgressBars() {
+                const progressBars = document.querySelectorAll('.story-progress-bar');
+                progressBars.forEach((bar, i) => {
+                    const fill = bar.querySelector('.story-progress-fill');
+                    if (i < currentStoryIndex) {
+                        // Completed stories
+                        fill.style.transition = 'none';
+                        fill.style.width = '100%';
+                    } else if (i === currentStoryIndex) {
+                        // Current story - reset to 0
+                        fill.style.transition = 'none';
+                        fill.style.width = '0%';
+                    } else {
+                        // Future stories
+                        fill.style.transition = 'none';
+                        fill.style.width = '0%';
+                    }
+                });
+            }
+
             // Touch/swipe support with improved handling
             let touchStartX = 0;
             let touchEndX = 0;
@@ -3618,13 +3723,42 @@
             let touchEndY = 0;
             let isSwiping = false;
             
+            // Story Navigation Functions
+            function nextStory() {
+                if (currentStoryIndex < allMedia.length - 1) {
+                    currentStoryIndex++;
+                    scrollToStory(currentStoryIndex);
+                    updateProgressBars();
+                    startStoryProgress();
+                } else {
+                    closeStoryViewer();
+                }
+            }
+
+            function prevStory() {
+                if (currentStoryIndex > 0) {
+                    currentStoryIndex--;
+                    scrollToStory(currentStoryIndex);
+                    updateProgressBars();
+                    startStoryProgress();
+                }
+            }
+
+            function scrollToStory(index) {
+                const itemWidth = window.innerWidth;
+                content.scrollTo({
+                    left: index * itemWidth,
+                    behavior: 'smooth'
+                });
+            }
+
             content.addEventListener('touchstart', (e) => {
                 touchStartX = e.changedTouches[0].clientX;
                 touchStartY = e.changedTouches[0].clientY;
                 isSwiping = false;
                 
                 // Pause auto-advance on touch
-                pauseStoryTimer();
+                stopStoryProgress();
             }, { passive: true });
             
             content.addEventListener('touchmove', (e) => {
@@ -3640,6 +3774,31 @@
                 }
             }, { passive: false });
             
+            // Tap Navigation (Sol/Sağ)
+            function handleStoryTap(e) {
+                const modal = document.getElementById('storyViewerModal');
+                const rect = modal.getBoundingClientRect();
+                const tapX = e.clientX || e.touches?.[0]?.clientX;
+                const tapPosition = tapX / rect.width;
+                
+                if (tapPosition < 0.3) {
+                    // Sol taraf - önceki story
+                    prevStory();
+                } else if (tapPosition > 0.7) {
+                    // Sağ taraf - sonraki story
+                    nextStory();
+                } else {
+                    // Orta - pause/resume
+                    if (storyPaused) {
+                        storyPaused = false;
+                        startStoryProgress();
+                    } else {
+                        storyPaused = true;
+                        stopStoryProgress();
+                    }
+                }
+            }
+
             content.addEventListener('touchend', (e) => {
                 touchEndX = e.changedTouches[0].clientX;
                 touchEndY = e.changedTouches[0].clientY;
@@ -3650,12 +3809,13 @@
                     // Resume auto-advance after short delay
                     setTimeout(() => {
                         if (!storyPaused) {
-                            startStoryTimer();
+                            startStoryProgress();
                         }
-                    }, 500);
+                    }, 200);
                 }
             }, { passive: true });
             
+            // Swipe Navigation
             function handleSwipe() {
                 const swipeThreshold = 50;
                 const diffX = touchStartX - touchEndX;
@@ -3663,171 +3823,35 @@
                 
                 // Only handle horizontal swipes
                 if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > diffY) {
-                    if (diffX > 0 && currentIndex < allMedia.length - 1) {
+                    if (diffX > 0) {
                         // Swipe left - next story
                         nextStory();
-                    } else if (diffX < 0 && currentIndex > 0) {
+                    } else {
                         // Swipe right - previous story
-                        previousStory();
-                    } else if (diffX > 0 && currentIndex >= allMedia.length - 1) {
-                        // Last story, close viewer
-                        closeStoryViewer();
+                        prevStory();
                     }
-                }
-            }
-            
-            function nextStory() {
-                if (currentIndex < allMedia.length - 1) {
-                    currentIndex++;
-                    updateStoryView();
-                    startStoryTimer();
                 } else {
-                    // Auto-close after last story
-                    closeStoryViewer();
-                }
-            }
-            
-            function previousStory() {
-                if (currentIndex > 0) {
-                    currentIndex--;
-                    updateStoryView();
-                    startStoryTimer();
-                }
-            }
-            
-            function updateStoryView() {
-                // Scroll to current story
-                content.scrollTo({
-                    left: currentIndex * window.innerWidth,
-                    behavior: 'smooth'
-                });
-                
-                // Update indicators
-                updateIndicators();
-                
-                // Update progress bars
-                updateProgressBars();
-            }
-            
-            function startStoryTimer() {
-                clearStoryTimer();
-                
-                const currentMedia = allMedia[currentIndex];
-                if (!currentMedia) return;
-                
-                let duration = STORY_DURATION; // 10 seconds for images
-                
-                // Check if current media is video and get its duration
-                const currentStoryItem = document.querySelectorAll('.story-viewer-item')[currentIndex];
-                const video = currentStoryItem?.querySelector('video');
-                
-                if (video && currentMedia.type === 'video') {
-                    // For videos, wait for loadedmetadata to get duration
-                    if (!isNaN(video.duration) && video.duration > 0) {
-                        duration = Math.max(video.duration * 1000, STORY_DURATION); // Use video duration or minimum 10s
-                    } else {
-                        // If duration not available yet, wait for it
-                        video.addEventListener('loadedmetadata', () => {
-                            if (!isNaN(video.duration) && video.duration > 0) {
-                                duration = Math.max(video.duration * 1000, STORY_DURATION);
-                                // Restart timer with correct duration
-                                startStoryTimer();
-                            }
-                        }, { once: true });
-                        duration = STORY_DURATION; // Fallback
-                    }
-                }
-                
-                storyStartTime = Date.now();
-                storyTimer = setTimeout(() => {
+                    // Not a swipe, resume progress
                     if (!storyPaused) {
-                        nextStory();
+                        startStoryProgress();
                     }
-                }, duration);
-                
-                // Start progress bar animation
-                animateProgressBar(currentIndex, duration);
-            }
-            
-            function pauseStoryTimer() {
-                storyPaused = true;
-                clearStoryTimer();
-            }
-            
-            function resumeStoryTimer() {
-                storyPaused = false;
-                startStoryTimer();
-            }
-            
-            function clearStoryTimer() {
-                if (storyTimer) {
-                    clearTimeout(storyTimer);
-                    storyTimer = null;
                 }
             }
             
-            function animateProgressBar(index, duration) {
-                const indicator = indicators.querySelectorAll('.story-indicator')[index];
-                if (!indicator) return;
-                
-                // Create a progress fill element
-                let progressFill = indicator.querySelector('.progress-fill');
-                if (!progressFill) {
-                    progressFill = document.createElement('div');
-                    progressFill.className = 'progress-fill';
-                    progressFill.style.cssText = `
-                        position: absolute !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        height: 100% !important;
-                        background: rgba(255, 255, 255, 0.9) !important;
-                        border-radius: 2px !important;
-                        width: 0% !important;
-                        transition: width ${duration}ms linear !important;
-                    `;
-                    indicator.style.position = 'relative';
-                    indicator.appendChild(progressFill);
-                }
-                
-                // Reset progress
-                progressFill.style.width = '0%';
-                progressFill.style.transition = 'none';
-                
-                // Force reflow
-                progressFill.offsetHeight;
-                
-                // Start animation
-                progressFill.style.transition = `width ${duration}ms linear`;
-                progressFill.style.width = '100%';
-            }
-            
-            function updateProgressBars() {
-                const indicatorElements = indicators.querySelectorAll('.story-indicator');
-                indicatorElements.forEach((ind, idx) => {
-                    if (idx < currentIndex) {
-                        // Completed stories - full white
-                        ind.style.background = 'rgba(255, 255, 255, 0.9) !important';
-                        ind.style.transition = 'none';
-                    } else if (idx === currentIndex) {
-                        // Current story - will be animated by animateProgressBar
-                        ind.style.background = 'rgba(255, 255, 255, 0.3) !important';
-                        ind.style.transition = 'none';
-                    } else {
-                        // Future stories - dim white
-                        ind.style.background = 'rgba(255, 255, 255, 0.3) !important';
-                        ind.style.transition = 'none';
-                    }
-                });
-            }
             
             // Close story viewer function
             function closeStoryViewer() {
-                clearStoryTimer();
+                // Stop progress and reset
+                stopStoryProgress();
                 storyPaused = false;
+                currentStoryIndex = 0;
+                
+                // Hide modal
                 modal.style.display = 'none';
                 document.body.style.overflow = '';
                 
                 // Remove event listeners
+                modal.removeEventListener('click', handleStoryTap);
                 if (typeof keyHandler !== 'undefined') {
                     document.removeEventListener('keydown', keyHandler);
                 }
@@ -3838,10 +3862,11 @@
                     video.currentTime = 0;
                 });
                 
-                // Clean up progress fills
-                indicators.querySelectorAll('.progress-fill').forEach(fill => {
-                    fill.remove();
-                });
+                // Clean up progress bars
+                const indicators = document.getElementById('storyViewerIndicators');
+                if (indicators) {
+                    indicators.innerHTML = '';
+                }
                 
                 // Reset global variables
                 window.currentStoryMedia = null;
@@ -3898,7 +3923,7 @@
                         break;
                     case 'ArrowLeft':
                         e.preventDefault();
-                        previousStory();
+                        prevStory();
                         break;
                     case 'ArrowRight':
                         e.preventDefault();
@@ -3907,9 +3932,11 @@
                     case ' ': // Space bar to pause/resume
                         e.preventDefault();
                         if (storyPaused) {
-                            resumeStoryTimer();
+                            storyPaused = false;
+                            startStoryProgress();
                         } else {
-                            pauseStoryTimer();
+                            storyPaused = true;
+                            stopStoryProgress();
                         }
                         break;
                 }
