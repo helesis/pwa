@@ -1292,6 +1292,67 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .map-suggestions:empty {
+            display: none;
+        }
+        
+        /* Map Overlay Controls */
+        .map-overlay-controls {
+            pointer-events: none; /* Allow map interaction */
+        }
+        
+        .map-overlay-controls > * {
+            pointer-events: auto; /* Enable interaction for child elements */
+        }
+        
+        /* Quick Search Buttons */
+        .map-quick-search {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0;
+        }
+        
+        .map-chip {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1A4D6D;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .map-chip:hover {
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+        
+        .map-chip:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Special styling for room chip hover */
+        .map-chip[style*="background: rgba(26, 77, 109"]:hover {
+            background: rgba(26, 77, 109, 1) !important;
+            box-shadow: 0 4px 12px rgba(26, 77, 109, 0.3) !important;
+        }
+            flex-wrap: wrap;
+            gap: 8px;
             padding-left: 16px;
             padding-right: 16px;
         }
@@ -1440,6 +1501,10 @@
         }
 
         /* Settings Section - İlk elementin aynı yükseklikten başlaması için */
+        #settingsSection.content-section {
+            padding-bottom: calc(100px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom))); /* Extra padding for iOS scroll */
+        }
+        
         #settingsSection .settings-section {
             padding-top: 0; /* Header eklendi, padding-top gerek yok */
             padding-left: 0; /* Sağ ve sol padding kaldırıldı */
@@ -2518,9 +2583,11 @@
             flex-direction: column;
             /* Yeşil panel yüksekliği: safe-area-inset-top + 44px (status bar) */
             padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top)) + 44px + 40px); /* Story bölümüyle aynı yükseklik için 40px */
+            padding-bottom: 40px; /* Extra space at bottom for iOS */
             overflow-y: auto; /* Scroll özelliği eklendi */
             flex: 1;
-            min-height: 0; /* Flex container'da scroll için gerekli */
+            min-height: calc(100vh - 160px); /* Viewport height - header - bottom nav */
+            min-height: calc(100dvh - 160px); /* Dynamic viewport for mobile */
         }
 
         .settings-item {
