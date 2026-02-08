@@ -918,10 +918,16 @@
         });
 
         // Handle window resize for mobile filtering
+        let lastWidth = window.innerWidth;
         window.addEventListener('resize', () => {
-            const dateInput = document.getElementById('dashboard-date');
-            if (dateInput && dateInput.value) {
-                renderDashboard(dateInput.value);
+            const currentWidth = window.innerWidth;
+            // Only re-render if width changed significantly (more than 50px)
+            if (Math.abs(currentWidth - lastWidth) > 50) {
+                lastWidth = currentWidth;
+                const dateInput = document.getElementById('dashboard-date');
+                if (dateInput && dateInput.value) {
+                    renderDashboard(dateInput.value);
+                }
             }
         });
 

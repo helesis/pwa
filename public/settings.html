@@ -1255,11 +1255,11 @@
                     <label class="form-label">Fotoğraflar (URL'ler)</label>
                     <div id="restaurant-photos-preview" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;"></div>
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <input type="text" id="restaurant-photo-url-input" class="form-input" placeholder="Fotoğraf URL'si (örn: /uploads/photo.jpg)" style="flex: 1;">
+                        <input type="text" id="restaurant-photo-url-input" class="form-input" placeholder="Fotoğraf URL'si (örn: /files/photo.jpg)" style="flex: 1;">
                         <button type="button" class="btn btn-secondary" onclick="addRestaurantPhotoUrl()">URL Ekle</button>
                     </div>
                     <small style="color: var(--text-light); display: block; margin-top: 5px;">
-                        Fotoğraf URL'lerini ekleyin (örn: /uploads/photo.jpg veya https://example.com/photo.jpg)
+                        Fotoğraf URL'lerini ekleyin (örn: /files/photo.jpg veya https://example.com/photo.jpg)
                     </small>
                     <input type="hidden" id="restaurant-photos-data">
                 </div>
@@ -3410,7 +3410,7 @@
                         formData.append('video_url', videoUrl);
                     }
                     
-                    const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload`, {
+                    const response = await fetch(`/api/admin/story-tray-items/${activityId}/upload-files`, {
                         method: 'POST',
                         credentials: 'include',
                         body: formData
@@ -3669,7 +3669,7 @@
                     // For new posts, upload to a temporary endpoint or use a generic upload
                     const uploadUrl = currentPostId 
                         ? `/api/admin/info-posts/${currentPostId}/upload`
-                        : '/api/admin/upload'; // We'll need to create this or handle differently
+                        : '/api/admin/upload-files'; // We'll need to create this or handle differently
                     
                     try {
                         if (currentPostId) {
@@ -3703,7 +3703,7 @@
                     formData.append('file', file);
                     const uploadUrl = currentPostId 
                         ? `/api/admin/info-posts/${currentPostId}/upload`
-                        : '/api/admin/upload';
+                        : '/api/admin/upload-files';
                     
                     try {
                         if (currentPostId) {

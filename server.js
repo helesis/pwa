@@ -48,13 +48,19 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Increase limit for restaurant photos
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Create uploads directory if it doesn't exist
+// Create uploads directory if it doesn't exist (legacy)
 const uploadsDir = join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Multer configuration for file uploads
+// Create files directory for new persistent storage
+const filesDir = '/opt/render/project/src/public/files';
+if (!fs.existsSync(filesDir)) {
+  fs.mkdirSync(filesDir, { recursive: true });
+}
+
+// Multer configuration for file uploads (legacy uploads)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
@@ -66,8 +72,36 @@ const storage = multer.diskStorage({
   }
 });
 
+// New multer configuration for persistent files storage
+const filesStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, filesDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = file.originalname.split('.').pop();
+    cb(null, `file-${uniqueSuffix}.${ext}`);
+  }
+});
+
 const upload = multer({
   storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images and videos
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and video files are allowed'), false);
+    }
+  }
+});
+
+// New upload instance for persistent files storage
+const uploadFiles = multer({
+  storage: filesStorage,
   limits: {
     fileSize: 50 * 1024 * 1024 // 50MB limit
   },
@@ -120,6 +154,21 @@ app.get('/service-worker.js', (req, res) => {
 });
 
 app.use(express.static('public'));
+
+// Serve files from persistent storage
+app.use('/files', express.static(filesDir, {
+  setHeaders: (res, path) => {
+    // Set proper cache headers for uploaded files
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+  }
+}));
+
+// Helper function to generate HTTPS URLs
+function getFileUrl(req, filename, useFiles = true) {
+  const host = req.get('host');
+  const path = useFiles ? 'files' : 'uploads';
+  return `https://${host}/${path}/${filename}`; // Always use HTTPS
+}
 
 // PostgreSQL Database Setup
 const { Pool } = pg;
@@ -4057,7 +4106,7 @@ app.delete('/api/admin/story-tray-items/:id', async (req, res) => {
   }
 });
 
-// Upload photo/video for story tray item
+// Upload photo/video for story tray item (legacy - uploads folder)
 app.post('/api/admin/story-tray-items/:id/upload', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -4101,6 +4150,57 @@ app.post('/api/admin/story-tray-items/:id/upload', upload.single('file'), async 
     }
     
     res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error uploading file for story tray item:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+// New upload endpoint for story tray items (persistent files storage)
+app.post('/api/admin/story-tray-items/:id/upload-files', uploadFiles.single('file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    let image_url = req.body.image_url;
+    let video_url = req.body.video_url;
+    
+    // If file was uploaded, use the file path
+    if (req.file) {
+      const fileUrl = getFileUrl(req, req.file.filename, true);
+      const filePath = join(filesDir, req.file.filename);
+      
+      // Verify file was actually saved
+      if (fs.existsSync(filePath)) {
+        console.log(`✅ File uploaded to persistent storage: ${req.file.filename}`);
+        console.log(`   Path: ${filePath}`);
+        console.log(`   URL: ${fileUrl}`);
+        console.log(`   Size: ${fs.statSync(filePath).size} bytes`);
+      } else {
+        console.error(`❌ File upload failed: ${req.file.filename} not found in ${filesDir}`);
+      }
+      
+      if (req.file.mimetype.startsWith('image/')) {
+        image_url = fileUrl;
+        video_url = null; // Clear video if image is uploaded
+      } else if (req.file.mimetype.startsWith('video/')) {
+        video_url = fileUrl;
+        image_url = null; // Clear image if video is uploaded
+      }
+    }
+    
+    const result = await retryQuery(() =>
+      pool.query(`
+        UPDATE story_tray_items
+        SET image_url = $1, video_url = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING *
+      `, [image_url || null, video_url || null, id])
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Story tray item not found' });
+    }
+    
+    res.json({ success: true, file_url: req.file ? getFileUrl(req, req.file.filename, true) : null, data: result.rows[0] });
   } catch (error) {
     console.error('Error uploading file for story tray item:', error);
     res.status(500).json({ error: 'Failed to upload file' });
@@ -7612,6 +7712,93 @@ app.get('/api/spa/requests/all', async (req, res) => {
 // This ensures the server only starts after the database is ready
 
 // Graceful shutdown
+// General upload endpoint for files
+app.post('/api/admin/upload-files', uploadFiles.single('file'), async (req, res) => {
+  try {
+    if (req.file) {
+      const fileUrl = getFileUrl(req, req.file.filename, true);
+      const filePath = join(filesDir, req.file.filename);
+      
+      if (fs.existsSync(filePath)) {
+        console.log(`✅ File uploaded to persistent storage: ${req.file.filename} -> ${fileUrl}`);
+      } else {
+        console.error(`❌ File upload failed: ${req.file.filename} not found in ${filesDir}`);
+      }
+      
+      res.json({ success: true, file_url: fileUrl });
+    } else {
+      res.status(400).json({ error: 'No file uploaded' });
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed: ' + error.message });
+  }
+});
+
+// Migration endpoint to update file URLs from /uploads/ to /files/
+app.post('/api/admin/migrate-file-urls', async (req, res) => {
+  try {
+    console.log('Starting file URL migration...');
+    
+    // Update story tray items
+    const storyResult = await pool.query(`
+      UPDATE story_tray_items 
+      SET image_url = REPLACE(image_url, '/uploads/', '/files/'),
+          video_url = REPLACE(video_url, '/uploads/', '/files/')
+      WHERE image_url LIKE '%/uploads/%' OR video_url LIKE '%/uploads/%'
+      RETURNING id, image_url, video_url
+    `);
+    
+    // Update activities
+    const activitiesResult = await pool.query(`
+      UPDATE activities 
+      SET image_url = REPLACE(image_url, '/uploads/', '/files/'),
+          video_url = REPLACE(video_url, '/uploads/', '/files/')
+      WHERE image_url LIKE '%/uploads/%' OR video_url LIKE '%/uploads/%'
+      RETURNING id, image_url, video_url
+    `);
+    
+    // Update info posts (if they have media_urls as JSON)
+    const postsResult = await pool.query('SELECT id, media_urls FROM info_posts WHERE media_urls IS NOT NULL');
+    let updatedPosts = 0;
+    
+    for (const post of postsResult.rows) {
+      try {
+        if (post.media_urls && typeof post.media_urls === 'string') {
+          const mediaUrls = JSON.parse(post.media_urls);
+          const updatedUrls = mediaUrls.map(url => 
+            typeof url === 'string' ? url.replace('/uploads/', '/files/') : url
+          );
+          
+          await pool.query('UPDATE info_posts SET media_urls = $1 WHERE id = $2', 
+                          [JSON.stringify(updatedUrls), post.id]);
+          updatedPosts++;
+        }
+      } catch (e) {
+        console.error('Error updating post media URLs for post', post.id, ':', e);
+      }
+    }
+    
+    console.log(`Migration completed:
+      - Story items updated: ${storyResult.rowCount}
+      - Activities updated: ${activitiesResult.rowCount}
+      - Posts updated: ${updatedPosts}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'File URLs migrated successfully',
+      updated: {
+        story_items: storyResult.rowCount,
+        activities: activitiesResult.rowCount,
+        posts: updatedPosts
+      }
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: 'Migration failed: ' + error.message });
+  }
+});
+
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
   httpServer.close(async () => {
