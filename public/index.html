@@ -3404,7 +3404,7 @@
         }
 
         // Open activity story
-        function openActivityStory(activity) {
+        function openActivityStory(activities, startIndex = 0) {
             const modal = document.getElementById('storyViewerModal');
             const content = document.getElementById('storyViewerContent');
             const title = document.getElementById('storyViewerTitle');
@@ -3412,7 +3412,19 @@
             
             if (!modal || !content) return;
             
-            // Get all media items (images and videos combined)
+            // Store all stories and current story index
+            window.allStories = activities;
+            window.currentStoryIndex = startIndex;
+            window.currentMediaIndex = 0;
+            
+            // Get current activity
+            const activity = activities[startIndex];
+            if (!activity) {
+                alert('Story bulunamadı');
+                return;
+            }
+            
+            // Get all media items from current activity (images and videos combined)
             const imageUrls = Array.isArray(activity.image_url) ? activity.image_url : (activity.image_url ? [activity.image_url] : []);
             const videoUrls = Array.isArray(activity.video_url) ? activity.video_url : (activity.video_url ? [activity.video_url] : []);
             const allMedia = [
@@ -3424,6 +3436,9 @@
                 alert('Bu story için medya bulunamadı');
                 return;
             }
+            
+            // Store current story media
+            window.currentStoryMedia = allMedia;
             
             // Set title
             if (title) {
@@ -3448,147 +3463,116 @@
             content.innerHTML = '';
             indicators.innerHTML = '';
             
-            // Store all media for navigation
-            window.currentStoryMedia = allMedia;
-            window.currentMediaIndex = 0;
+            // Build initial content
+            rebuildStoryContent();
             
-            allMedia.forEach((media, index) => {
-                // Create media item
-                const item = document.createElement('div');
-                item.className = 'story-viewer-item';
-                
-                if (media.type === 'video') {
-                    item.innerHTML = `<video controls autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain;"><source src="${media.url}" type="video/mp4"></video>`;
-                } else {
-                    item.innerHTML = `<img src="${media.url}" alt="Story ${index + 1}" style="width: 100%; height: 100%; object-fit: contain;">`;
-                }
-                
-                content.appendChild(item);
-                
-                // Create indicator
-                const indicator = document.createElement('div');
-                indicator.className = 'story-indicator';
-                
-                // Instagram tarzı indicator stili
-                indicator.style.cssText = `
-                    height: 3px !important;
-                    background: rgba(255, 255, 255, 0.3) !important;
-                    border-radius: 2px !important;
-                    flex: 1 !important;
-                    margin: 0 2px !important;
-                    transition: background 0.3s ease !important;
-                `;
-                
-                indicators.appendChild(indicator);
-            });
-            
-            // Show modal
+            // Show modal and apply Instagram styling
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
             document.body.classList.add('story-viewer-open');
             
-            // Instagram tarzı tam ekran yapı
-            modal.style.cssText = `
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                background: #000 !important;
-                z-index: 99999 !important;
-                display: flex !important;
-                flex-direction: column !important;
-            `;
+            applyInstagramStyling();
             
-            // Content'i tam ekran yap
-            content.style.cssText = `
-                flex: 1 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                width: 100% !important;
-                height: 100% !important;
-                overflow-x: auto !important;
-                scroll-snap-type: x mandatory !important;
-                scroll-behavior: smooth !important;
-            `;
-            
-            // Story item'ları tam ekran yap
-            const storyItems = document.querySelectorAll('.story-viewer-item');
-            storyItems.forEach(item => {
-                item.style.cssText = `
+            // Apply Instagram-style full screen styling
+            function applyInstagramStyling() {
+                // Instagram tarzı tam ekran yapı
+                modal.style.cssText = `
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
                     width: 100vw !important;
                     height: 100vh !important;
+                    background: #000 !important;
+                    z-index: 99999 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                `;
+                
+                // Content'i tam ekran yap
+                content.style.cssText = `
+                    flex: 1 !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
-                    flex-shrink: 0 !important;
-                    scroll-snap-align: start !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    overflow-x: auto !important;
+                    scroll-snap-type: x mandatory !important;
+                    scroll-behavior: smooth !important;
                 `;
                 
-                // İçindeki img/video'yu da tam ekran yap
-                const img = item.querySelector('img');
-                const video = item.querySelector('video');
-                
-                if (img) {
-                    img.style.cssText = `
-                        width: 100% !important;
-                        height: 100% !important;
-                        object-fit: cover !important;
-                    `;
-                }
-                
-                if (video) {
-                    video.style.cssText = `
-                        width: 100% !important;
-                        height: 100% !important;
-                        object-fit: cover !important;
+                // Story item'ları tam ekran yap
+                const storyItems = document.querySelectorAll('.story-viewer-item');
+                storyItems.forEach(item => {
+                    item.style.cssText = `
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        flex-shrink: 0 !important;
+                        scroll-snap-align: start !important;
                     `;
                     
-                    // Auto-play video and handle ended event
-                    video.muted = true; // Required for autoplay
-                    video.play().catch(e => console.log('Video autoplay failed:', e));
+                    // İçindeki img/video'yu da tam ekran yap
+                    const img = item.querySelector('img');
+                    const video = item.querySelector('video');
                     
-                    video.addEventListener('ended', () => {
-                        if (!storyPaused) {
-                            nextStory();
-                        }
-                    });
+                    if (img) {
+                        img.style.cssText = `
+                            width: 100% !important;
+                            height: 100% !important;
+                            object-fit: cover !important;
+                        `;
+                    }
                     
-                    // Pause/resume story timer when video is paused/played
-                    video.addEventListener('pause', () => {
-                        if (!video.ended) pauseStoryTimer();
-                    });
-                    
-                    video.addEventListener('play', () => {
-                        if (!video.ended) resumeStoryTimer();
-                    });
+                    if (video) {
+                        video.style.cssText = `
+                            width: 100% !important;
+                            height: 100% !important;
+                            object-fit: cover !important;
+                        `;
+                        
+                        // Auto-play video and handle ended event
+                        video.muted = true; // Required for autoplay
+                        video.play().catch(e => console.log('Video autoplay failed:', e));
+                        
+                        video.addEventListener('ended', () => {
+                            if (!storyPaused) {
+                                nextStory();
+                            }
+                        });
+                        
+                        // Pause/resume story timer when video is paused/played
+                        video.addEventListener('pause', () => {
+                            if (!video.ended) stopStoryProgress();
+                        });
+                        
+                        video.addEventListener('play', () => {
+                            if (!video.ended && !storyPaused) startStoryProgress();
+                        });
+                    }
+                });
+                
+                // Indicators'ı Instagram tarzı yap
+                if (indicators) {
+                    indicators.style.cssText = `
+                        position: absolute !important;
+                        top: 20px !important;
+                        left: 20px !important;
+                        right: 20px !important;
+                        display: flex !important;
+                        gap: 4px !important;
+                        z-index: 100000 !important;
+                        height: 3px !important;
+                    `;
                 }
-            });
-            
-            // Indicators'ı Instagram tarzı yap
-            if (indicators) {
-                indicators.style.cssText = `
-                    position: absolute !important;
-                    top: 20px !important;
-                    left: 20px !important;
-                    right: 20px !important;
-                    display: flex !important;
-                    gap: 4px !important;
-                    z-index: 100000 !important;
-                    height: 3px !important;
-                `;
             }
-            
+
             console.log('✅ Story tam ekran yapıldı! Instagram tarzı görünüm aktif.');
             
             // Setup Story Interactions
             function setupStoryInteractions() {
-                // Calculate current index from scroll position
-                const scrollLeft = content.scrollLeft;
-                const itemWidth = window.innerWidth;
-                currentStoryIndex = Math.round(scrollLeft / itemWidth);
-                
                 // Initialize progress bars
                 initializeStoryProgressBars();
                 updateProgressBars();
@@ -3613,7 +3597,7 @@
             // Instagram-style Progress Bar System
             function initializeStoryProgressBars() {
                 const indicators = document.getElementById('storyViewerIndicators');
-                const storyCount = allMedia.length;
+                const mediaCount = window.currentStoryMedia.length;
                 
                 indicators.innerHTML = '';
                 indicators.style.cssText = `
@@ -3628,7 +3612,7 @@
                     background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent) !important;
                 `;
                 
-                for (let i = 0; i < storyCount; i++) {
+                for (let i = 0; i < mediaCount; i++) {
                     const bar = document.createElement('div');
                     bar.className = 'story-progress-bar';
                     bar.innerHTML = '<div class="story-progress-fill"></div>';
@@ -3652,20 +3636,20 @@
                 }
             }
 
-            // Handle scroll to update story index
-            const updateStoryIndex = () => {
+            // Handle scroll to update media index
+            const updateMediaIndex = () => {
                 const newIndex = Math.round(content.scrollLeft / window.innerWidth);
-                if (newIndex !== currentStoryIndex && newIndex >= 0 && newIndex < allMedia.length) {
-                    currentStoryIndex = newIndex;
+                if (newIndex !== window.currentMediaIndex && newIndex >= 0 && newIndex < window.currentStoryMedia.length) {
+                    window.currentMediaIndex = newIndex;
                     updateProgressBars();
                     
-                    // Restart progress for new story
+                    // Restart progress for new media
                     if (!storyPaused) {
                         startStoryProgress();
                     }
                 }
             };
-            content.addEventListener('scroll', updateStoryIndex);
+            content.addEventListener('scroll', updateMediaIndex);
             
             // Instagram-style story variables
             let currentStoryIndex = 0;
@@ -3678,9 +3662,9 @@
                 stopStoryProgress();
                 
                 const progressBars = document.querySelectorAll('.story-progress-bar');
-                if (!progressBars[currentStoryIndex]) return;
+                if (!progressBars[window.currentMediaIndex]) return;
                 
-                const fill = progressBars[currentStoryIndex].querySelector('.story-progress-fill');
+                const fill = progressBars[window.currentMediaIndex].querySelector('.story-progress-fill');
                 fill.style.transition = `width ${STORY_DURATION}ms linear`;
                 fill.style.width = '100%';
                 
@@ -3700,16 +3684,16 @@
                 const progressBars = document.querySelectorAll('.story-progress-bar');
                 progressBars.forEach((bar, i) => {
                     const fill = bar.querySelector('.story-progress-fill');
-                    if (i < currentStoryIndex) {
-                        // Completed stories
+                    if (i < window.currentMediaIndex) {
+                        // Completed media
                         fill.style.transition = 'none';
                         fill.style.width = '100%';
-                    } else if (i === currentStoryIndex) {
-                        // Current story - reset to 0
+                    } else if (i === window.currentMediaIndex) {
+                        // Current media - reset to 0
                         fill.style.transition = 'none';
                         fill.style.width = '0%';
                     } else {
-                        // Future stories
+                        // Future media
                         fill.style.transition = 'none';
                         fill.style.width = '0%';
                     }
@@ -3725,31 +3709,148 @@
             
             // Story Navigation Functions
             function nextStory() {
-                if (currentStoryIndex < allMedia.length - 1) {
-                    currentStoryIndex++;
-                    scrollToStory(currentStoryIndex);
+                // Check if there are more media items in current story
+                if (window.currentMediaIndex < window.currentStoryMedia.length - 1) {
+                    // Move to next media in same story
+                    window.currentMediaIndex++;
+                    scrollToMedia(window.currentMediaIndex);
                     updateProgressBars();
                     startStoryProgress();
                 } else {
-                    closeStoryViewer();
+                    // Current story finished, check if there are more stories
+                    if (window.currentStoryIndex < window.allStories.length - 1) {
+                        // Move to next story
+                        window.currentStoryIndex++;
+                        loadNextStory();
+                    } else {
+                        // All stories finished, close viewer
+                        closeStoryViewer();
+                    }
                 }
             }
 
             function prevStory() {
-                if (currentStoryIndex > 0) {
-                    currentStoryIndex--;
-                    scrollToStory(currentStoryIndex);
+                // Check if we're at the first media of current story
+                if (window.currentMediaIndex > 0) {
+                    // Move to previous media in same story
+                    window.currentMediaIndex--;
+                    scrollToMedia(window.currentMediaIndex);
                     updateProgressBars();
                     startStoryProgress();
+                } else {
+                    // At first media, check if there are previous stories
+                    if (window.currentStoryIndex > 0) {
+                        // Move to previous story
+                        window.currentStoryIndex--;
+                        loadPreviousStory();
+                    }
                 }
             }
 
-            function scrollToStory(index) {
+            function scrollToMedia(index) {
                 const itemWidth = window.innerWidth;
                 content.scrollTo({
                     left: index * itemWidth,
                     behavior: 'smooth'
                 });
+            }
+
+            function loadNextStory() {
+                const nextActivity = window.allStories[window.currentStoryIndex];
+                if (!nextActivity) return;
+                
+                // Get media for next story
+                const imageUrls = Array.isArray(nextActivity.image_url) ? nextActivity.image_url : (nextActivity.image_url ? [nextActivity.image_url] : []);
+                const videoUrls = Array.isArray(nextActivity.video_url) ? nextActivity.video_url : (nextActivity.video_url ? [nextActivity.video_url] : []);
+                const nextStoryMedia = [
+                    ...imageUrls.map(url => ({ type: 'image', url: toAbsoluteUrl(url) })),
+                    ...videoUrls.map(url => ({ type: 'video', url: toAbsoluteUrl(url) }))
+                ];
+                
+                if (nextStoryMedia.length === 0) {
+                    // Skip this story if no media
+                    nextStory();
+                    return;
+                }
+                
+                // Update current story media and reset media index
+                window.currentStoryMedia = nextStoryMedia;
+                window.currentMediaIndex = 0;
+                
+                // Update title
+                const title = document.getElementById('storyViewerTitle');
+                if (title) {
+                    title.textContent = nextActivity.title || 'Story';
+                }
+                
+                // Rebuild content with new media
+                rebuildStoryContent();
+                
+                // Reinitialize progress bars
+                initializeStoryProgressBars();
+                updateProgressBars();
+                startStoryProgress();
+            }
+
+            function loadPreviousStory() {
+                const prevActivity = window.allStories[window.currentStoryIndex];
+                if (!prevActivity) return;
+                
+                // Get media for previous story
+                const imageUrls = Array.isArray(prevActivity.image_url) ? prevActivity.image_url : (prevActivity.image_url ? [prevActivity.image_url] : []);
+                const videoUrls = Array.isArray(prevActivity.video_url) ? prevActivity.video_url : (prevActivity.video_url ? [prevActivity.video_url] : []);
+                const prevStoryMedia = [
+                    ...imageUrls.map(url => ({ type: 'image', url: toAbsoluteUrl(url) })),
+                    ...videoUrls.map(url => ({ type: 'video', url: toAbsoluteUrl(url) }))
+                ];
+                
+                if (prevStoryMedia.length === 0) {
+                    // Skip this story if no media
+                    prevStory();
+                    return;
+                }
+                
+                // Update current story media and set to last media
+                window.currentStoryMedia = prevStoryMedia;
+                window.currentMediaIndex = prevStoryMedia.length - 1;
+                
+                // Update title
+                const title = document.getElementById('storyViewerTitle');
+                if (title) {
+                    title.textContent = prevActivity.title || 'Story';
+                }
+                
+                // Rebuild content with new media
+                rebuildStoryContent();
+                
+                // Reinitialize progress bars
+                initializeStoryProgressBars();
+                updateProgressBars();
+                startStoryProgress();
+            }
+
+            function rebuildStoryContent() {
+                // Clear and rebuild content with current story media
+                content.innerHTML = '';
+                
+                window.currentStoryMedia.forEach((media, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'story-viewer-item';
+                    
+                    if (media.type === 'video') {
+                        item.innerHTML = `<video controls autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain;"><source src="${media.url}" type="video/mp4"></video>`;
+                    } else {
+                        item.innerHTML = `<img src="${media.url}" alt="Story ${index + 1}" style="width: 100%; height: 100%; object-fit: contain;">`;
+                    }
+                    
+                    content.appendChild(item);
+                });
+                
+                // Apply Instagram-style full screen to new items
+                applyInstagramStyling();
+                
+                // Scroll to current media
+                scrollToMedia(window.currentMediaIndex);
             }
 
             content.addEventListener('touchstart', (e) => {
@@ -3844,7 +3945,6 @@
                 // Stop progress and reset
                 stopStoryProgress();
                 storyPaused = false;
-                currentStoryIndex = 0;
                 
                 // Hide modal
                 modal.style.display = 'none';
@@ -3869,6 +3969,8 @@
                 }
                 
                 // Reset global variables
+                window.allStories = null;
+                window.currentStoryIndex = 0;
                 window.currentStoryMedia = null;
                 window.currentMediaIndex = 0;
             }
@@ -3985,7 +4087,7 @@
                 activities.forEach((activity, index) => {
                     const storyEl = document.createElement('div');
                     storyEl.className = 'activity-story';
-                    storyEl.onclick = () => openActivityStory(activity);
+                    storyEl.onclick = () => openActivityStory(activities, index);
                     
                     // Handle arrays for image_url and video_url
                     const imageUrls = Array.isArray(activity.image_url) ? activity.image_url : (activity.image_url ? [activity.image_url] : []);
