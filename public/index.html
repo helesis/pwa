@@ -3428,6 +3428,20 @@
             // Set title
             if (title) {
                 title.textContent = activity.title || 'Story';
+                
+                // Instagram tarzı title stili
+                title.style.cssText = `
+                    position: absolute !important;
+                    top: 60px !important;
+                    left: 20px !important;
+                    right: 20px !important;
+                    color: white !important;
+                    font-size: 16px !important;
+                    font-weight: 600 !important;
+                    text-align: center !important;
+                    z-index: 100000 !important;
+                    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+                `;
             }
             
             // Clear and populate content
@@ -3451,6 +3465,21 @@
                 const indicator = document.createElement('div');
                 indicator.className = 'story-indicator';
                 if (index === 0) indicator.classList.add('active');
+                
+                // Instagram tarzı indicator stili
+                indicator.style.cssText = `
+                    height: 3px !important;
+                    background: rgba(255, 255, 255, 0.3) !important;
+                    border-radius: 2px !important;
+                    flex: 1 !important;
+                    margin: 0 2px !important;
+                    transition: background 0.3s ease !important;
+                `;
+                
+                if (index === 0) {
+                    indicator.style.background = 'rgba(255, 255, 255, 0.9) !important';
+                }
+                
                 indicators.appendChild(indicator);
             });
             
@@ -3458,6 +3487,82 @@
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
             document.body.classList.add('story-viewer-open');
+            
+            // Instagram tarzı tam ekran yapı
+            modal.style.cssText = `
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: #000 !important;
+                z-index: 99999 !important;
+                display: flex !important;
+                flex-direction: column !important;
+            `;
+            
+            // Content'i tam ekran yap
+            content.style.cssText = `
+                flex: 1 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 100% !important;
+                height: 100% !important;
+                overflow-x: auto !important;
+                scroll-snap-type: x mandatory !important;
+                scroll-behavior: smooth !important;
+            `;
+            
+            // Story item'ları tam ekran yap
+            const storyItems = document.querySelectorAll('.story-viewer-item');
+            storyItems.forEach(item => {
+                item.style.cssText = `
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    flex-shrink: 0 !important;
+                    scroll-snap-align: start !important;
+                `;
+                
+                // İçindeki img/video'yu da tam ekran yap
+                const img = item.querySelector('img');
+                const video = item.querySelector('video');
+                
+                if (img) {
+                    img.style.cssText = `
+                        width: 100% !important;
+                        height: 100% !important;
+                        object-fit: cover !important;
+                    `;
+                }
+                
+                if (video) {
+                    video.style.cssText = `
+                        width: 100% !important;
+                        height: 100% !important;
+                        object-fit: cover !important;
+                    `;
+                }
+            });
+            
+            // Indicators'ı Instagram tarzı yap
+            if (indicators) {
+                indicators.style.cssText = `
+                    position: absolute !important;
+                    top: 20px !important;
+                    left: 20px !important;
+                    right: 20px !important;
+                    display: flex !important;
+                    gap: 4px !important;
+                    z-index: 100000 !important;
+                    height: 3px !important;
+                `;
+            }
+            
+            console.log('✅ Story tam ekran yapıldı! Instagram tarzı görünüm aktif.');
             
             // Handle scroll to update indicators
             let currentIndex = 0;
@@ -3467,6 +3572,12 @@
                     currentIndex = newIndex;
                     indicators.querySelectorAll('.story-indicator').forEach((ind, idx) => {
                         ind.classList.toggle('active', idx === currentIndex);
+                        // Instagram tarzı indicator renklendirme
+                        if (idx === currentIndex) {
+                            ind.style.background = 'rgba(255, 255, 255, 0.9) !important';
+                        } else {
+                            ind.style.background = 'rgba(255, 255, 255, 0.3) !important';
+                        }
                     });
                 }
             };
@@ -3513,6 +3624,34 @@
             const closeBtn = document.getElementById('storyViewerClose');
             if (closeBtn) {
                 closeBtn.onclick = closeStoryViewer;
+                
+                // Instagram tarzı close button stili
+                closeBtn.style.cssText = `
+                    position: absolute !important;
+                    top: 20px !important;
+                    right: 20px !important;
+                    width: 40px !important;
+                    height: 40px !important;
+                    background: rgba(0, 0, 0, 0.5) !important;
+                    border: none !important;
+                    border-radius: 50% !important;
+                    color: white !important;
+                    font-size: 24px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    cursor: pointer !important;
+                    z-index: 100001 !important;
+                    transition: background 0.3s ease !important;
+                `;
+                
+                // Hover efekti
+                closeBtn.onmouseenter = () => {
+                    closeBtn.style.background = 'rgba(0, 0, 0, 0.7) !important';
+                };
+                closeBtn.onmouseleave = () => {
+                    closeBtn.style.background = 'rgba(0, 0, 0, 0.5) !important';
+                };
             }
             
             // Close on escape key

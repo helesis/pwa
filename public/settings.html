@@ -1405,6 +1405,33 @@
         </div>
     </div>
 
+    <!-- Media Viewer Modal -->
+    <div id="mediaViewerModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="position: relative; max-width: 90vw; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
+            <!-- Close Button -->
+            <button id="mediaViewerClose" style="position: absolute; top: -40px; right: -10px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10001;">&times;</button>
+            
+            <!-- Media Content -->
+            <div id="mediaViewerContent" style="max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center;">
+                <!-- Content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- All Media Grid Modal -->
+    <div id="allMediaGridModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="position: relative; max-width: 90vw; max-height: 90vh; background: white; border-radius: 12px; padding: 20px; overflow-y: auto;">
+            <!-- Close Button -->
+            <button id="allMediaGridClose" style="position: absolute; top: 10px; right: 10px; background: #f0f0f0; border: none; color: #333; font-size: 20px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10001;">&times;</button>
+            
+            <!-- Grid Content -->
+            <h3 style="margin: 0 0 20px 0; color: #333;">Tüm Medya Dosyaları</h3>
+            <div id="allMediaGridContent" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
+                <!-- Content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentAssistantId = null;
         let currentTeamId = null;
@@ -3231,8 +3258,8 @@
                                             if (mediaItems.length === 1) {
                                                 const item = mediaItems[0];
                                                 return item.type === 'image' 
-                                                    ? `<img src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" alt="Image">`
-                                                    : `<video src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" controls></video>`;
+                                                    ? `<img src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;" alt="Image" onclick="openMediaViewer('${item.url}', '${item.type}')">`
+                                                    : `<video src="${item.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;" muted onclick="openMediaViewer('${item.url}', '${item.type}')"></video>`;
                                             } else {
                                                 // Multiple media - create grid
                                                 const gridSize = Math.min(mediaItems.length, 4); // Max 4 items in grid
@@ -3240,12 +3267,12 @@
                                                 
                                                 return `
                                                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; width: 60px; height: 60px;">
-                                                        ${mediaItems.slice(0, 4).map(item => 
+                                                        ${mediaItems.slice(0, 4).map((item, idx) => 
                                                             item.type === 'image'
-                                                                ? `<img src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px;" alt="Image">`
-                                                                : `<video src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px;" muted></video>`
+                                                                ? `<img src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px; cursor: pointer;" alt="Image" onclick="openMediaViewer('${item.url}', '${item.type}')">`
+                                                                : `<video src="${item.url}" style="width: ${itemSize}; height: ${itemSize}; object-fit: cover; border-radius: 4px; cursor: pointer;" muted onclick="openMediaViewer('${item.url}', '${item.type}')"></video>`
                                                         ).join('')}
-                                                        ${mediaItems.length > 4 ? `<div style="width: ${itemSize}; height: ${itemSize}; background: rgba(0,0,0,0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold;">+${mediaItems.length - 4}</div>` : ''}
+                                                        ${mediaItems.length > 4 ? `<div style="width: ${itemSize}; height: ${itemSize}; background: rgba(0,0,0,0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold; cursor: pointer;" onclick="showAllMediaGrid(${a.id}, ${JSON.stringify(mediaItems).replace(/"/g, '&quot;')})">+${mediaItems.length - 4}</div>` : ''}
                                                     </div>
                                                 `;
                                             }
@@ -5786,6 +5813,141 @@
             } catch (error) {
                 console.error('Error saving SPA cancellation deadline:', error);
                 alert('Ayarlar kaydedilirken hata oluştu: ' + error.message);
+            }
+        }
+
+        // Media Viewer Functions
+        function openMediaViewer(url, type) {
+            const modal = document.getElementById('mediaViewerModal');
+            const content = document.getElementById('mediaViewerContent');
+            const closeBtn = document.getElementById('mediaViewerClose');
+            
+            if (!modal || !content) return;
+            
+            // Clear previous content
+            content.innerHTML = '';
+            
+            // Create media element
+            if (type === 'image') {
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.cssText = 'max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;';
+                img.alt = 'Büyük görünüm';
+                content.appendChild(img);
+            } else if (type === 'video') {
+                const video = document.createElement('video');
+                video.src = url;
+                video.style.cssText = 'max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;';
+                video.controls = true;
+                video.autoplay = true;
+                content.appendChild(video);
+            }
+            
+            // Show modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Close button event
+            closeBtn.onclick = closeMediaViewer;
+            
+            // Click outside to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    closeMediaViewer();
+                }
+            };
+            
+            // ESC key to close
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    closeMediaViewer();
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+        }
+        
+        function closeMediaViewer() {
+            const modal = document.getElementById('mediaViewerModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+        
+        function showAllMediaGrid(storyId, mediaItems) {
+            const modal = document.getElementById('allMediaGridModal');
+            const content = document.getElementById('allMediaGridContent');
+            const closeBtn = document.getElementById('allMediaGridClose');
+            
+            if (!modal || !content) return;
+            
+            // Clear previous content
+            content.innerHTML = '';
+            
+            // Create grid items
+            mediaItems.forEach((item, index) => {
+                const gridItem = document.createElement('div');
+                gridItem.style.cssText = 'position: relative; aspect-ratio: 1; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid #ddd; transition: border-color 0.2s ease;';
+                
+                if (item.type === 'image') {
+                    gridItem.innerHTML = `
+                        <img src="${item.url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Medya ${index + 1}">
+                        <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">📷</div>
+                    `;
+                } else {
+                    gridItem.innerHTML = `
+                        <video src="${item.url}" style="width: 100%; height: 100%; object-fit: cover;" muted>
+                        <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">🎥</div>
+                    `;
+                }
+                
+                // Click to open in viewer
+                gridItem.onclick = () => {
+                    closeAllMediaGrid();
+                    openMediaViewer(item.url, item.type);
+                };
+                
+                // Hover effect
+                gridItem.onmouseenter = () => {
+                    gridItem.style.borderColor = '#007bff';
+                };
+                gridItem.onmouseleave = () => {
+                    gridItem.style.borderColor = '#ddd';
+                };
+                
+                content.appendChild(gridItem);
+            });
+            
+            // Show modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Close button event
+            closeBtn.onclick = closeAllMediaGrid;
+            
+            // Click outside to close
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    closeAllMediaGrid();
+                }
+            };
+            
+            // ESC key to close
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    closeAllMediaGrid();
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+        }
+        
+        function closeAllMediaGrid() {
+            const modal = document.getElementById('allMediaGridModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
             }
         }
     </script>
