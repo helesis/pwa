@@ -1351,6 +1351,30 @@
             background: rgba(26, 77, 109, 1) !important;
             box-shadow: 0 4px 12px rgba(26, 77, 109, 0.3) !important;
         }
+
+        /* Chat notification badge */
+        .notification-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #ff4444;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: 2px solid white;
+        }
+
+        .nav-item-icon {
+            position: relative;
+        }
             flex-wrap: wrap;
             gap: 8px;
             padding-left: 16px;
@@ -2600,6 +2624,12 @@
             justify-content: space-between;
             cursor: pointer;
             transition: background 0.2s;
+            margin-bottom: 20px; /* Increased spacing between items */
+        }
+
+        /* Extra spacing after logout button for iOS */
+        .settings-item:last-child {
+            margin-bottom: 60px; /* Extra space after logout for iOS safe area */
         }
 
         .settings-item:hover {
@@ -3424,7 +3454,10 @@
             <div class="nav-item-label" data-i18n="reservations">Rezervasyonlar</div>
         </button>
         <button class="nav-item" onclick="switchSection('chat')" data-section="chat">
-            <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+            <div class="nav-item-icon">
+                <i data-lucide="message-circle" class="icon icon-lg"></i>
+                <span class="notification-badge" id="chatUnreadBadge" style="display: none;">0</span>
+            </div>
             <div class="nav-item-label" data-i18n="chat">Chat</div>
         </button>
         <button class="nav-item" onclick="switchSection('map')" data-section="map">

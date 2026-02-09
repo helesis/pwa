@@ -137,6 +137,27 @@
     <script src="/js/section-loader.js" defer></script>
     <script>
         // ============================================
+        // CHAT UNREAD MESSAGE COUNTER
+        // ============================================
+        
+        // Chat unread message counter
+        let unreadMessageCount = 0;
+
+        function updateChatBadge(count) {
+            const badge = document.getElementById('chatUnreadBadge');
+            if (!badge) return;
+            
+            unreadMessageCount = count;
+            
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count.toString();
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // ============================================
         // LEGACY COMPATIBILITY LAYER (Backward Compatibility)
         // Bu değişkenler kod içinde hala kullanılıyor, AppState'e proxy olarak çalışırlar
         // ============================================
@@ -602,14 +623,14 @@
             // Normalize dates
             let checkin = '';
             if (checkinDate instanceof Date) {
-                checkin = checkinDate.toISOString().split('T')[0];
+                checkin = checkinDate.getFullYear() + '-' + String(checkinDate.getMonth() + 1).padStart(2, '0') + '-' + String(checkinDate.getDate()).padStart(2, '0');
             } else if (checkinDate) {
                 checkin = String(checkinDate).split('T')[0];
             }
             
             let checkout = '';
             if (checkoutDate instanceof Date) {
-                checkout = checkoutDate.toISOString().split('T')[0];
+                checkout = checkoutDate.getFullYear() + '-' + String(checkoutDate.getMonth() + 1).padStart(2, '0') + '-' + String(checkoutDate.getDate()).padStart(2, '0');
             } else if (checkoutDate) {
                 checkout = String(checkoutDate).split('T')[0];
             }
@@ -1553,6 +1574,12 @@
                     if (!isSent) {
                         console.log('📬 Guest received message, emitting message_delivered:', data.id);
                         socket.emit('message_delivered', { messageId: data.id });
+                        
+                        // Increment unread counter if chat section is not active
+                        if (window.AppState.get('currentSection') !== 'chat') {
+                            unreadMessageCount++;
+                            updateChatBadge(unreadMessageCount);
+                        }
                     }
                     
                     displayMessage(data, !isSent);
@@ -3035,6 +3062,12 @@
             const navItem = document.querySelector(`[data-section="${section}"]`);
             if (navItem) {
                 navItem.classList.add('active');
+            }
+            
+            // Reset chat badge when switching to chat section
+            if (section === 'chat') {
+                unreadMessageCount = 0;
+                updateChatBadge(0);
             }
             
             // Update profile info when switching to settings section
@@ -5961,7 +5994,10 @@
 
             try {
                 // Get today's activities with location
-                const today = new Date().toISOString().split('T')[0];
+                const today = (() => {
+                    const d = new Date();
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                })();
                 const response = await fetch(`/api/activities?date=${today}`);
                 if (!response.ok) return;
 
@@ -6684,8 +6720,8 @@
             const to = new Date(checkout);
             to.setDate(to.getDate() - 1); // departure-1
             
-            const fromStr = from.toISOString().split('T')[0];
-            const toStr = to.toISOString().split('T')[0];
+            const fromStr = from.getFullYear() + '-' + String(from.getMonth() + 1).padStart(2, '0') + '-' + String(from.getDate()).padStart(2, '0');
+            const toStr = to.getFullYear() + '-' + String(to.getMonth() + 1).padStart(2, '0') + '-' + String(to.getDate()).padStart(2, '0');
             
             const container = document.getElementById('spa-availability-calendar');
             if (!container) return;
@@ -7036,7 +7072,7 @@
 
                 // Store dates for navigation
                 spaAllDates = allDates.map(d => ({
-                    date: d.toISOString().split('T')[0],
+                    date: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
                     dateObj: new Date(d)
                 }));
                 spaCurrentDateIndex = 0;
@@ -7465,8 +7501,8 @@
             const to = new Date(checkout);
             to.setDate(to.getDate() - 1); // departure-1
             
-            const fromStr = from.toISOString().split('T')[0];
-            const toStr = to.toISOString().split('T')[0];
+            const fromStr = from.getFullYear() + '-' + String(from.getMonth() + 1).padStart(2, '0') + '-' + String(from.getDate()).padStart(2, '0');
+            const toStr = to.getFullYear() + '-' + String(to.getMonth() + 1).padStart(2, '0') + '-' + String(to.getDate()).padStart(2, '0');
             
             calendarContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #667781;">Yükleniyor...</div>';
             
@@ -8556,7 +8592,7 @@
                 
                 // Store dates for navigation
                 restaurantAllDates = allDates.map(d => ({
-                    date: d.toISOString().split('T')[0],
+                    date: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
                     dateObj: new Date(d)
                 }));
                 restaurantCurrentDateIndex = 0;
@@ -8740,23 +8776,29 @@
                         const swipeWrapper = document.createElement('div');
                         swipeWrapper.style.cssText = 'position: relative; margin-bottom: 12px; overflow: hidden; border-radius: 8px;';
                         
-                        // Actions background (always create, but content depends on canCancel)
-                        const actionsBg = document.createElement('div');
-                        actionsBg.className = 'swipe-actions';
-                        actionsBg.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;';
-                        
-                        // Cancel action (right side - swipe left reveals)
-                        const cancelAction = document.createElement('div');
-                        cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
-                        cancelAction.textContent = t('cancelReservation');
-                        actionsBg.appendChild(cancelAction);
-                        
-                        swipeWrapper.appendChild(actionsBg);
+                        // Actions background (only create if cancellation is allowed)
+                        let actionsBg = null;
+                        if (canCancel) {
+                            actionsBg = document.createElement('div');
+                            actionsBg.className = 'swipe-actions';
+                            actionsBg.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;';
+                            
+                            // Cancel action (right side - swipe left reveals)
+                            const cancelAction = document.createElement('div');
+                            cancelAction.style.cssText = 'flex: 1; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;';
+                            cancelAction.textContent = t('cancelReservation');
+                            actionsBg.appendChild(cancelAction);
+                            
+                            swipeWrapper.appendChild(actionsBg);
+                        }
                         
                         // Content card
                         const cardEl = document.createElement('div');
                         cardEl.className = 'reservation-card';
-                        cardEl.style.cssText = 'position: relative; padding: 10px 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e4e6e9; display: flex; gap: 10px; align-items: center; z-index: 2; transition: transform 0.3s ease;';
+                        // Different styling for non-cancellable reservations
+                        const cardBackground = canCancel ? '#f8f9fa' : '#f5f5f5';
+                        const cardBorder = canCancel ? '#e4e6e9' : '#d6d6d6';
+                        cardEl.style.cssText = `position: relative; padding: 10px 12px; background: ${cardBackground}; border-radius: 8px; border: 1px solid ${cardBorder}; display: flex; gap: 10px; align-items: center; z-index: 2; transition: transform 0.3s ease;`;
                         cardEl.dataset.reservationId = reservation.id;
                         
                         // Image (compact, smaller)
@@ -8792,68 +8834,65 @@
                         
                         cardEl.appendChild(contentEl);
                         
-                        // Swipe gesture handlers (always enabled)
-                        let startX = 0;
-                        let currentX = 0;
-                        let isDragging = false;
+                        // Add status indicator for non-cancellable reservations
+                        if (!canCancel) {
+                            const statusEl = document.createElement('div');
+                            statusEl.style.cssText = 'flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #ffc107; border-radius: 50%; margin-left: auto;';
+                            statusEl.innerHTML = '<i data-lucide="info" style="width: 14px; height: 14px; color: white;"></i>';
+                            statusEl.title = 'İptal süresi geçmiş';
+                            cardEl.appendChild(statusEl);
+                        }
                         
-                        const handleTouchStart = (e) => {
-                            startX = e.touches[0].clientX;
-                            isDragging = true;
-                            cardEl.style.transition = 'none';
-                        };
-                        
-                        const handleTouchMove = (e) => {
-                            if (!isDragging) return;
-                            currentX = e.touches[0].clientX - startX;
+                        // Swipe gesture handlers (only enabled if cancellation is allowed)
+                        if (canCancel) {
+                            let startX = 0;
+                            let currentX = 0;
+                            let isDragging = false;
                             
-                            // Only allow left swipe (negative = left)
-                            if (currentX < 0) {
-                                cardEl.style.transform = `translateX(${currentX}px)`;
-                                actionsBg.style.display = 'flex';
-                            }
-                        };
-                        
-                        const handleTouchEnd = () => {
-                            if (!isDragging) return;
-                            isDragging = false;
-                            cardEl.style.transition = 'transform 0.3s ease';
+                            const handleTouchStart = (e) => {
+                                startX = e.touches[0].clientX;
+                                isDragging = true;
+                                cardEl.style.transition = 'none';
+                            };
                             
-                            // Threshold: %25 of button width (which equals card width)
-                            const threshold = cardEl.offsetWidth * 0.25;
+                            const handleTouchMove = (e) => {
+                                if (!isDragging) return;
+                                currentX = e.touches[0].clientX - startX;
+                                
+                                // Only allow left swipe (negative = left)
+                                if (currentX < 0) {
+                                    cardEl.style.transform = `translateX(${currentX}px)`;
+                                    actionsBg.style.display = 'flex';
+                                }
+                            };
                             
-                            if (currentX < -threshold) {
-                                if (canCancel) {
-                                    // Swipe left - Cancel (allowed)
+                            const handleTouchEnd = () => {
+                                if (!isDragging) return;
+                                isDragging = false;
+                                cardEl.style.transition = 'transform 0.3s ease';
+                                
+                                // Threshold: %25 of button width (which equals card width)
+                                const threshold = cardEl.offsetWidth * 0.25;
+                                
+                                if (currentX < -threshold) {
+                                    // Swipe left - Cancel (we know canCancel is true here)
                                     cardEl.style.transform = 'translateX(-100%)';
                                     setTimeout(() => {
                                         cancelRestaurantReservation(reservation.id);
                                     }, 300);
                                 } else {
-                                    // Swipe left - Cancel not allowed (deadline passed)
-                                    // Get cancellation deadline from restaurant rules
-                                    const rules = reservation.restaurant?.rules_json;
-                                    const cancellationDeadlineMinutes = rules?.cancellation_deadline_minutes || 240;
-                                    
-                                    // Slide back
+                                    // Reset
                                     cardEl.style.transform = 'translateX(0)';
                                     actionsBg.style.display = 'none';
-                                    
-                                    // Show message with cancellation deadline
-                                    alert(`Rezervasyona ${cancellationDeadlineMinutes} dakikadan az kaldığı için iptal edemezsiniz.`);
                                 }
-                            } else {
-                                // Reset
-                                cardEl.style.transform = 'translateX(0)';
-                                actionsBg.style.display = 'none';
-                            }
+                                
+                                currentX = 0;
+                            };
                             
-                            currentX = 0;
-                        };
-                        
-                        cardEl.addEventListener('touchstart', handleTouchStart);
-                        cardEl.addEventListener('touchmove', handleTouchMove);
-                        cardEl.addEventListener('touchend', handleTouchEnd);
+                            cardEl.addEventListener('touchstart', handleTouchStart);
+                            cardEl.addEventListener('touchmove', handleTouchMove);
+                            cardEl.addEventListener('touchend', handleTouchEnd);
+                        }
                         
                         swipeWrapper.appendChild(cardEl);
                         container.appendChild(swipeWrapper);
@@ -9259,7 +9298,10 @@
         // MOVED TO AppState.booking.restaurant.currentForReservation
         async function openRestaurantReservationModal(restaurantId, restaurantName, selectedDate) {
             // If no date provided, default to today
-            const reservationDate = selectedDate || new Date().toISOString().split('T')[0];
+            const reservationDate = selectedDate || (() => {
+                const today = new Date();
+                return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+            })();
             currentRestaurantForReservation = { id: restaurantId, name: restaurantName, date: reservationDate };
             const modal = document.getElementById('restaurantReservationModal');
             const form = document.getElementById('restaurantReservationForm');
@@ -9326,7 +9368,10 @@
             
             const restaurantId = document.getElementById('reservation-restaurant-id').value;
             const reservationDateInput = document.getElementById('reservation-date');
-            const reservationDate = reservationDateInput ? reservationDateInput.value : (currentRestaurantForReservation?.date || new Date().toISOString().split('T')[0]);
+            const reservationDate = reservationDateInput ? reservationDateInput.value : (currentRestaurantForReservation?.date || (() => {
+                const today = new Date();
+                return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+            })());
             const paxAdult = parseInt(document.getElementById('reservation-pax-adult').value) || 1;
             const paxChild = parseInt(document.getElementById('reservation-pax-child').value) || 0;
             const specialRequests = document.getElementById('reservation-special-requests').value.trim();

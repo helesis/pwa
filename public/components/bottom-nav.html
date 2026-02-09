@@ -13,7 +13,10 @@
     <div class="nav-item-label" data-i18n="reservations">Rezervasyonlar</div>
   </button>
   <button class="nav-item" onclick="switchSection('chat')" data-section="chat">
-    <div class="nav-item-icon"><i data-lucide="message-circle" class="icon icon-lg"></i></div>
+    <div class="nav-item-icon">
+      <i data-lucide="message-circle" class="icon icon-lg"></i>
+      <span class="notification-badge" id="chatUnreadBadge" style="display: none;">0</span>
+    </div>
     <div class="nav-item-label" data-i18n="chat">Chat</div>
   </button>
   <button class="nav-item" onclick="switchSection('map')" data-section="map">
