@@ -809,10 +809,6 @@
                     <input type="text" id="assistant-surname" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Email (Opsiyonel)</label>
-                    <input type="email" id="assistant-email" class="form-input">
-                </div>
-                <div class="form-group">
                     <label class="form-label">Konuştuğu Diller *</label>
                     <div class="checkbox-group" id="assistant-languages">
                         <label class="checkbox-item">
@@ -2141,12 +2137,14 @@
                     .then(data => {
                         document.getElementById('assistant-name').value = data.name || '';
                         document.getElementById('assistant-surname').value = data.surname || '';
-                        document.getElementById('assistant-email').value = data.email || '';
                         
                         // Load languages
+                        console.log('Loading languages for assistant:', data.languages);
                         const languageCheckboxes = document.querySelectorAll('input[name="languages"]');
                         languageCheckboxes.forEach(checkbox => {
-                            checkbox.checked = data.languages && data.languages.includes(checkbox.value);
+                            const shouldCheck = data.languages && data.languages.includes(checkbox.value);
+                            checkbox.checked = shouldCheck;
+                            console.log(`Language ${checkbox.value}: ${shouldCheck ? 'checked' : 'unchecked'}`);
                         });
                         
                         const preview = document.getElementById('assistant-avatar-preview');
@@ -2185,7 +2183,6 @@
             try {
                 const nameInput = document.getElementById('assistant-name');
                 const surnameInput = document.getElementById('assistant-surname');
-                const emailInput = document.getElementById('assistant-email');
                 const avatarDataInput = document.getElementById('assistant-avatar-data');
                 
                 if (!nameInput || !surnameInput || !avatarDataInput) {
@@ -2210,9 +2207,13 @@
                 // Get selected languages
                 const selectedLanguages = [];
                 const languageCheckboxes = document.querySelectorAll('input[name="languages"]:checked');
+                console.log('Found checked language checkboxes:', languageCheckboxes.length);
                 languageCheckboxes.forEach(checkbox => {
                     selectedLanguages.push(checkbox.value);
+                    console.log('Selected language:', checkbox.value);
                 });
+                
+                console.log('Final selected languages:', selectedLanguages);
                 
                 if (selectedLanguages.length === 0) {
                     showAlert('En az bir dil seçmelisiniz', 'error');
@@ -2223,7 +2224,6 @@
             const data = {
                     name: name,
                     surname: surname,
-                    email: emailInput ? (emailInput.value.trim() || null) : null,
                     avatar: avatarData || null,
                     languages: selectedLanguages
                 };
@@ -2231,7 +2231,7 @@
                 console.log('💾 Saving assistant:', { 
                     id: currentAssistantId,
                     name: data.name,
-                    email: data.email,
+                    languages: data.languages,
                     avatar: avatarData ? `base64 (${avatarData.length} chars)` : 'null' 
                 });
 
