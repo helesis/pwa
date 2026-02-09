@@ -9609,64 +9609,56 @@
                     
                     cardEl.appendChild(contentEl);
                     
-                    // Swipe gesture handlers (always enabled)
-                    let startX = 0;
-                    let currentX = 0;
-                    let isDragging = false;
-                    
-                    const handleTouchStart = (e) => {
-                        startX = e.touches[0].clientX;
-                        isDragging = true;
-                        cardEl.style.transition = 'none';
-                    };
-                    
-                    const handleTouchMove = (e) => {
-                        if (!isDragging) return;
-                        currentX = e.touches[0].clientX - startX;
+                    // Swipe gesture handlers (only enabled if cancellation is allowed)
+                    if (canCancel) {
+                        let startX = 0;
+                        let currentX = 0;
+                        let isDragging = false;
                         
-                        // Only allow left swipe (negative = left)
-                        if (currentX < 0) {
-                            cardEl.style.transform = `translateX(${currentX}px)`;
-                            actionsBg.style.display = 'flex';
-                        }
-                    };
-                    
-                    const handleTouchEnd = () => {
-                        if (!isDragging) return;
-                        isDragging = false;
-                        cardEl.style.transition = 'transform 0.3s ease';
+                        const handleTouchStart = (e) => {
+                            startX = e.touches[0].clientX;
+                            isDragging = true;
+                            cardEl.style.transition = 'none';
+                        };
                         
-                        // Threshold: %25 of button width (which equals card width)
-                        const threshold = cardEl.offsetWidth * 0.25;
+                        const handleTouchMove = (e) => {
+                            if (!isDragging) return;
+                            currentX = e.touches[0].clientX - startX;
+                            
+                            // Only allow left swipe (negative = left)
+                            if (currentX < 0) {
+                                cardEl.style.transform = `translateX(${currentX}px)`;
+                                actionsBg.style.display = 'flex';
+                            }
+                        };
                         
-                        if (currentX < -threshold) {
-                            if (canCancel) {
-                                // Swipe left - Cancel (allowed)
+                        const handleTouchEnd = () => {
+                            if (!isDragging) return;
+                            isDragging = false;
+                            cardEl.style.transition = 'transform 0.3s ease';
+                            
+                            // Threshold: %25 of button width (which equals card width)
+                            const threshold = cardEl.offsetWidth * 0.25;
+                            
+                            if (currentX < -threshold) {
+                                // Swipe left - Cancel (we know canCancel is true here)
                                 cardEl.style.transform = 'translateX(-100%)';
                                 setTimeout(() => {
                                     cancelSpaReservation(request.requestId);
                                 }, 300);
                             } else {
-                                // Swipe left - Cancel not allowed (deadline passed)
-                                // Slide back
+                                // Reset
                                 cardEl.style.transform = 'translateX(0)';
                                 actionsBg.style.display = 'none';
-                                
-                                // Show message with cancellation deadline
-                                alert(`Terapiye ${cancellationDeadlineMinutes} dakikadan az kaldığı için iptal edemezsiniz.`);
                             }
-                        } else {
-                            // Reset
-                            cardEl.style.transform = 'translateX(0)';
-                            actionsBg.style.display = 'none';
-                        }
+                            
+                            currentX = 0;
+                        };
                         
-                        currentX = 0;
-                    };
-                    
-                    cardEl.addEventListener('touchstart', handleTouchStart);
-                    cardEl.addEventListener('touchmove', handleTouchMove);
-                    cardEl.addEventListener('touchend', handleTouchEnd);
+                        cardEl.addEventListener('touchstart', handleTouchStart);
+                        cardEl.addEventListener('touchmove', handleTouchMove);
+                        cardEl.addEventListener('touchend', handleTouchEnd);
+                    }
                     
                     swipeWrapper.appendChild(cardEl);
                     container.appendChild(swipeWrapper);
