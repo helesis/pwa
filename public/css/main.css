@@ -32,6 +32,11 @@
             position: relative;
             margin: 0;
             padding: 0;
+            /* iOS scroll fixes */
+            -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         /* Safe area dışındaki üst alanı header rengiyle renklendir (Dynamic Island) */
@@ -450,6 +455,27 @@
             }
         }
 
+        /* iOS Safari scroll fixes */
+        @supports (-webkit-touch-callout: none) {
+            .content-section,
+            .settings-section,
+            .info-section {
+                -webkit-overflow-scrolling: touch !important;
+                -webkit-transform: translate3d(0, 0, 0) !important;
+                transform: translate3d(0, 0, 0) !important;
+                -webkit-backface-visibility: hidden !important;
+                backface-visibility: hidden !important;
+                will-change: scroll-position;
+                position: relative;
+            }
+            
+            /* Force hardware acceleration for scrollable elements */
+            .content-section.active {
+                -webkit-transform: translate3d(0, 0, 0) !important;
+                transform: translate3d(0, 0, 0) !important;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             * {
                 animation-duration: 0.01ms !important;
@@ -613,6 +639,11 @@
             max-height: calc(100vh - 65px); /* Ensure fixed height for scroll */
             position: relative;
             min-height: 0; /* ensure flex children can scroll */
+            /* iOS scroll fixes */
+            -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         /* Section-specific padding-top adjustments for fixed headers */
@@ -2008,6 +2039,13 @@
             overflow-y: auto; /* Scroll özelliği eklendi */
             flex: 1;
             min-height: 0; /* Flex container'da scroll için gerekli */
+            /* iOS scroll fixes */
+            -webkit-overflow-scrolling: touch;
+            -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            position: relative;
         }
 
         .settings-list {

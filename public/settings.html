@@ -812,6 +812,35 @@
                     <label class="form-label">Email (Opsiyonel)</label>
                     <input type="email" id="assistant-email" class="form-input">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Konuştuğu Diller *</label>
+                    <div class="checkbox-group" id="assistant-languages">
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="languages" value="tr" checked>
+                            🇹🇷 Türkçe
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="languages" value="en">
+                            🇺🇸 İngilizce
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="languages" value="de">
+                            🇩🇪 Almanca
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="languages" value="ru">
+                            🇷🇺 Rusça
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="languages" value="nl">
+                            🇳🇱 Felemenkçe
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="languages" value="fr">
+                            🇫🇷 Fransızca
+                        </label>
+                    </div>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeAssistantModal()">İptal</button>
                     <button type="submit" class="btn btn-primary">Kaydet</button>
@@ -1541,6 +1570,7 @@
                                 <th>Avatar</th>
                                 <th>Ad</th>
                                 <th>Soyad</th>
+                                <th>Diller</th>
                                 <th>Takım</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
@@ -1564,6 +1594,25 @@
                                     </td>
                                     <td>${firstName}</td>
                                     <td>${lastName || '-'}</td>
+                                    <td>
+                                        ${a.languages && a.languages.length > 0 ? `
+                                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                                ${a.languages.map(lang => {
+                                                    const langMap = {
+                                                        'tr': '🇹🇷',
+                                                        'en': '🇺🇸', 
+                                                        'de': '🇩🇪',
+                                                        'ru': '🇷🇺',
+                                                        'nl': '🇳🇱',
+                                                        'fr': '🇫🇷'
+                                                    };
+                                                    return `<span title="${lang}" style="font-size: 16px;">${langMap[lang] || lang}</span>`;
+                                                }).join('')}
+                                            </div>
+                                        ` : `
+                                            <span style="color: #999; font-style: italic;">-</span>
+                                        `}
+                                    </td>
                                     <td>
                                         ${a.teams ? `
                                             <span class="badge badge-success">${a.teams}</span>
@@ -2093,6 +2142,13 @@
                         document.getElementById('assistant-name').value = data.name || '';
                         document.getElementById('assistant-surname').value = data.surname || '';
                         document.getElementById('assistant-email').value = data.email || '';
+                        
+                        // Load languages
+                        const languageCheckboxes = document.querySelectorAll('input[name="languages"]');
+                        languageCheckboxes.forEach(checkbox => {
+                            checkbox.checked = data.languages && data.languages.includes(checkbox.value);
+                        });
+                        
                         const preview = document.getElementById('assistant-avatar-preview');
                         if (data.avatar) {
                             preview.innerHTML = `<img src="${data.avatar}" alt="Avatar">`;
@@ -2106,6 +2162,12 @@
                 document.getElementById('assistant-form').reset();
                 document.getElementById('assistant-avatar-preview').innerHTML = '<span>👤</span>';
                 document.getElementById('assistant-avatar-data').value = '';
+                
+                // Reset languages - only Turkish checked by default
+                const languageCheckboxes = document.querySelectorAll('input[name="languages"]');
+                languageCheckboxes.forEach(checkbox => {
+                    checkbox.checked = checkbox.value === 'tr';
+                });
             }
         }
 
@@ -2145,12 +2207,25 @@
                     return;
                 }
                 
+                // Get selected languages
+                const selectedLanguages = [];
+                const languageCheckboxes = document.querySelectorAll('input[name="languages"]:checked');
+                languageCheckboxes.forEach(checkbox => {
+                    selectedLanguages.push(checkbox.value);
+                });
+                
+                if (selectedLanguages.length === 0) {
+                    showAlert('En az bir dil seçmelisiniz', 'error');
+                    return;
+                }
+                
                 const avatarData = avatarDataInput.value || null;
             const data = {
                     name: name,
                     surname: surname,
                     email: emailInput ? (emailInput.value.trim() || null) : null,
-                    avatar: avatarData || null
+                    avatar: avatarData || null,
+                    languages: selectedLanguages
                 };
 
                 console.log('💾 Saving assistant:', { 

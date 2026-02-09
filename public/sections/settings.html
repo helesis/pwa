@@ -28,7 +28,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-<div class="content-section" id="settingsSection">
+<div class="content-section" id="settingsSection" style="height: calc(100vh - 84px); max-height: calc(100vh - 84px);">
   <div class="section-header">
     <h1 class="section-header-title" data-i18n="settings">Ayarlar</h1>
   </div>
@@ -72,7 +72,7 @@
     </div>
   </div>
 
-  <div class="settings-section" id="settingsContent" style="display:none;">
+  <div class="settings-section" id="settingsContent" style="display:none; -webkit-overflow-scrolling: touch; overflow-y: auto; height: 100%;">
     <div class="profile-header">
       <div class="profile-avatar-large" id="profileAvatarLarge">
         <i data-lucide="user" class="icon icon-xl"></i>
