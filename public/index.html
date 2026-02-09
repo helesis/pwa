@@ -157,6 +157,13 @@
             }
         }
 
+        // Test badge after DOM loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                updateChatBadge(3); // Test with 3 unread messages
+            }, 1000);
+        });
+
         // ============================================
         // LEGACY COMPATIBILITY LAYER (Backward Compatibility)
         // Bu değişkenler kod içinde hala kullanılıyor, AppState'e proxy olarak çalışırlar

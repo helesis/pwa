@@ -49,6 +49,7 @@
         .nav-item-icon {
             font-size: 24px;
             line-height: 1;
+            position: relative;
         }
 
         .nav-item-label {
@@ -59,6 +60,30 @@
 
         .nav-item.hidden {
             display: none !important;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            background: #ffc107;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #1a4d6d;
+            animation: pulse 2s infinite;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
         }
 
         @media (orientation: landscape) {
