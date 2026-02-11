@@ -1150,9 +1150,9 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Harita Konumu</label>
-                    <select id="calendar-activity-map-location" class="form-input">
-                        <option value="">Konum seçin (opsiyonel)</option>
+                    <label class="form-label">Harita Konumu *</label>
+                    <select id="calendar-activity-map-location" class="form-input" required>
+                        <option value="">Konum seçin</option>
                     </select>
                     <input type="hidden" id="calendar-activity-map-latitude">
                     <input type="hidden" id="calendar-activity-map-longitude">
@@ -4575,9 +4575,10 @@
             }
         }
         function populateMapLocationSelect(locations) {
+            const filtered = locations.filter(loc => !/^\d+$/.test(String(loc.name || '').trim()));
             const select = document.getElementById('calendar-activity-map-location');
-            select.innerHTML = '<option value="">Konum seçin (opsiyonel)</option>' +
-                locations.map(loc => `<option value="${loc.id}" data-lat="${loc.latitude}" data-lng="${loc.longitude}">${loc.name}</option>`).join('');
+            select.innerHTML = '<option value="">Konum seçin</option>' +
+                filtered.map(loc => `<option value="${loc.id}" data-lat="${loc.latitude}" data-lng="${loc.longitude}">${loc.name}</option>`).join('');
         }
 
         // Open activity calendar modal
@@ -4771,6 +4772,14 @@
 
             if (!title || !startDate) {
                 showAlert('Başlık ve başlangıç tarihi gereklidir', 'error');
+                isProcessingActivity = false;
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Kaydet'; }
+                return;
+            }
+            const mapLocId = document.getElementById('calendar-activity-map-location').value;
+            if (!mapLocId) {
+                showAlert('Harita konumu seçilmelidir', 'error');
                 isProcessingActivity = false;
                 const submitBtn = event.target.querySelector('button[type="submit"]');
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Kaydet'; }
