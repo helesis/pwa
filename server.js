@@ -613,6 +613,21 @@ async function addNewTablesIfNeeded() {
     
     const missingColumns = columnsToAdd.filter(col => !existingColumnNames.has(col.name));
     
+    // Migrate category to Zamanlama (Sabah, Öğle, Akşam, Gece) - clear old Tür values
+    try {
+      const migrateResult = await pool.query(`
+        UPDATE activities 
+        SET category = NULL 
+        WHERE category IS NOT NULL 
+        AND category NOT IN ('Sabah', 'Öğle', 'Akşam', 'Gece')
+      `);
+      if (migrateResult.rowCount > 0) {
+        logDebug(`Migrated ${migrateResult.rowCount} activities: category → Zamanlama (cleared old values)`);
+      }
+    } catch (migErr) {
+      logDebug(`Category migration skipped or failed: ${migErr.message}`);
+    }
+    
     if (missingColumns.length > 0) {
       logDebug(`Adding ${missingColumns.length} missing columns to activities table`);
       const client = await pool.connect();

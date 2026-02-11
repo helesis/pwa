@@ -982,8 +982,14 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Kategori</label>
-                    <input type="text" id="activity-category" class="form-input" placeholder="Örn: Sabah / Öğle / Akşam">
+                    <label class="form-label">Zamanlama</label>
+                    <select id="activity-category" class="form-input">
+                        <option value="">Seçiniz</option>
+                        <option value="Sabah">Sabah</option>
+                        <option value="Öğle">Öğle</option>
+                        <option value="Akşam">Akşam</option>
+                        <option value="Gece">Gece</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tür</label>
@@ -1090,16 +1096,13 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Kategori</label>
+                    <label class="form-label">Zamanlama</label>
                     <select id="calendar-activity-category" class="form-input">
                         <option value="">Seçiniz</option>
-                        <option value="Gündüz Aktivitesi">Gündüz Aktivitesi</option>
-                        <option value="Workshop">Workshop</option>
-                        <option value="Çocuk Aktivitesi">Çocuk Aktivitesi</option>
-                        <option value="Çocuk Gösterisi">Çocuk Gösterisi</option>
-                        <option value="Akşam Gösterisi">Akşam Gösterisi</option>
-                        <option value="Canlı Müzik">Canlı Müzik</option>
-                        <option value="Gösteri Sonrası">Gösteri Sonrası</option>
+                        <option value="Sabah">Sabah</option>
+                        <option value="Öğle">Öğle</option>
+                        <option value="Akşam">Akşam</option>
+                        <option value="Gece">Gece</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -4499,10 +4502,12 @@
                         },
                         backgroundColor: activity.category === 'Sabah' ? '#FFD700' : 
                                        activity.category === 'Öğle' ? '#FF6347' : 
-                                       activity.category === 'Akşam' ? '#4B0082' : '#2C6E8F',
+                                       activity.category === 'Akşam' ? '#4B0082' : 
+                                       activity.category === 'Gece' ? '#2C3E50' : '#2C6E8F',
                         borderColor: activity.category === 'Sabah' ? '#FFA500' : 
                                    activity.category === 'Öğle' ? '#FF4500' : 
-                                   activity.category === 'Akşam' ? '#6A0DAD' : '#1A4D6D'
+                                   activity.category === 'Akşam' ? '#6A0DAD' : 
+                                   activity.category === 'Gece' ? '#1A2530' : '#1A4D6D'
                     };
                     
                     // Add RRule if exists (FullCalendar RRule plugin expects string)
