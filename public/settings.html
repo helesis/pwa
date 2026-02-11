@@ -1081,8 +1081,9 @@
                         <input type="date" id="calendar-activity-start-date" class="form-input" required>
                     </div>
                     <div>
-                        <label class="form-label">Bitiş Tarihi</label>
+                        <label class="form-label" id="calendar-activity-end-date-label">Bitiş Tarihi</label>
                         <input type="date" id="calendar-activity-end-date" class="form-input">
+                        <div style="font-size: 12px; color: #667781; margin-top: 4px; display: none;" id="calendar-activity-end-date-hint">Tekrarlı aktivitelerde son tekrar tarihi</div>
                     </div>
                 </div>
                 <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -1198,13 +1199,6 @@
                         <input type="text" id="recurring-rrule-string" class="form-input" placeholder="Örn: FREQ=WEEKLY;BYDAY=MO,WE,FR">
                         <div style="font-size: 12px; color: #667781; margin-top: 4px;">
                             RRule formatı: FREQ=DAILY|WEEKLY|MONTHLY|YEARLY;INTERVAL=2;BYDAY=MO,WE,FR;UNTIL=20241231T000000Z
-                        </div>
-                    </div>
-                    <div class="form-group" id="recurring-until-group" style="display: none;">
-                        <label class="form-label">Tekrar Son Tarihi (Opsiyonel)</label>
-                        <input type="date" id="recurring-until-date" class="form-input">
-                        <div style="font-size: 12px; color: #667781; margin-top: 4px;">
-                            Boş bırakılırsa seçilen yılın sonuna kadar tekrar eder
                         </div>
                     </div>
                 </div>
@@ -4557,18 +4551,22 @@
         // Toggle recurring options visibility
         function toggleRecurringOptions() {
             const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
-            const untilGroup = document.getElementById('recurring-until-group');
             const customGroup = document.getElementById('recurring-custom-group');
-            
+            const endDateInput = document.getElementById('calendar-activity-end-date');
+            const endDateHint = document.getElementById('calendar-activity-end-date-hint');
+
             if (recurringType === 'none') {
-                untilGroup.style.display = 'none';
                 customGroup.style.display = 'none';
-            } else if (recurringType === 'custom') {
-                untilGroup.style.display = 'block';
-                customGroup.style.display = 'block';
+                endDateInput.removeAttribute('required');
+                endDateHint.style.display = 'none';
             } else {
-                untilGroup.style.display = 'block';
-                customGroup.style.display = 'none';
+                customGroup.style.display = recurringType === 'custom' ? 'block' : 'none';
+                endDateInput.setAttribute('required', 'required');
+                endDateHint.style.display = 'block';
+                if (!endDateInput.value) {
+                    const year = new Date().getFullYear();
+                    endDateInput.value = `${year}-12-31`;
+                }
             }
         }
 
@@ -4612,10 +4610,10 @@
                 document.getElementById('activity-calendar-modal-title').textContent = 'Aktivite Düzenle';
                 document.getElementById('activity-calendar-modal').classList.add('active');
                 
-                // Fill form
+                // Fill form (end_date = bitiş/son tekrar tarihi)
                 document.getElementById('calendar-activity-title').value = activity.title || '';
                 document.getElementById('calendar-activity-start-date').value = activity.activity_date || '';
-                document.getElementById('calendar-activity-end-date').value = activity.end_date || '';
+                document.getElementById('calendar-activity-end-date').value = activity.end_date || activity.recurring_until || '';
                 document.getElementById('calendar-activity-start-time').value = activity.start_time || '';
                 document.getElementById('calendar-activity-end-time').value = activity.end_time || '';
                 document.getElementById('calendar-activity-category').value = activity.category || '';
@@ -4637,9 +4635,6 @@
                 if (recurringRadio) {
                     recurringRadio.checked = true;
                     }
-                }
-                if (activity.recurring_until) {
-                    document.getElementById('recurring-until-date').value = activity.recurring_until;
                 }
                 toggleRecurringOptions();
             } catch (error) {
@@ -4682,29 +4677,30 @@
             const imageUrl = document.getElementById('calendar-activity-image-url').value.trim() || null;
             const videoUrl = document.getElementById('calendar-activity-video-url').value.trim() || null;
             const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
-            const recurringUntil = document.getElementById('recurring-until-date').value || null;
             const customRrule = document.getElementById('recurring-rrule-string').value.trim() || null;
-            
+            const recurringUntilDate = (recurringType !== 'none' && endDate) ? endDate : (new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]);
+
             if (!title || !startDate) {
                 showAlert('Başlık ve başlangıç tarihi gereklidir', 'error');
                 isProcessingActivity = false;
-                // Re-enable submit button
                 const submitBtn = event.target.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Kaydet';
-                }
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Kaydet'; }
                 return;
             }
-            
+            if (recurringType !== 'none' && !endDate) {
+                showAlert('Tekrarlı aktivitelerde bitiş tarihi (son tekrar) gereklidir', 'error');
+                isProcessingActivity = false;
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Kaydet'; }
+                return;
+            }
+
             try {
                 let rruleString = null;
                 if (recurringType === 'custom' && customRrule) {
                     rruleString = customRrule;
                 } else if (recurringType !== 'none') {
-                    // Generate RRule string from simple recurring type
-                    const untilDate = recurringUntil || new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0];
-                    rruleString = generateRRuleString(recurringType, startDate, untilDate);
+                    rruleString = generateRRuleString(recurringType, startDate, recurringUntilDate);
                 }
                 
                 // If editing single activity, update it directly
@@ -4727,7 +4723,7 @@
                             image_url: imageUrl,
                             video_url: videoUrl,
                             recurring_rule: recurringType !== 'none' ? recurringType : null,
-                            recurring_until: recurringType !== 'none' ? (recurringUntil || new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]) : null,
+                            recurring_until: recurringType !== 'none' ? recurringUntilDate : null,
                             rrule: rruleString,
                             is_active: true
                         })
@@ -4771,9 +4767,7 @@
                     return;
                 }
                 
-                // Create new activity/activities
-                const year = new Date().getFullYear();
-                const recurringUntilDate = recurringUntil ? recurringUntil : `${year}-12-31`;
+                // Create new activity/activities (recurringUntilDate from end date)
                 
                 // Generate dates if recurring
                 let dates = [startDate];
@@ -4803,7 +4797,7 @@
                     }
                 }
                 
-                // Save each date as a separate activity
+                // Save each date as a separate activity (rrule=null to avoid server duplicate on date filter)
                 const savedActivities = [];
                 for (const date of dates) {
                     const response = await fetch('/api/admin/activities', {
@@ -4824,7 +4818,7 @@
                             video_url: videoUrl,
                             recurring_rule: recurringType !== 'none' ? recurringType : null,
                             recurring_until: recurringType !== 'none' ? recurringUntilDate : null,
-                            rrule: rruleString,
+                            rrule: null,
                             is_story: false,
                             is_active: true
                         })
