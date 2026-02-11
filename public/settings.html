@@ -19,8 +19,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- FullCalendar JS - using jsDelivr CDN (includes locales) -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-    <!-- RRule Library - using unpkg -->
-    <script src="https://unpkg.com/rrule@2.8.1/dist/es5/rrule.min.js"></script>
+    <!-- RRule Library - using jsDelivr CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/rrule@2.8.1/dist/es5/rrule.min.js"></script>
     
     <style>
         * {
@@ -4239,11 +4239,13 @@
             } else {
                 console.log('✅ FullCalendar library loaded');
             }
-            // Check RRule availability once
-            if (typeof RRule === 'undefined') {
+            // Check RRule availability once (supports RRule or rrule.RRule exports)
+            const RRuleLib = window.RRule || (window.rrule && window.rrule.RRule);
+            if (typeof RRuleLib === 'undefined') {
                 console.warn('⚠️ RRule library not loaded (optional - will use simple generation)');
                 rruleAvailable = false;
             } else {
+                window.RRule = RRuleLib;
                 console.log('✅ RRule library loaded');
                 rruleAvailable = true;
             }
