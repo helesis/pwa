@@ -4794,17 +4794,8 @@
                             dates = generateRecurringDates(startDate, recurringType, recurringUntilDate);
                         } else {
                             const rruleObj = RRule.fromString(rruleString);
-                        const startDateTime = new Date(startDate);
-                        if (startTime) {
-                            const [hours, minutes] = startTime.split(':');
-                            startDateTime.setHours(parseInt(hours), parseInt(minutes));
-                        }
-                        rruleObj.options.dtstart = startDateTime;
-                        if (recurringUntilDate) {
-                            rruleObj.options.until = new Date(recurringUntilDate + 'T23:59:59');
-                        }
                             const allDates = rruleObj.all();
-                            dates = allDates.map(d => d.toISOString().split('T')[0]);
+                            dates = allDates.map(d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
                         }
                     } catch (e) {
                         console.warn('Error parsing RRule, using simple generation:', e);
@@ -4878,20 +4869,21 @@
             }
         }
 
-        // Generate RRule string from simple recurring type
+        // Generate RRule string from simple recurring type (DTSTART required for RRule.fromString)
         function generateRRuleString(recurringType, startDate, untilDate) {
             const start = new Date(startDate);
             const dayOfWeek = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][start.getDay()];
-            
+            const dtstart = startDate.replace(/-/g, '') + 'T000000Z';
+            const until = untilDate.replace(/-/g, '') + 'T235959Z';
             switch (recurringType) {
                 case 'daily':
-                    return `FREQ=DAILY;UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                    return `DTSTART:${dtstart}\nRRULE:FREQ=DAILY;UNTIL=${until}`;
                 case 'weekly':
-                    return `FREQ=WEEKLY;BYDAY=${dayOfWeek};UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                    return `DTSTART:${dtstart}\nRRULE:FREQ=WEEKLY;BYDAY=${dayOfWeek};UNTIL=${until}`;
                 case 'biweekly':
-                    return `FREQ=WEEKLY;INTERVAL=2;BYDAY=${dayOfWeek};UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                    return `DTSTART:${dtstart}\nRRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=${dayOfWeek};UNTIL=${until}`;
                 case 'monthly':
-                    return `FREQ=MONTHLY;BYMONTHDAY=${start.getDate()};UNTIL=${untilDate.replace(/-/g, '')}T235959Z`;
+                    return `DTSTART:${dtstart}\nRRULE:FREQ=MONTHLY;BYMONTHDAY=${start.getDate()};UNTIL=${until}`;
                 default:
                     return null;
             }
@@ -4908,8 +4900,9 @@
             const until = new Date(untilDate);
             const current = new Date(start);
             
+            const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             while (current <= until) {
-                dates.push(current.toISOString().split('T')[0]);
+                dates.push(fmt(current));
                 
                 switch (recurringType) {
                     case 'daily':
