@@ -1137,19 +1137,6 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Lokasyon</label>
-                    <select id="calendar-activity-location" class="form-input">
-                        <option value="">Seçiniz</option>
-                        <option value="Tugi Kid's Club">Tugi Kid's Club</option>
-                        <option value="Beach Club">Beach Club</option>
-                        <option value="Boccia Alanı">Boccia Alanı</option>
-                        <option value="Tenis Kortları">Tenis Kortları</option>
-                        <option value="Plaj">Plaj</option>
-                        <option value="Animasyon Info Desk">Animasyon Info Desk</option>
-                        <option value="Vista Restaurant">Vista Restaurant</option>
-                    </select>
-                </div>
-                <div class="form-group">
                     <label class="form-label">Harita Konumu *</label>
                     <select id="calendar-activity-map-location" class="form-input" required>
                         <option value="">Konum seçin</option>
@@ -4680,7 +4667,6 @@
                 document.getElementById('calendar-activity-end-time').value = activity.end_time || '';
                 document.getElementById('calendar-activity-category').value = activity.category || '';
                 document.getElementById('calendar-activity-type').value = activity.type || '';
-                document.getElementById('calendar-activity-location').value = activity.location || '';
                 document.getElementById('calendar-activity-description').value = activity.description || '';
                 document.querySelectorAll('input[name="calendar-activity-age-group"]').forEach(cb => { cb.checked = false; });
                 if (activity.age_group) {
@@ -4756,7 +4742,8 @@
             const endTime = document.getElementById('calendar-activity-end-time').value || null;
             const category = document.getElementById('calendar-activity-category').value.trim() || null;
             const type = document.getElementById('calendar-activity-type').value.trim() || null;
-            const location = document.getElementById('calendar-activity-location').value.trim() || null;
+            const mapLocSelect = document.getElementById('calendar-activity-map-location');
+            const location = mapLocSelect.selectedIndex > 0 ? mapLocSelect.options[mapLocSelect.selectedIndex].text : null;
             const description = document.getElementById('calendar-activity-description').value.trim() || null;
             const imageUrl = document.getElementById('calendar-activity-image-url').value.trim() || null;
             const videoUrl = document.getElementById('calendar-activity-video-url').value.trim() || null;

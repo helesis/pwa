@@ -11372,7 +11372,12 @@
                                     <div class="activity-card-content">
                                         <div class="activity-card-time">${timeRange}</div>
                                         <div class="activity-card-title">${activity.title || ''}</div>
-                                        ${activity.location ? `
+                                        ${activity.location && (activity.map_latitude && activity.map_longitude) ? `
+                                            <div class="activity-card-location" style="cursor: pointer; text-decoration: underline;" data-lat="${activity.map_latitude}" data-lng="${activity.map_longitude}" data-title="${(activity.location || activity.title || '').replace(/"/g, '&quot;')}" onclick="showActivityOnMapFromCard(this)" title="Haritada göster">
+                                                <i data-lucide="map-pin" class="icon icon-sm"></i>
+                                                <span>${activity.location}</span>
+                                            </div>
+                                        ` : activity.location ? `
                                             <div class="activity-card-location">
                                                 <i data-lucide="map-pin" class="icon icon-sm"></i>
                                                 <span>${activity.location}</span>
@@ -11387,7 +11392,7 @@
                                     </div>
                                     <div class="activity-card-actions">
                                         ${activity.map_latitude && activity.map_longitude ? `
-                                            <button class="activity-action-btn" onclick="showActivityOnMap(${activity.map_latitude}, ${activity.map_longitude}, '${activity.title}')" title="Haritada göster">
+                                            <button class="activity-action-btn" onclick="showActivityOnMap(${activity.map_latitude}, ${activity.map_longitude}, '${(activity.location || activity.title || '').replace(/'/g, "\\'")}')" title="Haritada göster">
                                                 <i data-lucide="map" class="icon icon-sm"></i>
                                             </button>
                                         ` : ''}
@@ -11985,21 +11990,27 @@
 
         // Show activity on map
         function showActivityOnMap(lat, lng, title) {
-            // Switch to map section and show activity location
             switchSection('map');
             setTimeout(() => {
-                if (typeof map !== 'undefined' && map) {
-                    map.setView([lat, lng], 17, { animate: true, duration: 1.0 });
-                    
-                    // Add marker if it doesn't exist
-                    if (typeof L !== 'undefined') {
-                        const marker = L.marker([lat, lng])
-                            .addTo(map)
-                            .bindPopup(`<b>${title}</b>`)
-                            .openPopup();
-                    }
-                }
-            }, 300);
+                if (typeof map === 'undefined' || !map) return;
+                map.easeTo({ center: [lng, lat], zoom: 18, duration: 500 });
+                if (typeof tempMarker !== 'undefined' && tempMarker) tempMarker.remove();
+                const tempEl = document.createElement('div');
+                tempEl.style.cssText = 'width: 30px; height: 30px; border-radius: 50%; background: #FF9800; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;';
+                tempEl.innerHTML = '<i data-lucide="map-pin" style="color: white; width: 16px; height: 16px;"></i>';
+                window.tempMarker = new mapboxgl.Marker(tempEl)
+                    .setLngLat([lng, lat])
+                    .setPopup(new mapboxgl.Popup().setHTML('<b>' + (title || 'Aktivite') + '</b>'))
+                    .addTo(map)
+                    .togglePopup();
+                if (typeof lucide !== 'undefined') setTimeout(() => lucide.createIcons(), 100);
+            }, 400);
+        }
+        function showActivityOnMapFromCard(el) {
+            const lat = parseFloat(el.getAttribute('data-lat'));
+            const lng = parseFloat(el.getAttribute('data-lng'));
+            const title = el.getAttribute('data-title') || 'Aktivite';
+            if (!isNaN(lat) && !isNaN(lng)) showActivityOnMap(lat, lng, title);
         }
 
         // Add pulse animation for now playing banner
