@@ -1120,6 +1120,23 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Yaş Grubu (opsiyonel)</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                        <label class="form-label" style="display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" name="calendar-activity-age-group" value="Kids"> Kids
+                        </label>
+                        <label class="form-label" style="display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" name="calendar-activity-age-group" value="Teens"> Teens
+                        </label>
+                        <label class="form-label" style="display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" name="calendar-activity-age-group" value="Adults"> Adults
+                        </label>
+                        <label class="form-label" style="display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" name="calendar-activity-age-group" value="All"> All
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Lokasyon</label>
                     <select id="calendar-activity-location" class="form-input">
                         <option value="">Seçiniz</option>
@@ -1131,6 +1148,14 @@
                         <option value="Animasyon Info Desk">Animasyon Info Desk</option>
                         <option value="Vista Restaurant">Vista Restaurant</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Harita Konumu</label>
+                    <select id="calendar-activity-map-location" class="form-input">
+                        <option value="">Konum seçin (opsiyonel)</option>
+                    </select>
+                    <input type="hidden" id="calendar-activity-map-latitude">
+                    <input type="hidden" id="calendar-activity-map-longitude">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Açıklama</label>
@@ -4292,6 +4317,14 @@
                 activityCalendarForm.setAttribute('data-listener-added', 'true');
                 console.log('✅ Activity calendar form submit handler attached');
             }
+            const mapLocationSelect = document.getElementById('calendar-activity-map-location');
+            if (mapLocationSelect) {
+                mapLocationSelect.addEventListener('change', function() {
+                    const opt = this.options[this.selectedIndex];
+                    document.getElementById('calendar-activity-map-latitude').value = opt?.dataset?.lat || '';
+                    document.getElementById('calendar-activity-map-longitude').value = opt?.dataset?.lng || '';
+                });
+            }
         });
 
         // ============================================
@@ -4463,16 +4496,21 @@
                     }
                     
                     let endDate = null;
-                    if (activity.end_date) {
-                        endDate = new Date(activity.end_date);
-                        if (activity.end_time) {
-                            const [hours, minutes] = activity.end_time.split(':');
-                            endDate.setHours(parseInt(hours), parseInt(minutes));
-                        }
-                    } else if (activity.end_time) {
-                        endDate = new Date(startDate);
+                    const isRecurring = activity.recurring_rule || activity.recurring_until;
+                    if (activity.end_time) {
+                        endDate = new Date(activity.activity_date);
                         const [hours, minutes] = activity.end_time.split(':');
                         endDate.setHours(parseInt(hours), parseInt(minutes));
+                    } else if (!isRecurring && activity.end_date) {
+                        const actDateStr = String(activity.activity_date).split('T')[0].split(' ')[0];
+                        const endDateStr = String(activity.end_date).split('T')[0].split(' ')[0];
+                        if (actDateStr !== endDateStr) {
+                            endDate = new Date(activity.end_date);
+                            if (activity.end_time) {
+                                const [h, m] = activity.end_time.split(':');
+                                endDate.setHours(parseInt(h), parseInt(m));
+                            }
+                        }
                     }
                     
                     const event = {
@@ -4520,26 +4558,48 @@
             }
         }
 
+        // Load map locations for activity modal (id >= 1000 = non-room locations)
+        let mapLocationsCache = null;
+        async function loadMapLocationsForActivity() {
+            if (mapLocationsCache) {
+                populateMapLocationSelect(mapLocationsCache);
+                return;
+            }
+            try {
+                const res = await fetch('/api/map/locations', { credentials: 'include' });
+                const locations = await res.json();
+                mapLocationsCache = locations;
+                populateMapLocationSelect(locations);
+            } catch (e) {
+                console.warn('Map locations load failed:', e);
+            }
+        }
+        function populateMapLocationSelect(locations) {
+            const select = document.getElementById('calendar-activity-map-location');
+            select.innerHTML = '<option value="">Konum seçin (opsiyonel)</option>' +
+                locations.map(loc => `<option value="${loc.id}" data-lat="${loc.latitude}" data-lng="${loc.longitude}">${loc.name}</option>`).join('');
+        }
+
         // Open activity calendar modal
         function openActivityCalendarModal(dateStr = null) {
             currentCalendarActivityId = null;
             activityFileToUpload = null;
             document.getElementById('activity-calendar-modal-title').textContent = 'Yeni Aktivite';
-            document.getElementById('activity-calendar-modal').classList.add('active');
             document.getElementById('activity-calendar-form').reset();
             document.getElementById('calendar-activity-file-preview').innerHTML = '';
-            
+            document.getElementById('calendar-activity-map-latitude').value = '';
+            document.getElementById('calendar-activity-map-longitude').value = '';
+            document.getElementById('activity-calendar-modal').classList.add('active');
+
             if (dateStr) {
                 document.getElementById('calendar-activity-start-date').value = dateStr;
             } else {
-                // Set default to today
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('calendar-activity-start-date').value = today;
             }
-            
-            // Reset recurring options
             document.getElementById('recurring-none').checked = true;
             toggleRecurringOptions();
+            loadMapLocationsForActivity();
         }
 
         // Close activity calendar modal
@@ -4605,12 +4665,13 @@
                 });
                 if (!response.ok) throw new Error('Failed to load activity');
                 const activity = await response.json();
-                
+
+                await loadMapLocationsForActivity();
+
                 currentCalendarActivityId = id;
                 document.getElementById('activity-calendar-modal-title').textContent = 'Aktivite Düzenle';
                 document.getElementById('activity-calendar-modal').classList.add('active');
-                
-                // Fill form (end_date = bitiş/son tekrar tarihi)
+
                 document.getElementById('calendar-activity-title').value = activity.title || '';
                 document.getElementById('calendar-activity-start-date').value = activity.activity_date || '';
                 document.getElementById('calendar-activity-end-date').value = activity.end_date || activity.recurring_until || '';
@@ -4620,10 +4681,32 @@
                 document.getElementById('calendar-activity-type').value = activity.type || '';
                 document.getElementById('calendar-activity-location').value = activity.location || '';
                 document.getElementById('calendar-activity-description').value = activity.description || '';
-                
-                // Set media URLs
+                document.querySelectorAll('input[name="calendar-activity-age-group"]').forEach(cb => { cb.checked = false; });
+                if (activity.age_group) {
+                    activity.age_group.split(/,\s*/).forEach(v => {
+                        const cb = document.querySelector(`input[name="calendar-activity-age-group"][value="${v.trim()}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
                 document.getElementById('calendar-activity-image-url').value = activity.image_url || '';
                 document.getElementById('calendar-activity-video-url').value = activity.video_url || '';
+
+                document.getElementById('calendar-activity-map-latitude').value = activity.map_latitude || '';
+                document.getElementById('calendar-activity-map-longitude').value = activity.map_longitude || '';
+                const mapSelect = document.getElementById('calendar-activity-map-location');
+                if (activity.map_latitude != null && activity.map_longitude != null) {
+                    const lat = parseFloat(activity.map_latitude);
+                    const lng = parseFloat(activity.map_longitude);
+                    for (let i = 1; i < mapSelect.options.length; i++) {
+                        const opt = mapSelect.options[i];
+                        if (Math.abs(parseFloat(opt.dataset.lat) - lat) < 1e-6 && Math.abs(parseFloat(opt.dataset.lng) - lng) < 1e-6) {
+                            mapSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                } else {
+                    mapSelect.selectedIndex = 0;
+                }
                 
                 // Set recurring type
                 if (activity.rrule) {
@@ -4676,6 +4759,12 @@
             const description = document.getElementById('calendar-activity-description').value.trim() || null;
             const imageUrl = document.getElementById('calendar-activity-image-url').value.trim() || null;
             const videoUrl = document.getElementById('calendar-activity-video-url').value.trim() || null;
+            const mapLatRaw = document.getElementById('calendar-activity-map-latitude').value.trim();
+            const mapLngRaw = document.getElementById('calendar-activity-map-longitude').value.trim();
+            const mapLatitude = mapLatRaw ? parseFloat(mapLatRaw) : null;
+            const mapLongitude = mapLngRaw ? parseFloat(mapLngRaw) : null;
+            const ageGroupChecks = Array.from(document.querySelectorAll('input[name="calendar-activity-age-group"]:checked'));
+            const ageGroup = ageGroupChecks.length > 0 ? ageGroupChecks.map(c => c.value).join(', ') : null;
             const recurringType = document.querySelector('input[name="recurring-type"]:checked').value;
             const customRrule = document.getElementById('recurring-rrule-string').value.trim() || null;
             const recurringUntilDate = (recurringType !== 'none' && endDate) ? endDate : (new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]);
@@ -4722,13 +4811,16 @@
                             description,
                             image_url: imageUrl,
                             video_url: videoUrl,
+                            age_group: ageGroup,
+                            map_latitude: mapLatitude,
+                            map_longitude: mapLongitude,
                             recurring_rule: recurringType !== 'none' ? recurringType : null,
                             recurring_until: recurringType !== 'none' ? recurringUntilDate : null,
                             rrule: rruleString,
                             is_active: true
                         })
                     });
-                    
+
                     if (!response.ok) {
                         const error = await response.json();
                         throw new Error(error.error || 'Failed to update activity');
@@ -4816,6 +4908,9 @@
                             description,
                             image_url: imageUrl,
                             video_url: videoUrl,
+                            age_group: ageGroup,
+                            map_latitude: mapLatitude,
+                            map_longitude: mapLongitude,
                             recurring_rule: recurringType !== 'none' ? recurringType : null,
                             recurring_until: recurringType !== 'none' ? recurringUntilDate : null,
                             rrule: null,
@@ -4833,16 +4928,33 @@
                     savedActivities.push(savedActivity);
                 }
                 
-                // Upload file to first activity if exists
+                // Upload file and apply to all activities
                 if (activityFileToUpload && savedActivities.length > 0) {
                     const formData = new FormData();
                     formData.append('file', activityFileToUpload);
-                    
-                    await fetch(`/api/admin/activities/${savedActivities[0].id}/upload`, {
+                    const uploadRes = await fetch(`/api/admin/activities/${savedActivities[0].id}/upload`, {
                         method: 'POST',
                         credentials: 'include',
                         body: formData
                     });
+                    if (uploadRes.ok) {
+                        const firstUpdated = await uploadRes.json();
+                        const uploadedImageUrl = firstUpdated.image_url;
+                        const uploadedVideoUrl = firstUpdated.video_url;
+                        if ((uploadedImageUrl || uploadedVideoUrl) && savedActivities.length > 1) {
+                            for (let i = 1; i < savedActivities.length; i++) {
+                                await fetch(`/api/admin/activities/${savedActivities[i].id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({
+                                        image_url: uploadedImageUrl || null,
+                                        video_url: uploadedVideoUrl || null
+                                    })
+                                });
+                            }
+                        }
+                    }
                 }
                 
                 closeActivityCalendarModal();
