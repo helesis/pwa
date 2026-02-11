@@ -13,14 +13,12 @@
     
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     
-    <!-- FullCalendar CSS - using unpkg -->
-    <link href="https://unpkg.com/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    <!-- FullCalendar CSS - using jsDelivr CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
     
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- FullCalendar JS - using unpkg global bundle -->
-    <script src="https://unpkg.com/fullcalendar@6.1.10/index.global.min.js"></script>
-    <!-- FullCalendar Turkish Locale -->
-    <script src="https://unpkg.com/fullcalendar@6.1.10/locales/tr.global.min.js"></script>
+    <!-- FullCalendar JS - using jsDelivr CDN (includes locales) -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <!-- RRule Library - using unpkg -->
     <script src="https://unpkg.com/rrule@2.8.1/dist/es5/rrule.min.js"></script>
     
@@ -4659,8 +4657,7 @@
                 submitBtn.textContent = 'Kaydediliyor...';
             }
             
-            try {
-                const title = document.getElementById('calendar-activity-title').value.trim();
+            const title = document.getElementById('calendar-activity-title').value.trim();
             const startDate = document.getElementById('calendar-activity-start-date').value;
             const endDate = document.getElementById('calendar-activity-end-date').value || null;
             const startTime = document.getElementById('calendar-activity-start-time').value || null;
