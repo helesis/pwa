@@ -1069,7 +1069,7 @@
                 <h3 class="modal-title" id="activity-calendar-modal-title">Yeni Aktivite</h3>
                 <button class="close-btn" onclick="closeActivityCalendarModal()">&times;</button>
             </div>
-            <form id="activity-calendar-form" onsubmit="saveActivityCalendar(event)">
+            <form id="activity-calendar-form">
                 <div class="form-group">
                     <label class="form-label">Başlık *</label>
                     <input type="text" id="calendar-activity-title" class="form-input" required>
@@ -1102,14 +1102,27 @@
                     <label class="form-label">Tür</label>
                     <select id="calendar-activity-type" class="form-input">
                         <option value="">Seçiniz</option>
-                        <option value="Kids" data-i18n="kids">Çocuk</option>
-                        <option value="Adult" data-i18n="adult">Yetişkin</option>
-                        <option value="All Ages" data-i18n="allAges">Tüm Yaşlar</option>
+                        <option value="Gündüz Aktivitesi">Gündüz Aktivitesi</option>
+                        <option value="Workshop">Workshop</option>
+                        <option value="Çocuk Aktivitesi">Çocuk Aktivitesi</option>
+                        <option value="Çocuk Gösterisi">Çocuk Gösterisi</option>
+                        <option value="Akşam Gösterisi">Akşam Gösterisi</option>
+                        <option value="Canlı Müzik">Canlı Müzik</option>
+                        <option value="Gösteri Sonrası">Gösteri Sonrası</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Lokasyon</label>
-                    <input type="text" id="calendar-activity-location" class="form-input" placeholder="Örn: Ana Sahne / Havuz">
+                    <select id="calendar-activity-location" class="form-input">
+                        <option value="">Seçiniz</option>
+                        <option value="Tugi Kid's Club">Tugi Kid's Club</option>
+                        <option value="Beach Club">Beach Club</option>
+                        <option value="Boccia Alanı">Boccia Alanı</option>
+                        <option value="Tenis Kortları">Tenis Kortları</option>
+                        <option value="Plaj">Plaj</option>
+                        <option value="Animasyon Info Desk">Animasyon Info Desk</option>
+                        <option value="Vista Restaurant">Vista Restaurant</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Açıklama</label>
@@ -4271,8 +4284,9 @@
             }
             
             const activityCalendarForm = document.getElementById('activity-calendar-form');
-            if (activityCalendarForm) {
+            if (activityCalendarForm && !activityCalendarForm.hasAttribute('data-listener-added')) {
                 activityCalendarForm.addEventListener('submit', saveActivityCalendar);
+                activityCalendarForm.setAttribute('data-listener-added', 'true');
                 console.log('✅ Activity calendar form submit handler attached');
             }
         });
@@ -4624,10 +4638,29 @@
         }
 
         // Save activity calendar (with recurring support and file upload)
+        let isProcessingActivity = false;
         async function saveActivityCalendar(event) {
             event.preventDefault();
+            event.stopPropagation();
             
-            const title = document.getElementById('calendar-activity-title').value.trim();
+            // Prevent multiple submissions
+            if (isProcessingActivity) {
+                console.log('⚠️ Activity save already in progress, ignoring duplicate submission');
+                return;
+            }
+            
+            isProcessingActivity = true;
+            console.log('🔄 Starting activity save process...');
+            
+            // Disable submit button to prevent multiple clicks
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Kaydediliyor...';
+            }
+            
+            try {
+                const title = document.getElementById('calendar-activity-title').value.trim();
             const startDate = document.getElementById('calendar-activity-start-date').value;
             const endDate = document.getElementById('calendar-activity-end-date').value || null;
             const startTime = document.getElementById('calendar-activity-start-time').value || null;
@@ -4644,6 +4677,13 @@
             
             if (!title || !startDate) {
                 showAlert('Başlık ve başlangıç tarihi gereklidir', 'error');
+                isProcessingActivity = false;
+                // Re-enable submit button
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Kaydet';
+                }
                 return;
             }
             
@@ -4711,6 +4751,13 @@
                     closeActivityCalendarModal();
                     loadActivitiesCalendar();
                     showAlert('Aktivite başarıyla güncellendi', 'success');
+                    isProcessingActivity = false;
+                    // Re-enable submit button
+                    const submitBtn = event.target.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Kaydet';
+                    }
                     return;
                 }
                 
@@ -4809,6 +4856,15 @@
             } catch (error) {
                 console.error('Error saving activity:', error);
                 showAlert('Aktivite kaydedilirken hata oluştu: ' + error.message, 'error');
+            } finally {
+                isProcessingActivity = false;
+                // Re-enable submit button
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Kaydet';
+                }
+                console.log('✅ Activity save process completed');
             }
         }
 
