@@ -27,188 +27,164 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Chat keyboard optimization -->
+    <!-- Chat keyboard optimization - Visual Viewport API (reference pattern) -->
     <script>
-        // Android ve iOS için klavye optimizasyonu
-        document.addEventListener('DOMContentLoaded', function() {
-            const messageInput = document.getElementById('messageInput');
-            const chatContainer = document.getElementById('chatContainer');
-            const inputContainer = document.querySelector('.input-container');
-            const chatSection = document.getElementById('chatSection');
-            
-            let initialViewportHeight = window.innerHeight;
-            let isKeyboardVisible = false;
-            
-            // Sadece chat container yüksekliğini kontrol et
-            function ensureFixedPositions() {
-                // Chat container'ın yüksekliğini kontrol et
-                if (chatContainer && window.visualViewport) {
-                    const vvHeight = window.visualViewport.height;
-                    const windowHeight = window.innerHeight;
-                    const keyboardHeight = windowHeight - vvHeight;
-                    
-                    if (keyboardHeight > 150) {
-                        // Klavye açık - chat container'ı küçült
-                        chatContainer.style.bottom = `${keyboardHeight + 143}px`;
-                    } else {
-                        // Klavye kapalı - chat container'ı normal boyut
-                        chatContainer.style.bottom = '143px';
-                    }
-                }
+        (function() {
+            'use strict';
+            const BOTTOM_NAV = 84;
+            const INPUT_MIN_HEIGHT = 60;
+            const HEADER_HEIGHT = 80;
+
+            let vvResizeHandler, vvScrollHandler, resizeFallback;
+            let messageInput, chatContainer, inputContainer, chatSection, sectionHeader;
+
+            function scrollToTop() {
+                if (chatContainer) chatContainer.scrollTop = 0;
             }
-            
-            // Sürekli pozisyon kontrolü
-            setInterval(ensureFixedPositions, 100);
-            
-            if (messageInput) {
-                // Section yüklendiğinde otomatik focus
-                setTimeout(() => {
-                    // iOS için özel klavye açma
-                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                        messageInput.focus();
-                        messageInput.click();
-                        // iOS'ta bazen iki kez gerekir
-                        setTimeout(() => {
-                            messageInput.focus();
-                        }, 100);
-                    } else {
-                        messageInput.focus();
-                    }
-                    // Body scroll'u engelle
-                    document.body.classList.add('chat-active');
-                    
-                    // Visual viewport kontrolü yap
-                    if (window.visualViewport) {
-                        const vvHeight = window.visualViewport.height;
-                        const windowHeight = window.innerHeight;
-                        const keyboardHeight = windowHeight - vvHeight;
-                        
-                        if (keyboardHeight > 150) {
-                            // Klavye zaten açık - sadece chat container'ı ayarla
-                            if (chatContainer) {
-                                chatContainer.style.bottom = `${keyboardHeight + 143}px`;
-                            }
-                            document.body.classList.add('keyboard-visible');
-                        }
-                    }
-                }, 300);
-                
-                // Klavye durumunu takip et
-                function handleKeyboardVisibility() {
-                    const currentHeight = window.innerHeight;
-                    const heightDifference = initialViewportHeight - currentHeight;
-                    
-                    if (heightDifference > 150 && !isKeyboardVisible) {
-                        // Klavye açıldı
-                        isKeyboardVisible = true;
-                        document.body.classList.add('keyboard-visible');
-                        
-                        // Reverse chat: Üste scroll (son mesaj input altında)
-                        setTimeout(() => {
-                            if (chatContainer) {
-                                // Reverse chat: Her zaman üste scroll
-                                chatContainer.scrollTop = 0;
-                            }
-                        }, 50);
-                        
-                    } else if (heightDifference <= 150 && isKeyboardVisible) {
-                        // Klavye kapandı
-                        isKeyboardVisible = false;
-                        document.body.classList.remove('keyboard-visible');
-                    }
+
+            function updateViewport() {
+                if (!chatSection) return;
+                if (!window.visualViewport) {
+                    chatSection.style.height = window.innerHeight + 'px';
+                    chatSection.style.top = '0';
+                    if (sectionHeader) sectionHeader.style.removeProperty('top');
+                    if (inputContainer) inputContainer.style.setProperty('bottom', BOTTOM_NAV + 'px', 'important');
+                    if (chatContainer) chatContainer.style.setProperty('bottom', (BOTTOM_NAV + INPUT_MIN_HEIGHT) + 'px', 'important');
+                    scrollToTop();
+                    return;
                 }
-                
-                // Viewport değişikliklerini takip et
-                window.addEventListener('resize', handleKeyboardVisibility);
-                
-                // iOS Safari için özel ayarlar
-                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                    messageInput.addEventListener('focus', function() {
-                        setTimeout(() => {
-                            handleKeyboardVisibility();
-                            if (chatContainer) {
-                                // Reverse chat: iOS için de üste scroll
-                                chatContainer.scrollTop = 0;
-                            }
-                        }, 300);
-                    });
-                    
-                    messageInput.addEventListener('blur', function() {
-                        setTimeout(() => {
-                            handleKeyboardVisibility();
-                        }, 100);
-                    });
+                const vv = window.visualViewport;
+                const visibleHeight = vv.height;
+                const offsetTop = vv.offsetTop;
+                const innerHeight = window.innerHeight;
+                const visibleBottomOffset = innerHeight - offsetTop - visibleHeight;
+                const inputBottom = Math.max(visibleBottomOffset, BOTTOM_NAV);
+                const chatBottom = inputBottom + INPUT_MIN_HEIGHT;
+
+                chatSection.style.height = visibleHeight + 'px';
+                chatSection.style.top = offsetTop + 'px';
+                if (sectionHeader) sectionHeader.style.setProperty('top', offsetTop + 'px', 'important');
+                if (chatContainer) {
+                    chatContainer.style.setProperty('top', (offsetTop + HEADER_HEIGHT) + 'px', 'important');
+                    chatContainer.style.setProperty('bottom', chatBottom + 'px', 'important');
                 }
-                
-                // Visual Viewport API desteği - Sadece chat container yüksekliğini ayarla
+                if (inputContainer) inputContainer.style.setProperty('bottom', inputBottom + 'px', 'important');
+
+                if (visibleBottomOffset > 100) document.body.classList.add('keyboard-visible');
+                else document.body.classList.remove('keyboard-visible');
+
+                scrollToTop();
+            }
+
+            function setupViewportListeners() {
                 if (window.visualViewport) {
-                    window.visualViewport.addEventListener('resize', function() {
-                        const vvHeight = window.visualViewport.height;
-                        const windowHeight = window.innerHeight;
-                        const keyboardHeight = windowHeight - vvHeight;
-                        
-                        if (keyboardHeight > 150) {
-                            document.body.classList.add('keyboard-visible');
-                            isKeyboardVisible = true;
-                            
-                            // Sadece chat container'ın bottom'unu ayarla
-                            // Header ve input container sabit kalsın
-                            if (chatContainer) {
-                                chatContainer.style.bottom = `${keyboardHeight + 143}px`;
-                            }
-                            
-                            // Reverse chat: Üste scroll
-                            setTimeout(() => {
-                                if (chatContainer) {
-                                    chatContainer.scrollTop = 0;
-                                }
-                            }, 100);
+                    vvResizeHandler = updateViewport;
+                    vvScrollHandler = updateViewport;
+                    window.visualViewport.addEventListener('resize', vvResizeHandler);
+                    window.visualViewport.addEventListener('scroll', vvScrollHandler);
+                    updateViewport();
+                }
+                resizeFallback = function() {
+                    if (!window.visualViewport) updateViewport();
+                };
+                window.addEventListener('resize', resizeFallback);
+            }
+
+            function removeViewportListeners() {
+                if (window.visualViewport) {
+                    if (vvResizeHandler) window.visualViewport.removeEventListener('resize', vvResizeHandler);
+                    if (vvScrollHandler) window.visualViewport.removeEventListener('scroll', vvScrollHandler);
+                }
+                if (resizeFallback) window.removeEventListener('resize', resizeFallback);
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                messageInput = document.getElementById('messageInput');
+                chatContainer = document.getElementById('chatContainer');
+                inputContainer = document.querySelector('.input-container');
+                chatSection = document.getElementById('chatSection');
+                sectionHeader = chatSection && chatSection.querySelector('.section-header');
+
+                if (!chatSection) return;
+
+                chatSection.style.position = 'fixed';
+                chatSection.style.left = '0';
+                chatSection.style.right = '0';
+
+                setupViewportListeners();
+
+                if (messageInput) {
+                    setTimeout(() => {
+                        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                            messageInput.focus();
+                            messageInput.click();
+                            setTimeout(() => messageInput.focus(), 100);
                         } else {
-                            document.body.classList.remove('keyboard-visible');
-                            isKeyboardVisible = false;
-                            
-                            // Chat container'ı normale döndür
-                            if (chatContainer) {
-                                chatContainer.style.bottom = '143px';
-                            }
+                            messageInput.focus();
                         }
-                    });
+                        document.body.classList.add('chat-active');
+                        updateViewport();
+                    }, 300);
+
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        messageInput.addEventListener('focus', () => setTimeout(() => {
+                            updateViewport();
+                            scrollToTop();
+                        }, 350));
+                    }
+                }
+            });
+
+            function initChatSection() {
+                messageInput = document.getElementById('messageInput');
+                chatContainer = document.getElementById('chatContainer');
+                inputContainer = document.querySelector('.input-container');
+                chatSection = document.getElementById('chatSection');
+                sectionHeader = chatSection && chatSection.querySelector('.section-header');
+                if (chatSection) {
+                    chatSection.style.position = 'fixed';
+                    chatSection.style.left = '0';
+                    chatSection.style.right = '0';
+                    setupViewportListeners();
+                    updateViewport();
+                }
+                if (messageInput) {
+                    setTimeout(() => {
+                        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                            messageInput.focus();
+                            messageInput.click();
+                            setTimeout(() => messageInput.focus(), 100);
+                        } else messageInput.focus();
+                        document.body.classList.add('chat-active');
+                        updateViewport();
+                    }, 200);
                 }
             }
-        });
-        
-        // Section aktif olduğunda focus yap
-        function initChatSection() {
-            const messageInput = document.getElementById('messageInput');
-            if (messageInput) {
-                setTimeout(() => {
-                    // iOS için özel klavye açma
-                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                        messageInput.focus();
-                        messageInput.click();
-                        setTimeout(() => {
-                            messageInput.focus();
-                        }, 100);
-                    } else {
-                        messageInput.focus();
-                    }
-                    // Body scroll'u engelle
-                    document.body.classList.add('chat-active');
-                }, 200);
+
+            function cleanupChatSection() {
+                removeViewportListeners();
+                document.body.classList.remove('chat-active');
+                document.body.classList.remove('keyboard-visible');
+                if (sectionHeader) sectionHeader.style.removeProperty('top');
+                if (chatSection) {
+                    chatSection.style.height = '';
+                    chatSection.style.top = '';
+                    chatSection.style.position = '';
+                    chatSection.style.left = '';
+                    chatSection.style.right = '';
+                }
+                if (inputContainer) inputContainer.style.removeProperty('bottom');
+                if (chatContainer) {
+                    chatContainer.style.removeProperty('top');
+                    chatContainer.style.removeProperty('bottom');
+                }
             }
-        }
-        
-        // Section kapatıldığında body scroll'u restore et
-        function cleanupChatSection() {
-            document.body.classList.remove('chat-active');
-            document.body.classList.remove('keyboard-visible');
-        }
-        
-        // Eğer section loader kullanılıyorsa
-        if (window.VoyageApp && window.VoyageApp.onSectionLoad) {
-            window.VoyageApp.onSectionLoad('chat', initChatSection);
-            window.VoyageApp.onSectionUnload('chat', cleanupChatSection);
-        }
+
+            if (window.VoyageApp && window.VoyageApp.onSectionLoad) {
+                window.VoyageApp.onSectionLoad('chat', initChatSection);
+                window.VoyageApp.onSectionUnload('chat', cleanupChatSection);
+            }
+        })();
     </script>
 </head>
 <body>
